@@ -1,0 +1,20 @@
+{
+  "name": "crew",
+  "private": true,
+  "version": "0.0.0",
+  "packageManager": "pnpm@10.33.2",
+  "scripts": {
+    "build": "turbo build",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test",
+    "lint": "dependency-cruiser --config .dependency-cruiser.cjs agents packages",
+    "clean": "turbo clean",
+    "dev": "turbo dev"
+  },
+  "devDependencies": {
+    "@types/node": "^24.12.2",
+    "dependency-cruiser": "^17.4.0",
+    "turbo": "^2.9.8",
+    "typescript": "^6.0.3"
+  }
+}

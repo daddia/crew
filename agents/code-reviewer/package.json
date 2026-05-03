@@ -1,0 +1,34 @@
+{
+  "name": "@daddia/agent-code-reviewer",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "code-reviewer": "./dist/cli.js"
+  },
+  "main": "./dist/cli.js",
+  "files": [
+    "dist",
+    "src/agents/code-quality/prompt.md",
+    "src/agents/code-quality/.claude"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "start": "node dist/cli.js",
+    "dev": "node --watch dist/cli.js",
+    "test": "vitest run",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-code": "^2.1.126",
+    "@daddia/contracts": "workspace:*",
+    "@daddia/sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@repo/vitest-config": "workspace:*",
+    "@types/node": "^24.12.2",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.5"
+  }
+}

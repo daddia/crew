@@ -1,0 +1,32 @@
+{
+  "name": "@daddia/agent-delivery",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "start": "node dist/index.js",
+    "dev": "node --watch dist/index.js",
+    "test": "vitest run",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-code": "^2.1.126",
+    "@daddia/contracts": "workspace:*",
+    "@daddia/sdk": "workspace:*",
+    "@daddia/webhooks": "workspace:*",
+    "@hono/node-server": "^2.0.1",
+    "better-sqlite3": "^12.9.0",
+    "hono": "^4.12.16"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@repo/vitest-config": "workspace:*",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^24.12.2",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.5"
+  }
+}
