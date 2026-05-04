@@ -21,17 +21,6 @@ module.exports = {
       to: { path: "^agents/" },
     },
     {
-      name: "no-contracts-importing-packages",
-      comment:
-        "packages/contracts is pure types — it must not import from any other local package.",
-      severity: "error",
-      from: { path: "^packages/contracts/" },
-      to: {
-        path: "^packages/",
-        pathNot: "^packages/contracts/",
-      },
-    },
-    {
       name: "no-agents-outside-own-scope",
       comment:
         "Agent units may only import from their own src tree or from packages/*.",

@@ -149,7 +149,7 @@ Never pass a persona's full result object to the next persona. Extract only what
 
 ## 7. Tool scoping
 
-Each persona must declare a minimal `allowedTools` list. A reviewer should have no write tools. A gatekeeper that only reads diffs and approves MRs should not have Jira write access. Use `buildAuditHook()` from `@daddia/sdk` to enforce the allowlist at runtime as a second layer.
+Each persona must declare a minimal `allowedTools` list. A reviewer should have no write tools. A gatekeeper that only reads diffs and approves MRs should not have Jira write access. Use `buildAuditHook()` from `@daddia/crew` to enforce the allowlist at runtime as a second layer.
 
 ## Checklist
 

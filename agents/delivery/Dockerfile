@@ -13,9 +13,6 @@ WORKDIR /workspace
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
 COPY tooling/typescript-config/package.json ./tooling/typescript-config/
 COPY tooling/vitest-config/package.json      ./tooling/vitest-config/
-COPY packages/contracts/package.json         ./packages/contracts/
-COPY packages/sdk/package.json               ./packages/sdk/
-COPY packages/webhooks/package.json          ./packages/webhooks/
 COPY packages/crew/package.json              ./packages/crew/
 COPY agents/delivery/package.json            ./agents/delivery/
 
