@@ -7,20 +7,20 @@ vi.mock("@anthropic-ai/claude-agent-sdk", () => ({
 }));
 
 vi.mock("node:fs/promises", () => ({
-  readFile: vi.fn(),
+  access: vi.fn(),
 }));
 
 import {
   unstable_v2_createSession,
   unstable_v2_resumeSession,
 } from "@anthropic-ai/claude-agent-sdk";
-import { readFile } from "node:fs/promises";
+import { access } from "node:fs/promises";
 import { resolveSession } from "../src/session.js";
 import type { SessionOptions } from "../src/session.js";
 
 const mockCreate = vi.mocked(unstable_v2_createSession);
 const mockResume = vi.mocked(unstable_v2_resumeSession);
-const mockReadFile = vi.mocked(readFile);
+const mockAccess = vi.mocked(access);
 
 function makeSession(sessionId: string): SDKSession {
   return {
@@ -52,8 +52,8 @@ function makeOptions(overrides: Partial<SessionOptions> = {}): SessionOptions {
 describe("resolveSession", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Default: files exist when read.
-    mockReadFile.mockResolvedValue("# Subagent content" as never);
+    // Default: files are accessible.
+    mockAccess.mockResolvedValue(undefined as never);
   });
 
   describe("create path", () => {
@@ -151,10 +151,9 @@ describe("resolveSession", () => {
   });
 
   describe("subagent loading", () => {
-    it("reads each subagent file when subagentPaths is non-empty", async () => {
+    it("checks each subagent path for existence when non-empty", async () => {
       const fakeSession = makeSession("sdk-session-sub");
       mockCreate.mockReturnValue(fakeSession);
-      mockReadFile.mockResolvedValue("# test-runner subagent" as never);
 
       await resolveSession(
         makeOptions({
@@ -172,15 +171,9 @@ describe("resolveSession", () => {
         }),
       );
 
-      expect(mockReadFile).toHaveBeenCalledTimes(2);
-      expect(mockReadFile).toHaveBeenCalledWith(
-        "/agent/.claude/agents/test-runner.md",
-        "utf8",
-      );
-      expect(mockReadFile).toHaveBeenCalledWith(
-        "/agent/.claude/agents/linter.md",
-        "utf8",
-      );
+      expect(mockAccess).toHaveBeenCalledTimes(2);
+      expect(mockAccess).toHaveBeenCalledWith("/agent/.claude/agents/test-runner.md");
+      expect(mockAccess).toHaveBeenCalledWith("/agent/.claude/agents/linter.md");
     });
 
     it("passes settingSources: ['project'] when valid subagent paths exist", async () => {
@@ -214,18 +207,18 @@ describe("resolveSession", () => {
 
       await resolveSession(makeOptions());
 
-      expect(mockReadFile).not.toHaveBeenCalled();
+      expect(mockAccess).not.toHaveBeenCalled();
       const callArg = mockCreate.mock.calls[0]?.[0] as Record<string, unknown>;
       expect(callArg).not.toHaveProperty("settingSources");
     });
 
-    it("warns and skips a subagent path that cannot be read", async () => {
+    it("warns and skips a subagent path that cannot be accessed", async () => {
       const fakeSession = makeSession("sdk-session-partial");
       mockCreate.mockReturnValue(fakeSession);
       const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
       const enoent = Object.assign(new Error("ENOENT"), { code: "ENOENT" });
-      mockReadFile.mockRejectedValueOnce(enoent);
+      mockAccess.mockRejectedValueOnce(enoent);
 
       await resolveSession(
         makeOptions({
@@ -251,9 +244,9 @@ describe("resolveSession", () => {
       vi.spyOn(console, "warn").mockImplementation(() => {});
 
       const enoent = Object.assign(new Error("ENOENT"), { code: "ENOENT" });
-      mockReadFile
-        .mockRejectedValueOnce(enoent)                   // first path: missing
-        .mockResolvedValueOnce("# valid subagent" as never); // second path: exists
+      mockAccess
+        .mockRejectedValueOnce(enoent)          // first path: missing
+        .mockResolvedValueOnce(undefined as never); // second path: exists
 
       await resolveSession(
         makeOptions({
@@ -283,7 +276,7 @@ describe("resolveSession", () => {
       vi.spyOn(console, "warn").mockImplementation(() => {});
 
       const enoent = Object.assign(new Error("ENOENT"), { code: "ENOENT" });
-      mockReadFile.mockRejectedValue(enoent);
+      mockAccess.mockRejectedValue(enoent);
 
       await resolveSession(
         makeOptions({
@@ -300,6 +293,31 @@ describe("resolveSession", () => {
 
       const callArg = mockCreate.mock.calls[0]?.[0] as Record<string, unknown>;
       expect(callArg).not.toHaveProperty("settingSources");
+    });
+  });
+
+  describe("audit hook wiring", () => {
+    it("passes a PostToolUse hook to the SDK when auditHook is provided", async () => {
+      const fakeSession = makeSession("sdk-session-hook");
+      mockCreate.mockReturnValue(fakeSession);
+      const handler = vi.fn();
+
+      await resolveSession(makeOptions({ auditHook: handler }));
+
+      const callArg = mockCreate.mock.calls[0]?.[0] as Record<string, unknown>;
+      expect(callArg).toHaveProperty("hooks");
+      const hooks = callArg["hooks"] as Record<string, unknown>;
+      expect(hooks).toHaveProperty("PostToolUse");
+    });
+
+    it("does not add a hooks field when auditHook is not provided", async () => {
+      const fakeSession = makeSession("sdk-session-no-hook");
+      mockCreate.mockReturnValue(fakeSession);
+
+      await resolveSession(makeOptions());
+
+      const callArg = mockCreate.mock.calls[0]?.[0] as Record<string, unknown>;
+      expect(callArg).not.toHaveProperty("hooks");
     });
   });
 });

@@ -53,8 +53,7 @@ async function run(input: AgentInput): Promise<AgentResult> {
   const definition = await buildDefinition();
   const prompt = await readPromptFile(definition.promptPath);
 
-  // Belt-and-suspenders tool enforcement on top of the SDK allowedTools filter.
-  buildAuditHook(definition.allowedTools, () => {});
+  const auditHook = buildAuditHook(definition.allowedTools, () => {});
 
   const previousSessionId =
     typeof input.context["previousSessionId"] === "string"
@@ -67,6 +66,7 @@ async function run(input: AgentInput): Promise<AgentResult> {
       input,
       resumeWithinMs: RESUME_WITHIN_MS,
       model: process.env["ANTHROPIC_MODEL"] ?? DEFAULT_MODEL,
+      auditHook,
     },
     previousSessionId,
   );

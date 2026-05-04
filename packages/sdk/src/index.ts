@@ -6,6 +6,7 @@ export { readPromptFile, readSkillsDir, readSubagentsDir } from "./loaders.js";
 
 export {
   buildAuditHook,
+  toSDKHookCallback,
   boundedIterGuard,
   IterationCapReached,
 } from "./hooks.js";

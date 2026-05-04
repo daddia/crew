@@ -178,6 +178,53 @@ describe("engineer.run()", () => {
     );
   });
 
+  it("passes the audit hook to resolveSession as auditHook", async () => {
+    const fakeHook = vi.fn();
+    mockBuildAuditHook.mockReturnValue(fakeHook);
+    const session = makeSession([makeResultMessage()]);
+    mockResolveSession.mockResolvedValue({
+      session,
+      sessionId: "sess-test-123",
+      isResumed: false,
+    });
+
+    await engineer.run(baseInput);
+
+    const callOptions = mockResolveSession.mock.calls[0]?.[0];
+    expect(callOptions).toMatchObject({ auditHook: fakeHook });
+  });
+
+  it("sends the full persona prompt on a new session (not a continuation)", async () => {
+    const session = makeSession([makeResultMessage()]);
+    mockReadPromptFile.mockResolvedValue("PERSONA INSTRUCTIONS");
+    mockResolveSession.mockResolvedValue({
+      session,
+      sessionId: "sess-test-123",
+      isResumed: false,
+    });
+
+    await engineer.run(baseInput);
+
+    const sent = (session.send as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as string;
+    expect(sent).toContain("PERSONA INSTRUCTIONS");
+  });
+
+  it("passes memory: 'project' in the AgentDefinition to resolveSession", async () => {
+    const session = makeSession([makeResultMessage()]);
+    mockResolveSession.mockResolvedValue({
+      session,
+      sessionId: "sess-test-123",
+      isResumed: false,
+    });
+
+    await engineer.run(baseInput);
+
+    const callOptions = mockResolveSession.mock.calls[0]?.[0];
+    expect(callOptions).toMatchObject({
+      definition: expect.objectContaining({ memory: "project" }),
+    });
+  });
+
   it("reads the prompt file from the definition", async () => {
     const session = makeSession([makeResultMessage()]);
     mockResolveSession.mockResolvedValue({

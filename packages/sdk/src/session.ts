@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { access } from "node:fs/promises";
 import { dirname } from "node:path";
 import {
   unstable_v2_createSession,
@@ -7,6 +7,7 @@ import {
   type SettingSource,
 } from "@anthropic-ai/claude-agent-sdk";
 import type { AgentDefinition, AgentInput } from "@daddia/contracts";
+import { toSDKHookCallback, type PostToolUseHandler } from "./hooks.js";
 
 export interface SessionOptions {
   definition: AgentDefinition;
@@ -22,6 +23,12 @@ export interface SessionOptions {
    * e.g. "claude-opus-4-5", "claude-sonnet-4-6"
    */
   model: string;
+  /**
+   * Optional audit hook returned by buildAuditHook(). When provided it is
+   * adapted to the SDK's HookCallback shape and attached to the session's
+   * PostToolUse event so disallowed tool calls are caught at runtime.
+   */
+  auditHook?: PostToolUseHandler;
 }
 
 export interface ActiveSession {
@@ -50,24 +57,27 @@ export async function resolveSession(
   options: SessionOptions,
   previousSessionId?: string,
 ): Promise<ActiveSession> {
-  const { resumeWithinMs, model, definition } = options;
+  const { resumeWithinMs, model, definition, auditHook } = options;
 
-  // Validate subagent files; warn and skip any that cannot be read.
+  // Check all subagent files in parallel; warn and skip any that are absent.
   // The SDK subprocess loads the valid ones via settingSources: ['project'].
-  const validSubagentPaths: string[] = [];
-  for (const subagentPath of definition.subagentPaths) {
-    try {
-      await readFile(subagentPath, "utf8");
-      validSubagentPaths.push(subagentPath);
-    } catch {
-      console.warn(
-        `resolveSession: subagent file not found, skipping: ${subagentPath}`,
-      );
-    }
-  }
+  const results = await Promise.all(
+    definition.subagentPaths.map(async (p) => {
+      try {
+        await access(p);
+        return p;
+      } catch {
+        console.warn(`resolveSession: subagent file not found, skipping: ${p}`);
+        return null;
+      }
+    }),
+  );
+  const validSubagentPaths = results.filter((p): p is string => p !== null);
 
   // Set cwd to the agent's own directory so the SDK subprocess resolves
   // .claude/agents/, .claude/settings.json, and CLAUDE.md from the right place.
+  // Note: SDKSessionOptions.cwd was silently ignored in SDK <0.2.77 (issue
+  // anthropics/claude-code#39731). Verify with a smoke test after upgrading.
   const cwd = dirname(definition.promptPath);
   const settingSources: SettingSource[] =
     validSubagentPaths.length > 0 ? ["project"] : [];
@@ -77,6 +87,13 @@ export async function resolveSession(
     allowedTools: definition.allowedTools,
     cwd,
     ...(settingSources.length > 0 ? { settingSources } : {}),
+    ...(auditHook
+      ? {
+          hooks: {
+            PostToolUse: [{ hooks: [toSDKHookCallback(auditHook)] }],
+          },
+        }
+      : {}),
   };
 
   if (previousSessionId && resumeWithinMs > 0) {

@@ -143,6 +143,55 @@ describe("techLead.run()", () => {
     );
   });
 
+  it("passes the audit hook to resolveSession as auditHook", async () => {
+    const fakeHook = vi.fn();
+    mockBuildAuditHook.mockReturnValue(fakeHook);
+    const session = makeSession([makeResultMessage()]);
+    mockResolveSession.mockResolvedValue({
+      session,
+      sessionId: "sess-tl-123",
+      isResumed: false,
+    });
+
+    await techLead.run(baseInput);
+
+    expect(mockResolveSession).toHaveBeenCalledWith(
+      expect.objectContaining({ auditHook: fakeHook }),
+    );
+  });
+
+  it("sends the persona prompt in the session message", async () => {
+    const session = makeSession([makeResultMessage()]);
+    mockReadPromptFile.mockResolvedValue("TECH LEAD INSTRUCTIONS");
+    mockResolveSession.mockResolvedValue({
+      session,
+      sessionId: "sess-tl-123",
+      isResumed: false,
+    });
+
+    await techLead.run(baseInput);
+
+    const sent = (session.send as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as string;
+    expect(sent).toContain("TECH LEAD INSTRUCTIONS");
+  });
+
+  it("passes memory: 'project' in the AgentDefinition to resolveSession", async () => {
+    const session = makeSession([makeResultMessage()]);
+    mockResolveSession.mockResolvedValue({
+      session,
+      sessionId: "sess-tl-123",
+      isResumed: false,
+    });
+
+    await techLead.run(baseInput);
+
+    expect(mockResolveSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        definition: expect.objectContaining({ memory: "project" }),
+      }),
+    );
+  });
+
   it("reads the prompt file from the definition", async () => {
     const session = makeSession([makeResultMessage()]);
     mockResolveSession.mockResolvedValue({
