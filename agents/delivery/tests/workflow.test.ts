@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { AgentInput, AgentResult } from "@daddia/contracts";
 
+vi.mock("../src/memory.js", () => ({
+  seedProjectMemory: vi.fn().mockResolvedValue(undefined),
+}));
+
 // Mock all three agents before importing workflow.
 vi.mock("../src/agents/engineer/agent.js", () => ({
   engineer: { name: "engineer", run: vi.fn() },

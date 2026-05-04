@@ -40,4 +40,9 @@ export interface AgentDefinition {
   allowedTools: string[];
   /** Keys into the unit's mcp.json servers map. */
   mcpServerNames: string[];
+  /**
+   * Scope for agent memory files.
+   * 'project' loads .claude/agent-memory/<name>/ and injects MEMORY.md into context.
+   */
+  memory?: "user" | "project" | "local";
 }

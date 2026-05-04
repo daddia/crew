@@ -33,18 +33,18 @@ agents/
         gitlab.ts
     mcp.json          # MCP server config (Atlassian, GitLab)
     Dockerfile
-    package.json      # @org/agent-delivery
+    package.json      # @daddia/agent-delivery
 
 packages/
-  contracts/          # @org/contracts — Agent, AgentUnit, AgentInput, AgentResult, AgentDefinition
-  sdk/                # @org/sdk — session helpers, asset loaders, hook builders
-  webhooks/           # @org/webhooks — signature verification, replay guard, idempotency store
-  tsconfig/           # @org/tsconfig — shared TypeScript base config
+  contracts/          # @daddia/contracts — Agent, AgentUnit, AgentInput, AgentResult, AgentDefinition
+  sdk/                # @daddia/sdk — session helpers, asset loaders, hook builders
+  webhooks/           # @daddia/webhooks — signature verification, replay guard, idempotency store
+  tsconfig/           # @daddia/tsconfig — shared TypeScript base config
 ```
 
 ## Key packages
 
-### `@org/contracts`
+### `@daddia/contracts`
 
 The shared type contract. Every persona module implements `Agent`. Every deployable service satisfies `AgentUnit`. `AgentDefinition` is what the SDK uses to configure a session.
 
@@ -54,10 +54,10 @@ The shared type contract. Every persona module implements `Agent`. Every deploya
 | `AgentUnit` | Interface every deployable unit must satisfy |
 | `AgentInput` | `{ issueKey, context }` passed into every `agent.run()` |
 | `AgentResult` | `{ success, summary, artefacts, costUsd }` returned by every run |
-| `AgentDefinition` | Configuration passed to `@org/sdk` to boot a Claude session |
+| `AgentDefinition` | Configuration passed to `@daddia/sdk` to boot a Claude session |
 | `PersonaName` | `"tech-lead" \| "engineer" \| "senior-engineer"` |
 
-### `@org/sdk`
+### `@daddia/sdk`
 
 Wrappers around the Claude Agent SDK (`@anthropic-ai/claude-agent-sdk`).
 
@@ -71,7 +71,7 @@ Wrappers around the Claude Agent SDK (`@anthropic-ai/claude-agent-sdk`).
 | `boundedIterGuard()` | Guard that throws `IterationCapReached` when loop cap is hit |
 | `IterationCapReached` | Error class for iteration cap exhaustion |
 
-### `@org/webhooks`
+### `@daddia/webhooks`
 
 Security primitives for inbound webhook handlers.
 
@@ -135,8 +135,8 @@ agents/{name}/
     integrations/     # Idempotent clients for external systems
   mcp.json            # MCP server definitions for this unit
   Dockerfile
-  package.json        # scoped as @org/agent-{name}
-  tsconfig.json       # extends @org/tsconfig/base.json
+  package.json        # scoped as @daddia/agent-{name}
+  tsconfig.json       # extends @daddia/tsconfig/base.json
 ```
 
 A solo unit (single agent, no team) uses the same shape but omits the inner `agents/` subdirectory.
@@ -153,9 +153,9 @@ export const engineer: Agent = {
 ```
 
 The `run` implementation:
-- Calls `resolveSession()` from `@org/sdk` to decide create vs resume.
+- Calls `resolveSession()` from `@daddia/sdk` to decide create vs resume.
 - Builds an `AgentDefinition` from the persona's `promptPath`, `skillPaths`, `subagentPaths`, `allowedTools`, and `mcpServerNames`.
-- Attaches `buildAuditHook()` from `@org/sdk` for every run.
+- Attaches `buildAuditHook()` from `@daddia/sdk` for every run.
 - Returns `AgentResult` with `success`, `summary`, `artefacts`, and `costUsd`.
 
 Tool allowlists are enforced at two levels: the Claude Agent SDK `allowedTools` option, and the `buildAuditHook` belt-and-suspenders check.
@@ -181,7 +181,7 @@ The `REFACTOR_LOOP_CAP` env var (default: `2`) bounds the address-feedback loop.
 ## Webhook handler conventions
 
 Every inbound handler must:
-1. Call `verifySignature()` from `@org/webhooks` before parsing the body.
+1. Call `verifySignature()` from `@daddia/webhooks` before parsing the body.
 2. Call `checkReplayWindow()` and `createIdempotencyStore()` to deduplicate.
 3. Return `200` promptly; run the workflow asynchronously (fire-and-forget with error logging).
 4. Never expose internal error details in the response body.
@@ -197,8 +197,8 @@ Currently configured servers:
 ## Agent guidance
 
 - When adding a new persona, start with `agent.ts` and `prompt.md`. Add skills only once the persona runs correctly with a plain prompt.
-- When changing the `Agent` or `AgentResult` interface in `@org/contracts`, update all persona `agent.ts` files in the same PR.
-- When changing webhook verification logic in `@org/webhooks`, test against both Jira (HMAC) and GitLab (shared token) paths.
+- When changing the `Agent` or `AgentResult` interface in `@daddia/contracts`, update all persona `agent.ts` files in the same PR.
+- When changing webhook verification logic in `@daddia/webhooks`, test against both Jira (HMAC) and GitLab (shared token) paths.
 - When changing `workflow.ts`, check that escalation paths (loop cap, agent failure) transition Jira correctly and do not re-enter the workflow.
-- Prefer modifying the smallest scope package needed. A change to the delivery workflow should not touch `@org/contracts`.
+- Prefer modifying the smallest scope package needed. A change to the delivery workflow should not touch `@daddia/contracts`.
 - Run `pnpm lint` before pushing. Boundary violations fail CI.

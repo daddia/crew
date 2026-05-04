@@ -1,3 +1,9 @@
+import type {
+  HookCallback,
+  HookInput,
+  HookJSONOutput,
+} from "@anthropic-ai/claude-agent-sdk";
+
 export interface ToolUseEvent {
   tool: string;
   input: unknown;
@@ -6,6 +12,26 @@ export interface ToolUseEvent {
 }
 
 export type PostToolUseHandler = (event: ToolUseEvent) => void;
+
+/**
+ * Adapt a PostToolUseHandler to the SDK's HookCallback shape so it can be
+ * attached to SDKSessionOptions.hooks.PostToolUse. Calls the handler with a
+ * normalised ToolUseEvent; if the handler throws (disallowed tool), the error
+ * propagates to the SDK subprocess and the tool call is blocked.
+ */
+export function toSDKHookCallback(handler: PostToolUseHandler): HookCallback {
+  return async (input: HookInput): Promise<HookJSONOutput> => {
+    if (input.hook_event_name === "PostToolUse") {
+      handler({
+        tool: input.tool_name,
+        input: input.tool_input,
+        output: input.tool_response,
+        durationMs: input.duration_ms ?? 0,
+      });
+    }
+    return {};
+  };
+}
 
 /**
  * Build a PostToolUse hook that logs every tool invocation and enforces
