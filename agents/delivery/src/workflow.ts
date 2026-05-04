@@ -48,6 +48,10 @@ export async function runStory(ctx: WorkflowContext): Promise<void> {
     context: { task: "implement-story" },
   });
 
+  // Carry the engineer's session ID forward so the address-feedback loop
+  // can resume the same session and preserve MR context across turns.
+  let engineerSessionId = implResult.artefacts["sessionId"] as string | undefined;
+
   state.finishPhase(issueKey, "implement", {
     costUsd: implResult.costUsd,
     verdict: implResult.success ? "ok" : "failed",
@@ -107,8 +111,15 @@ export async function runStory(ctx: WorkflowContext): Promise<void> {
 
     const feedbackResult = await engineer.run({
       ...input,
-      context: { task: "address-feedback", mrUrl, comments: unresolvedItems },
+      context: {
+        task: "address-feedback",
+        mrUrl,
+        comments: unresolvedItems,
+        previousSessionId: engineerSessionId,
+      },
     });
+
+    engineerSessionId = feedbackResult.artefacts["sessionId"] as string | undefined;
 
     state.finishPhase(issueKey, "address-feedback", {
       costUsd: feedbackResult.costUsd,
