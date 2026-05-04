@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "write-backlog": {
+      "source": "daddia/skills",
+      "sourceType": "github",
+      "skillPath": "write-backlog/SKILL.md",
+      "computedHash": "2f98920180a8e137e6ccc2bd2a1eaecfb3bf820f72762d29f4b7b003c57f0e69"
+    },
+    "write-wp-design": {
+      "source": "daddia/skills",
+      "sourceType": "github",
+      "skillPath": "write-wp-design/SKILL.md",
+      "computedHash": "c0f78b55e58106770298e621ac619ce3a8af095f345974c7db7123f0bea9f3a2"
+    }
+  }
+}
