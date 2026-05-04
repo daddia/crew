@@ -1,22 +1,21 @@
 # Tooling
 
-Shared build, lint, format, and test configuration for HelmIQ repositories.
+Shared build, lint, format, and test configuration for the **crew** monorepo.
 
-Each directory is a workspace package published under the `@repo/*` namespace. This directory is mastered in the `crew` monorepo and can be copied into other HelmIQ projects.
+Each directory is a workspace package under `@repo/*`, listed in `pnpm-workspace.yaml` as `tooling/*`.
 
 ## Packages
 
 | Package | Name | Purpose |
 |---|---|---|
-| `typescript-config/` | `@repo/typescript-config` | Shared base tsconfig and per-framework variants |
-| `eslint-config/` | `@repo/eslint-config` | Shared ESLint flat config with base, library, and framework variants |
+| `typescript-config/` | `@repo/typescript-config` | Shared base `tsconfig` and optional framework-flavoured extends |
+| `eslint-config/` | `@repo/eslint-config` | Shared ESLint flat config (base, library) |
 | `prettier-config/` | `@repo/prettier-config` | Shared Prettier config |
-| `tailwind-config/` | `@repo/tailwind-config` | Shared Tailwind CSS and PostCSS config |
-| `vitest-config/` | `@repo/vitest-config` | Shared Vitest config with base and UI variants |
+| `vitest-config/` | `@repo/vitest-config` | Shared Vitest config (base and UI variants) |
 
 ## Usage
 
-**Copy into a new project and include in `pnpm-workspace.yaml`:**
+**Include in `pnpm-workspace.yaml` (already done in this repo):**
 
 ```yaml
 packages:

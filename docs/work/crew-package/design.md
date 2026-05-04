@@ -95,7 +95,7 @@ with module-not-found. The consolidated package exposes those types from
 From the repo root, in sequence:
 
 ```
-pnpm install        # lockfile resolves without @daddia/contracts, @daddia/sdk, @daddia/webhooks
+pnpm install        # workspace resolves; shared library is packages/crew only
 pnpm build          # exit 0; dist/ present for packages/crew, agents/delivery, agents/code-reviewer
 pnpm typecheck      # exit 0; no new type errors in any package or agent
 pnpm lint           # exit 0 (dependency-cruiser); no boundary violations
@@ -104,10 +104,10 @@ pnpm test           # exit 0; all previously-passing tests continue to pass
 
 ## 4. Data contracts
 
-No new types are introduced. All types are moved unchanged from their source
-packages. The only internal change is in `packages/crew/src/session.ts`: the
-import of `AgentDefinition` and `AgentInput` changes from
-`"@daddia/contracts"` to `"./agent.js"` (relative, same package).
+No new public types were added in CREW-56: the shared surface matches the
+previously split packages. In `packages/crew/src/session.ts`, `AgentDefinition`
+and `AgentInput` are imported from `"./agent.js"` (same package), not from a
+separate contracts package.
 
 ## 5. What this WP did NOT deliver
 

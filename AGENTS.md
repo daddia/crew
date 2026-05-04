@@ -100,15 +100,15 @@ Per-unit commands (run inside `agents/{name}/`):
 | `pnpm dev` | Start the server with `--watch` |
 | `pnpm typecheck` | Type-check this unit |
 
-## Dependency rules (enforced by CI)
+## Dependency rules (enforced by dependency-cruiser)
 
-These rules are non-negotiable. CI fails if any is violated.
+These rules are non-negotiable. `pnpm lint` runs dependency-cruiser and must pass before a change merges; fix boundary violations rather than bypassing them.
 
 1. `agents/*` may import from `packages/*` only. Never from another `agents/*`.
 2. `packages/*` may not import from `agents/*`.
 3. No circular dependencies within `packages/*`.
 
-The `pnpm lint` command runs `dependency-cruiser` to enforce these boundaries.
+There is no GitHub Actions workflow in this repository yet; contributors rely on local `pnpm lint`. When CI is added (see product backlog CREW-51-002), it should run the same lint, typecheck, and test commands on every push and PR.
 
 ## Agent unit conventions
 
@@ -198,4 +198,4 @@ Currently configured servers:
 - When changing webhook verification logic in `@daddia/crew/webhooks`, test against both Jira (HMAC) and GitLab (shared token) paths.
 - When changing `workflow.ts`, check that escalation paths (loop cap, agent failure) transition Jira correctly and do not re-enter the workflow.
 - Prefer modifying the smallest scope needed. A change to the delivery workflow should not touch shared types unless the contract truly changes.
-- Run `pnpm lint` before pushing. Boundary violations fail CI.
+- Run `pnpm lint` before pushing. Boundary violations must not merge.

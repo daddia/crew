@@ -1,6 +1,6 @@
 # `@repo/eslint-config`
 
-Shared ESLint flat configurations for HelmIQ repositories.
+Shared ESLint flat configurations used by the **crew** monorepo (and portable to other pnpm workspaces).
 
 ## Available configs
 

@@ -56,6 +56,18 @@ registry publish; changes to agent workflow, persona, or prompt logic.
 
 ## 3. Stories
 
+**Repository contract (current):** The only workspace library under `packages/` is
+`packages/crew`, published as `@daddia/crew` with a `./webhooks` subpath
+(`@daddia/crew/webhooks`). Agent units list `@daddia/crew: workspace:*`; units
+with webhook ingress also import `@daddia/crew/webhooks`. There are no
+`packages/contracts`, `packages/sdk`, or `packages/webhooks` directories. See
+[`AGENTS.md`](../../../AGENTS.md) for the authoritative layout.
+
+Everything below is **historical**: closed migration stories (CREW-56-001–005).
+Deliverables and EARS/Gherkin still mention old paths or package names where the
+acceptance text was written for the migration; those references describe the past
+state of the repo, not what exists today.
+
 - [x] **[CREW-56-001] Scaffold `@daddia/crew` package and migrate contracts + sdk source**
   - **Status:** Done | **Priority:** P0 | **Estimate:** 3
   - **Epic:** CREW-56 | **Labels:** phase:now, type:refactor
