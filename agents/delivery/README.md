@@ -83,6 +83,6 @@ MCP server definitions live in [mcp.json](mcp.json). The unit starts `atlassian`
 ## Adding a persona
 
 1. `mkdir src/agents/<name>` and copy an existing persona as a template.
-2. Implement `src/agents/<name>/agent.ts` following the `Agent` interface from `@daddia/contracts`.
+2. Implement `src/agents/<name>/agent.ts` following the `Agent` interface from `@daddia/crew`.
 3. Wire the new agent into `src/workflow.ts`.
 4. Add tool-scoping assertions to `tests/agent-tool-scoping.test.ts`.

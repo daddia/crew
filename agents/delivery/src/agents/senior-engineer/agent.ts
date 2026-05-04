@@ -6,9 +6,12 @@ import {
   readSkillsDir,
   readSubagentsDir,
   buildAuditHook,
-} from "@daddia/sdk";
-import type { SDKResultMessage } from "@daddia/sdk";
-import type { Agent, AgentDefinition, AgentInput, AgentResult } from "@daddia/contracts";
+  type SDKResultMessage,
+  type Agent,
+  type AgentDefinition,
+  type AgentInput,
+  type AgentResult,
+} from "@daddia/crew";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 

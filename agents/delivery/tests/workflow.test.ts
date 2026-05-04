@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import type { AgentInput, AgentResult } from "@daddia/contracts";
+import type { AgentInput, AgentResult } from "@daddia/crew";
 
 vi.mock("../src/memory.js", () => ({
   seedProjectMemory: vi.fn().mockResolvedValue(undefined),

@@ -1,5 +1,4 @@
-import type { AgentInput } from "@daddia/contracts";
-import { IterationCapReached } from "@daddia/sdk";
+import { IterationCapReached, type AgentInput } from "@daddia/crew";
 import { engineer } from "./agents/engineer/agent.js";
 import { seniorEngineer } from "./agents/senior-engineer/agent.js";
 import { techLead } from "./agents/tech-lead/agent.js";

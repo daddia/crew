@@ -14,9 +14,7 @@
   },
   "dependencies": {
     "@anthropic-ai/claude-code": "^2.1.126",
-    "@daddia/contracts": "workspace:*",
-    "@daddia/sdk": "workspace:*",
-    "@daddia/webhooks": "workspace:*",
+    "@daddia/crew": "workspace:*",
     "@hono/node-server": "^2.0.1",
     "better-sqlite3": "^12.9.0",
     "hono": "^4.12.16"

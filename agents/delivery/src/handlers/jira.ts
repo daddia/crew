@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import { checkReplayWindow, verifySignature } from "@daddia/webhooks";
+import { checkReplayWindow, verifySignature } from "@daddia/crew/webhooks";
 import { getIdempotency } from "../idempotency.js";
 import { log } from "../observability.js";
 import type { StateStore } from "../state.js";

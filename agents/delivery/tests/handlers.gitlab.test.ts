@@ -4,8 +4,9 @@ import { Hono } from "hono";
 vi.mock("../src/workflow.js", () => ({
   addressFeedback: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock("@daddia/webhooks", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@daddia/webhooks")>();
+vi.mock("@daddia/crew/webhooks", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@daddia/crew/webhooks")>();
   return {
     ...actual,
     createIdempotencyStore: vi.fn().mockReturnValue({

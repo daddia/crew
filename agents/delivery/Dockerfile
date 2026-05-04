@@ -16,6 +16,7 @@ COPY tooling/vitest-config/package.json      ./tooling/vitest-config/
 COPY packages/contracts/package.json         ./packages/contracts/
 COPY packages/sdk/package.json               ./packages/sdk/
 COPY packages/webhooks/package.json          ./packages/webhooks/
+COPY packages/crew/package.json              ./packages/crew/
 COPY agents/delivery/package.json            ./agents/delivery/
 
 RUN pnpm install --frozen-lockfile
@@ -28,10 +29,8 @@ COPY agents/delivery/   ./agents/delivery/
 
 # Build in dependency order.
 RUN pnpm --filter @repo/vitest-config        build
-RUN pnpm --filter @daddia/contracts          build
-RUN pnpm --filter @daddia/sdk               build
-RUN pnpm --filter @daddia/webhooks          build
-RUN pnpm --filter @daddia/agent-delivery    build
+RUN pnpm --filter @daddia/crew                 build
+RUN pnpm --filter @daddia/agent-delivery       build
 
 # Mirror markdown assets (prompts, skills, subagents) into dist so that
 # __dirname-relative lookups in agent.ts resolve correctly at runtime.

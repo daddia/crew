@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { SDKSession } from "@anthropic-ai/claude-agent-sdk";
-import type { SDKResultMessage } from "@daddia/sdk";
-import type { AgentInput } from "@daddia/contracts";
+import type { SDKResultMessage } from "@daddia/crew";
+import type { AgentInput } from "@daddia/crew";
 
-vi.mock("@daddia/sdk", () => ({
+vi.mock("@daddia/crew", () => ({
   resolveSession: vi.fn(),
   readPromptFile: vi.fn().mockResolvedValue("You are a senior-engineer persona."),
   readSkillsDir: vi.fn().mockResolvedValue([]),
@@ -15,7 +15,7 @@ import {
   resolveSession,
   readPromptFile,
   buildAuditHook,
-} from "@daddia/sdk";
+} from "@daddia/crew";
 import { seniorEngineer } from "../src/agents/senior-engineer/agent.js";
 
 const mockResolveSession = vi.mocked(resolveSession);

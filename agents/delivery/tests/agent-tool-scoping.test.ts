@@ -7,8 +7,7 @@
 import { describe, it, expect } from "vitest";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { readSkillsDir, readSubagentsDir } from "@daddia/sdk";
-import type { AgentDefinition } from "@daddia/contracts";
+import { readSkillsDir, readSubagentsDir, type AgentDefinition } from "@daddia/crew";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const agentsDir = join(__dirname, "../src/agents");

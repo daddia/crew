@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { SDKSession } from "@anthropic-ai/claude-agent-sdk";
-import type { SDKResultMessage } from "@daddia/sdk";
-import type { AgentInput } from "@daddia/contracts";
+import type { SDKResultMessage } from "@daddia/crew";
+import type { AgentInput } from "@daddia/crew";
 
-// Mock @daddia/sdk before the module under test is imported.
-vi.mock("@daddia/sdk", () => ({
+// Mock @daddia/crew before the module under test is imported.
+vi.mock("@daddia/crew", () => ({
   resolveSession: vi.fn(),
   readPromptFile: vi.fn().mockResolvedValue("You are an engineer persona."),
   readSkillsDir: vi.fn().mockResolvedValue([]),
@@ -16,7 +16,7 @@ import {
   resolveSession,
   readPromptFile,
   buildAuditHook,
-} from "@daddia/sdk";
+} from "@daddia/crew";
 import { engineer } from "../src/agents/engineer/agent.js";
 
 const mockResolveSession = vi.mocked(resolveSession);

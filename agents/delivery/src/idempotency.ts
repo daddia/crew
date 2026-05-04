@@ -1,4 +1,4 @@
-import { createIdempotencyStore } from "@daddia/webhooks";
+import { createIdempotencyStore } from "@daddia/crew/webhooks";
 
 type IdempotencyStore = ReturnType<typeof createIdempotencyStore>;
 
