@@ -1,7 +1,10 @@
+import { readFile } from "node:fs/promises";
+import { dirname } from "node:path";
 import {
   unstable_v2_createSession,
   unstable_v2_resumeSession,
   type SDKSession,
+  type SettingSource,
 } from "@anthropic-ai/claude-agent-sdk";
 import type { AgentDefinition, AgentInput } from "@daddia/contracts";
 
@@ -36,6 +39,12 @@ export interface ActiveSession {
  * Calls unstable_v2_createSession when no prior sessionId exists, and
  * unstable_v2_resumeSession when one does. Errors from the SDK are
  * propagated directly to the caller.
+ *
+ * Subagent definitions listed in AgentDefinition.subagentPaths are validated
+ * before the session is created. Missing files are skipped with a warning.
+ * When valid subagent paths are present, the SDK subprocess is pointed at the
+ * agent's project directory (settingSources: ['project']) so it loads the
+ * .claude/agents/ definitions automatically.
  */
 export async function resolveSession(
   options: SessionOptions,
@@ -43,9 +52,31 @@ export async function resolveSession(
 ): Promise<ActiveSession> {
   const { resumeWithinMs, model, definition } = options;
 
+  // Validate subagent files; warn and skip any that cannot be read.
+  // The SDK subprocess loads the valid ones via settingSources: ['project'].
+  const validSubagentPaths: string[] = [];
+  for (const subagentPath of definition.subagentPaths) {
+    try {
+      await readFile(subagentPath, "utf8");
+      validSubagentPaths.push(subagentPath);
+    } catch {
+      console.warn(
+        `resolveSession: subagent file not found, skipping: ${subagentPath}`,
+      );
+    }
+  }
+
+  // Set cwd to the agent's own directory so the SDK subprocess resolves
+  // .claude/agents/, .claude/settings.json, and CLAUDE.md from the right place.
+  const cwd = dirname(definition.promptPath);
+  const settingSources: SettingSource[] =
+    validSubagentPaths.length > 0 ? ["project"] : [];
+
   const sdkOptions = {
     model,
     allowedTools: definition.allowedTools,
+    cwd,
+    ...(settingSources.length > 0 ? { settingSources } : {}),
   };
 
   if (previousSessionId && resumeWithinMs > 0) {

@@ -6,15 +6,21 @@ vi.mock("@anthropic-ai/claude-agent-sdk", () => ({
   unstable_v2_resumeSession: vi.fn(),
 }));
 
+vi.mock("node:fs/promises", () => ({
+  readFile: vi.fn(),
+}));
+
 import {
   unstable_v2_createSession,
   unstable_v2_resumeSession,
 } from "@anthropic-ai/claude-agent-sdk";
+import { readFile } from "node:fs/promises";
 import { resolveSession } from "../src/session.js";
 import type { SessionOptions } from "../src/session.js";
 
 const mockCreate = vi.mocked(unstable_v2_createSession);
 const mockResume = vi.mocked(unstable_v2_resumeSession);
+const mockReadFile = vi.mocked(readFile);
 
 function makeSession(sessionId: string): SDKSession {
   return {
@@ -46,6 +52,8 @@ function makeOptions(overrides: Partial<SessionOptions> = {}): SessionOptions {
 describe("resolveSession", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default: files exist when read.
+    mockReadFile.mockResolvedValue("# Subagent content" as never);
   });
 
   describe("create path", () => {
@@ -53,12 +61,13 @@ describe("resolveSession", () => {
       const fakeSession = makeSession("sdk-session-new");
       mockCreate.mockReturnValue(fakeSession);
 
-      const result = await resolveSession(makeOptions());
+      await resolveSession(makeOptions());
 
       expect(mockCreate).toHaveBeenCalledOnce();
       expect(mockCreate).toHaveBeenCalledWith({
         model: "claude-test",
         allowedTools: ["Read", "Edit"],
+        cwd: "/fake",
       });
       expect(mockResume).not.toHaveBeenCalled();
     });
@@ -100,6 +109,7 @@ describe("resolveSession", () => {
       expect(mockResume).toHaveBeenCalledWith("sess_abc", {
         model: "claude-test",
         allowedTools: ["Read", "Edit"],
+        cwd: "/fake",
       });
       expect(mockCreate).not.toHaveBeenCalled();
     });
@@ -137,6 +147,159 @@ describe("resolveSession", () => {
       await expect(
         resolveSession(makeOptions(), "missing-session"),
       ).rejects.toThrow("Session not found");
+    });
+  });
+
+  describe("subagent loading", () => {
+    it("reads each subagent file when subagentPaths is non-empty", async () => {
+      const fakeSession = makeSession("sdk-session-sub");
+      mockCreate.mockReturnValue(fakeSession);
+      mockReadFile.mockResolvedValue("# test-runner subagent" as never);
+
+      await resolveSession(
+        makeOptions({
+          definition: {
+            name: "engineer",
+            promptPath: "/agent/prompt.md",
+            skillPaths: [],
+            subagentPaths: [
+              "/agent/.claude/agents/test-runner.md",
+              "/agent/.claude/agents/linter.md",
+            ],
+            allowedTools: ["Read", "Edit"],
+            mcpServerNames: ["gitlab"],
+          },
+        }),
+      );
+
+      expect(mockReadFile).toHaveBeenCalledTimes(2);
+      expect(mockReadFile).toHaveBeenCalledWith(
+        "/agent/.claude/agents/test-runner.md",
+        "utf8",
+      );
+      expect(mockReadFile).toHaveBeenCalledWith(
+        "/agent/.claude/agents/linter.md",
+        "utf8",
+      );
+    });
+
+    it("passes settingSources: ['project'] when valid subagent paths exist", async () => {
+      const fakeSession = makeSession("sdk-session-sub");
+      mockCreate.mockReturnValue(fakeSession);
+
+      await resolveSession(
+        makeOptions({
+          definition: {
+            name: "engineer",
+            promptPath: "/agent/prompt.md",
+            skillPaths: [],
+            subagentPaths: ["/agent/.claude/agents/test-runner.md"],
+            allowedTools: ["Read", "Edit"],
+            mcpServerNames: ["gitlab"],
+          },
+        }),
+      );
+
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          cwd: "/agent",
+          settingSources: ["project"],
+        }),
+      );
+    });
+
+    it("does not set settingSources when subagentPaths is empty", async () => {
+      const fakeSession = makeSession("sdk-session-no-sub");
+      mockCreate.mockReturnValue(fakeSession);
+
+      await resolveSession(makeOptions());
+
+      expect(mockReadFile).not.toHaveBeenCalled();
+      const callArg = mockCreate.mock.calls[0]?.[0] as Record<string, unknown>;
+      expect(callArg).not.toHaveProperty("settingSources");
+    });
+
+    it("warns and skips a subagent path that cannot be read", async () => {
+      const fakeSession = makeSession("sdk-session-partial");
+      mockCreate.mockReturnValue(fakeSession);
+      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+      const enoent = Object.assign(new Error("ENOENT"), { code: "ENOENT" });
+      mockReadFile.mockRejectedValueOnce(enoent);
+
+      await resolveSession(
+        makeOptions({
+          definition: {
+            name: "engineer",
+            promptPath: "/agent/prompt.md",
+            skillPaths: [],
+            subagentPaths: ["/agent/.claude/agents/missing.md"],
+            allowedTools: ["Read", "Edit"],
+            mcpServerNames: ["gitlab"],
+          },
+        }),
+      );
+
+      expect(warnSpy).toHaveBeenCalledOnce();
+      expect(warnSpy.mock.calls[0]?.[0]).toContain("missing.md");
+      warnSpy.mockRestore();
+    });
+
+    it("starts the session with remaining subagents after skipping a missing one", async () => {
+      const fakeSession = makeSession("sdk-session-partial");
+      mockCreate.mockReturnValue(fakeSession);
+      vi.spyOn(console, "warn").mockImplementation(() => {});
+
+      const enoent = Object.assign(new Error("ENOENT"), { code: "ENOENT" });
+      mockReadFile
+        .mockRejectedValueOnce(enoent)                   // first path: missing
+        .mockResolvedValueOnce("# valid subagent" as never); // second path: exists
+
+      await resolveSession(
+        makeOptions({
+          definition: {
+            name: "engineer",
+            promptPath: "/agent/prompt.md",
+            skillPaths: [],
+            subagentPaths: [
+              "/agent/.claude/agents/missing.md",
+              "/agent/.claude/agents/valid.md",
+            ],
+            allowedTools: ["Read", "Edit"],
+            mcpServerNames: ["gitlab"],
+          },
+        }),
+      );
+
+      // One valid path remains, so settingSources is still set.
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({ settingSources: ["project"] }),
+      );
+    });
+
+    it("does not set settingSources when all subagent paths are missing", async () => {
+      const fakeSession = makeSession("sdk-session-all-missing");
+      mockCreate.mockReturnValue(fakeSession);
+      vi.spyOn(console, "warn").mockImplementation(() => {});
+
+      const enoent = Object.assign(new Error("ENOENT"), { code: "ENOENT" });
+      mockReadFile.mockRejectedValue(enoent);
+
+      await resolveSession(
+        makeOptions({
+          definition: {
+            name: "engineer",
+            promptPath: "/agent/prompt.md",
+            skillPaths: [],
+            subagentPaths: ["/agent/.claude/agents/gone.md"],
+            allowedTools: ["Read", "Edit"],
+            mcpServerNames: ["gitlab"],
+          },
+        }),
+      );
+
+      const callArg = mockCreate.mock.calls[0]?.[0] as Record<string, unknown>;
+      expect(callArg).not.toHaveProperty("settingSources");
     });
   });
 });
