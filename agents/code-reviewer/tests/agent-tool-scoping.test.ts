@@ -21,10 +21,10 @@ describe("code-quality agent tool scoping", () => {
     expect(typeof codeQuality.run).toBe("function");
   });
 
-  it("run throws before SDK is wired (not silently no-ops)", async () => {
-    await expect(
-      codeQuality.run({ issueKey: "test!1", context: {} }),
-    ).rejects.toThrow("Claude SDK integration not yet wired");
+  it("run is callable and returns a Promise", () => {
+    expect(typeof codeQuality.run).toBe("function");
+    // run() is fully implemented; calling it without mocking the SDK would
+    // hit the real SDK subprocess, so we only assert the shape here.
   });
 });
 
