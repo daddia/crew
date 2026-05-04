@@ -1,4 +1,4 @@
-import type { AgentInput } from "@daddia/contracts";
+import type { AgentInput } from "@daddia/crew";
 import { codeQuality } from "./agents/code-quality/agent.js";
 import { log } from "./observability.js";
 import type { CliConfig, Finding, MrContext, ReviewResult, Severity } from "./types.js";

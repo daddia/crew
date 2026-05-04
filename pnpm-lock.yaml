@@ -26,12 +26,9 @@ importers:
       '@anthropic-ai/claude-code':
         specifier: ^2.1.126
         version: 2.1.126
-      '@daddia/contracts':
+      '@daddia/crew':
         specifier: workspace:*
-        version: link:../../packages/contracts
-      '@daddia/sdk':
-        specifier: workspace:*
-        version: link:../../packages/sdk
+        version: link:../../packages/crew
     devDependencies:
       '@repo/typescript-config':
         specifier: workspace:*

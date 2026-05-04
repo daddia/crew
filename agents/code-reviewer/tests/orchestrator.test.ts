@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import type { AgentResult } from "@daddia/contracts";
+import type { AgentResult } from "@daddia/crew";
 import type { CliConfig, Finding, MrContext } from "../src/types.js";
 
 vi.mock("../src/agents/code-quality/agent.js", () => ({

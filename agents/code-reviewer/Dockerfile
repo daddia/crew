@@ -12,6 +12,8 @@ COPY tooling/typescript-config/package.json ./tooling/typescript-config/
 COPY tooling/vitest-config/package.json ./tooling/vitest-config/
 COPY packages/contracts/package.json ./packages/contracts/
 COPY packages/sdk/package.json ./packages/sdk/
+COPY packages/webhooks/package.json ./packages/webhooks/
+COPY packages/crew/package.json ./packages/crew/
 COPY agents/code-reviewer/package.json ./agents/code-reviewer/
 
 RUN pnpm install --frozen-lockfile
@@ -24,8 +26,7 @@ COPY agents/code-reviewer/ ./agents/code-reviewer/
 
 # Build in dependency order.
 RUN pnpm --filter @repo/vitest-config build
-RUN pnpm --filter @daddia/contracts build
-RUN pnpm --filter @daddia/sdk build
+RUN pnpm --filter @daddia/crew build
 RUN pnpm --filter @daddia/agent-code-reviewer build
 
 # ---- runtime image ----

@@ -21,8 +21,7 @@
   },
   "dependencies": {
     "@anthropic-ai/claude-code": "^2.1.126",
-    "@daddia/contracts": "workspace:*",
-    "@daddia/sdk": "workspace:*"
+    "@daddia/crew": "workspace:*"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
