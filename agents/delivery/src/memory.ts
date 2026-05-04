@@ -21,7 +21,13 @@ async function buildSeedContent(projectDir: string): Promise<string> {
     const pkg = JSON.parse(raw) as Record<string, unknown>;
     lines.push("## Language and tooling");
     lines.push("");
-    lines.push("- Language: TypeScript");
+
+    // Detect TypeScript by checking for tsconfig.json rather than assuming.
+    const hasTsconfig = await access(join(projectDir, "tsconfig.json"))
+      .then(() => true)
+      .catch(() => false);
+    if (hasTsconfig) lines.push("- Language: TypeScript");
+
     if (typeof pkg["packageManager"] === "string") {
       const pm = (pkg["packageManager"] as string).split("@")[0] ?? "unknown";
       lines.push(`- Package manager: ${pm}`);
@@ -38,8 +44,17 @@ async function buildSeedContent(projectDir: string): Promise<string> {
     const agentsRaw = await readFile(join(projectDir, "AGENTS.md"), "utf8");
     lines.push("## Conventions (from AGENTS.md)");
     lines.push("");
-    // Include the first 60 lines as a concise context summary.
-    lines.push(...agentsRaw.split("\n").slice(0, 60));
+    // Truncate at a section boundary (H2 heading) after the first 30 lines so
+    // the included block is always a complete markdown section.
+    const agentsLines = agentsRaw.split("\n");
+    let cutoff = agentsLines.length;
+    for (let i = 30; i < Math.min(agentsLines.length, 80); i++) {
+      if (agentsLines[i]?.startsWith("## ")) {
+        cutoff = i;
+        break;
+      }
+    }
+    lines.push(...agentsLines.slice(0, cutoff));
     lines.push("");
   } catch {
     // AGENTS.md not readable; skip section

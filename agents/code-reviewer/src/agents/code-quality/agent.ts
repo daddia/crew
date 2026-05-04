@@ -55,6 +55,9 @@ async function run(input: AgentInput): Promise<AgentResult> {
     auditHook,
   });
 
+  // SECURITY: input.context is constructed by the orchestrator from trusted
+  // internal values (task, mrUrl, pre-fetched diff). Never pass user-supplied
+  // data here without sanitising it first.
   const taskPrompt = [
     prompt,
     "---",

@@ -60,6 +60,9 @@ async function run(input: AgentInput): Promise<AgentResult> {
     },
   );
 
+  // SECURITY: input.context is constructed by the workflow from trusted
+  // internal values (task, mrUrl, diff). Never pass user-supplied data
+  // here without sanitising it first.
   const taskPrompt = [
     prompt,
     "---",
