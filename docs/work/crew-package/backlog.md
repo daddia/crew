@@ -3,7 +3,7 @@ type: Backlog
 scope: work-package
 version: '0.1'
 owner: daddia
-status: Complete
+status: Draft
 last_updated: 2026-05-05
 related:
   - docs/product/product.md
@@ -15,10 +15,13 @@ related:
 Story-level backlog for `docs/work/crew-package/`, implementing CREW-56 from
 `docs/product/backlog.md`.
 
-> **Status (2026-05).** CREW-56 is complete: `packages/crew` is the only shared
-> library (`@daddia/crew` and `@daddia/crew/webhooks`). Stories CREW-56-001
-> through CREW-56-005 are done. The sections below retain the original
-> deliverables and acceptance criteria for traceability.
+> **Status (2026-05).** Consolidation stories **CREW-56-001–005** are complete on
+> `main`: `packages/crew` is the only shared library (`@daddia/crew` and
+> `@daddia/crew/webhooks`). Closed stories below retain original deliverables and
+> acceptance criteria for traceability. **Follow-on stories CREW-56-006–009**
+> (manual npm publish, Changesets release pipeline, migrate agents off
+> `workspace:*`, local container verification) are defined below and are **not
+> started**.
 
 Companion artefacts: `docs/product/product.md` · `docs/product/backlog.md`
 
@@ -26,22 +29,34 @@ Companion artefacts: `docs/product/product.md` · `docs/product/backlog.md`
 
 - **Epic.** CREW-56 — Consolidate packages into `@daddia/crew`
 - **Phase.** Now / Quality
-- **Outcome.** Delivered (2026-05): 11 points across 5 stories; `packages/crew`
-  is the sole shared package; `AGENTS.md` and dependency-cruiser match the new
-  layout.
+- **Outcome (CREW-56-001–005).** Delivered (2026-05): 11 points across 5 stories;
+  `packages/crew` is the sole shared package; `AGENTS.md` and dependency-cruiser
+  match the new layout.
+- **Estimate (full backlog).** 22 points across 9 stories: **11** delivered
+  (CREW-56-001–005); **11** remaining (CREW-56-006–009 — publish, Changesets and
+  release pipeline, registry migration for agents, container verification).
 
-**What shipped.** One workspace package (`@daddia/crew`) with two entry points:
-`@daddia/crew` (types, session helpers, hooks, loaders) and
+**What shipped (001–005).** One workspace package (`@daddia/crew`) with two entry
+points: `@daddia/crew` (types, session helpers, hooks, loaders) and
 `@daddia/crew/webhooks` (signature verification, replay guard, idempotency).
 Both agents import from these entry points. Legacy `packages/contracts`,
 `packages/sdk`, and `packages/webhooks` are removed.
+
+**What remains (006–009).** Publish `@daddia/crew` to npm as a private package
+(first manually, then via Changesets + CI), switch agents from `workspace:*` to a
+registry semver range, and prove build/deploy in a local container.
 
 **Rationale (historical).** A single package with subpath exports preserves the
 separation between core utilities and the `better-sqlite3`-bearing webhook
 helpers without three separate build pipelines.
 
-**Explicitly not part of this WP.** New exports beyond the consolidated surface;
-registry publish; changes to agent workflow, persona, or prompt logic.
+**Explicitly not part of CREW-56-001–005.** New exports beyond the consolidated
+surface; registry publish; changes to agent workflow, persona, or prompt logic.
+Those exclusions apply only to the consolidation slice; **006–009** intentionally
+cover npm publish and consuming the package outside the workspace.
+
+**Out of scope for CREW-56-006–009.** Changing agent workflow, persona, or prompt
+logic beyond what is required to consume `@daddia/crew` from the registry.
 
 ## 2. Conventions
 
@@ -63,7 +78,9 @@ with webhook ingress also import `@daddia/crew/webhooks`. There are no
 `packages/contracts`, `packages/sdk`, or `packages/webhooks` directories. See
 [`AGENTS.md`](../../../AGENTS.md) for the authoritative layout.
 
-Everything below is **historical**: closed migration stories (CREW-56-001–005).
+### Closed migration stories (historical)
+
+Everything in **CREW-56-001–005** below is **historical**: those stories are done.
 Deliverables and EARS/Gherkin still mention old paths or package names where the
 acceptance text was written for the migration; those references describe the past
 state of the repo, not what exists today.
@@ -274,6 +291,148 @@ state of the repo, not what exists today.
       And no mention of "@daddia/contracts", "@daddia/sdk", or "@daddia/webhooks" remains
     ```
 
+### Follow-on stories (not started)
+
+Until **CREW-56-008**, agents may continue to declare `@daddia/crew` via
+`workspace:*`. Stories **006–009** are ordered: manual publish → Changesets and
+release pipeline → migrate agents to semver from the registry → verify container
+build and deploy locally.
+
+- [ ] **[CREW-56-006] Manually publish `@daddia/crew` to npm as a private package**
+  - **Status:** Not started | **Priority:** P1 | **Estimate:** 3
+  - **Epic:** CREW-56 | **Labels:** phase:now, type:release
+  - **Depends on:** CREW-56-005
+  - **Deliverable:** `@daddia/crew` is published to the npm registry **once, by
+    hand** from a maintainer environment (e.g. `pnpm publish` or `npm publish` from
+    `packages/crew` after build), proving private scoped access works. `publishConfig`
+    matches org policy (e.g. `publishConfig.access: "restricted"` where applicable).
+    The published artifact includes the same export map as the repo (`"."` and
+    `"./webhooks"`). Registry authentication for publish and read is documented
+    (`NPM_TOKEN`, `.npmrc` scope). Automated releases are **not** in scope for this
+    story; they are CREW-56-007.
+  - **Design:** design is captured in `docs/work/crew-package/backlog.md` §3 (this document)
+  - **Acceptance (EARS):**
+    - THE SYSTEM SHALL provide `packages/crew/package.json` with `publishConfig`
+      appropriate for a private scoped package under `@daddia`.
+    - WHEN a maintainer runs the documented manual publish steps, THE SYSTEM SHALL
+      produce a versioned tarball on the registry that consumers can install with a
+      semver range.
+    - THE DEVELOPER SHALL document registry authentication and which npm org or
+      team grants publish and install access to `@daddia/crew`.
+  - **Acceptance (Gherkin):**
+
+    ```gherkin
+    Scenario: Private install from a clean environment
+      Given a machine with only Node, npm, and a valid read token for the @daddia scope
+      When npm install @daddia/crew@<published-version> is run in an empty project
+      Then the install succeeds
+      And imports from "@daddia/crew" and "@daddia/crew/webhooks" resolve
+    ```
+
+- [ ] **[CREW-56-007] Add Changesets and a release pipeline for `@daddia/crew`**
+  - **Status:** Not started | **Priority:** P1 | **Estimate:** 3
+  - **Epic:** CREW-56 | **Labels:** phase:now, type:ci
+  - **Depends on:** CREW-56-006
+  - **Deliverable:** [Changesets](https://github.com/changesets/changesets) is
+    configured for the repo (e.g. `.changeset/config.json`, package inclusion for
+    `packages/crew`). Contributors add changesets with PRs; versioning and
+    `CHANGELOG.md` updates follow the Changesets workflow. A **release pipeline**
+    (CI) publishes `@daddia/crew` using an automation secret (`NPM_TOKEN` or
+    equivalent) so routine releases no longer depend on a manual publish from a
+    laptop. The pipeline behaviour is documented (what triggers publish: merge to
+    default branch, tag, or dedicated release job). This story does **not** require
+    migrating agents off `workspace:*`; that remains CREW-56-008.
+  - **Design:** design is captured in `docs/work/crew-package/backlog.md` §3 (this document)
+  - **Acceptance (EARS):**
+    - THE SYSTEM SHALL include Changesets configuration that targets `@daddia/crew`
+      and produces semver bumps consistent with change notes.
+    - THE SYSTEM SHALL provide a CI job (or jobs) that can publish `@daddia/crew`
+      to the private registry when the release workflow runs, using stored
+      credentials.
+    - THE DEVELOPER SHALL document how maintainers open versioning PRs or release
+      PRs and how the pipeline is invoked.
+  - **Acceptance (Gherkin):**
+
+    ```gherkin
+    Scenario: A library change gets a changeset
+      Given a PR that changes packages/crew source
+      When the contributor follows the documented changeset flow
+      Then a changeset file exists describing the bump intent
+
+    Scenario: Automated publish for routine releases
+      Given the release pipeline has run successfully after a merge
+      When the registry is queried for @daddia/crew
+      Then a new version matching the changeset bump is available
+    ```
+
+- [ ] **[CREW-56-008] Migrate agents to the published package (not `workspace:*`)**
+  - **Status:** Not started | **Priority:** P1 | **Estimate:** 2
+  - **Epic:** CREW-56 | **Labels:** phase:now, type:refactor
+  - **Depends on:** CREW-56-007
+  - **Deliverable:** `agents/delivery` and `agents/code-reviewer` declare
+    `@daddia/crew` with a semver range (or exact version) that resolves to the
+    published package on the registry, not `workspace:*`. Root `pnpm` / lockfile
+    configuration allows resolution from the registry in CI and locally (e.g.
+    `.npmrc` for the scope or documented token setup). `pnpm install`, `pnpm
+    typecheck`, and `pnpm test` pass for both agents from the repo root. No
+    agent `package.json` uses `workspace:*` for `@daddia/crew`.
+  - **Design:** design is captured in `docs/work/crew-package/backlog.md` §3 (this document)
+  - **Acceptance (EARS):**
+    - THE SYSTEM SHALL NOT list `workspace:*` (or any workspace protocol) for
+      `@daddia/crew` in `agents/delivery/package.json` or
+      `agents/code-reviewer/package.json`.
+    - WHEN `pnpm install` is run at the repository root, THE SYSTEM SHALL resolve
+      `@daddia/crew` from the configured registry in line with the semver range.
+    - WHEN `pnpm typecheck` and `pnpm test` are run for each agent, THE SYSTEM
+      SHALL exit with code 0.
+  - **Acceptance (Gherkin):**
+
+    ```gherkin
+    Scenario: Agent manifests reference the registry, not the monorepo link
+      Given agents/delivery/package.json and agents/code-reviewer/package.json
+      When the @daddia/crew dependency is inspected
+      Then the version spec is a semver range or exact version, not "workspace:*"
+
+    Scenario: CI and local dev still pass
+      Given dependencies are installed from the registry
+      When pnpm typecheck and pnpm test are run for each agent
+      Then both complete with exit code 0
+    ```
+
+- [ ] **[CREW-56-009] Verify agents build and deploy in a local container**
+  - **Status:** Not started | **Priority:** P1 | **Estimate:** 3
+  - **Epic:** CREW-56 | **Labels:** phase:now, type:ops
+  - **Depends on:** CREW-56-008
+  - **Deliverable:** A documented local path (e.g. `Dockerfile` and/or
+    `docker compose` in repo or `docs/`) builds at least one agent image that
+    installs dependencies from the registry, runs `build` (and any required
+    steps), and starts or runs a smoke command suitable for the agent. The
+    flow is reproducible: a developer with registry credentials can run the
+    container build and confirm the image runs without relying on the monorepo
+    workspace layout for `@daddia/crew`.
+  - **Design:** design is captured in `docs/work/crew-package/backlog.md` §3 (this document)
+  - **Acceptance (EARS):**
+    - THE SYSTEM SHALL provide container build instructions and image definition(s)
+      that copy or build the agent and install `@daddia/crew` from the registry.
+    - WHEN the documented build is run on a machine with Docker and valid npm
+      credentials, THE SYSTEM SHALL produce a runnable image.
+    - THE DEVELOPER SHALL document any required build args or secrets (e.g.
+      `NPM_TOKEN`) for private package install inside the image.
+  - **Acceptance (Gherkin):**
+
+    ```gherkin
+    Scenario: Image build does not require a linked workspace package
+      Given a clean clone without pnpm workspace link for @daddia/crew
+      When the container build is run with registry authentication
+      Then the build completes successfully
+      And the application or smoke command inside the image runs
+
+    Scenario: Documented run path
+      Given the handoff or ops doc for local container
+      When a new engineer follows the steps
+      Then they can build and run the image locally
+    ```
+
 ## 4. Traceability
 
 ### Stories to product outcomes
@@ -285,6 +444,10 @@ state of the repo, not what exists today.
 | CREW-56-003 | Delivery agent fully migrated; no dual-import risk during runtime |
 | CREW-56-004 | Code-reviewer agent fully migrated; enforces that the webhook native dep is not silently pulled into a CLI tool |
 | CREW-56-005 | Removes the three legacy build targets; makes `pnpm lint` (dep-cruiser) truthfully reflect the single-package architecture |
+| CREW-56-006 | First manual publish proves private `@daddia/crew` works on the registry |
+| CREW-56-007 | Semver and changelog are driven by Changesets; CI publishes routine releases |
+| CREW-56-008 | Agents consume the library like external consumers; validates semver and registry integration |
+| CREW-56-009 | Production-like deploy path is reproducible in Docker without workspace hacks |
 
 ### Stories to codebase sections
 
@@ -295,43 +458,63 @@ state of the repo, not what exists today.
 | CREW-56-003 | `agents/delivery/src/**`, `agents/delivery/package.json` |
 | CREW-56-004 | `agents/code-reviewer/src/**`, `agents/code-reviewer/package.json` |
 | CREW-56-005 | Legacy package dirs removed; `.dependency-cruiser.cjs`, `AGENTS.md`, root tooling touched |
+| CREW-56-006 | `packages/crew/package.json`, manual publish runbook, npm org settings |
+| CREW-56-007 | `.changeset/`, CI workflow(s) for version/publish, `CHANGELOG.md` (if generated), secrets docs |
+| CREW-56-008 | `agents/delivery/package.json`, `agents/code-reviewer/package.json`, lockfile, `.npmrc` (if added) |
+| CREW-56-009 | `Dockerfile` / `docker-compose.yml` or equivalent, ops/runbook snippet |
 
 ### Definition of Done
 
-A story in this backlog is done when:
+A story is done when:
 
-- [x] All EARS statements hold and every Gherkin scenario passes.
-- [x] `pnpm typecheck` exits with code 0 for every package or agent touched.
-- [x] `pnpm test` exits with code 0; no previously-passing test now fails.
-- [x] `pnpm lint` (dependency-cruiser) exits with code 0 from the repo root.
-- [x] Code review approved by at least one engineer.
-- [x] PR merged into main.
+- All EARS statements hold and every Gherkin scenario passes.
+- `pnpm typecheck` exits with code 0 for every package or agent touched.
+- `pnpm test` exits with code 0; no previously-passing test now fails.
+- `pnpm lint` (dependency-cruiser) exits with code 0 from the repo root (where the story touches boundaries).
+- Code review approved by at least one engineer.
+- PR merged into `main`.
+
+**CREW-56-001–005:** Met on `main` for the consolidation slice.
+
+**CREW-56-006–009:** Open — same criteria apply when each story closes.
 
 ## 5. Dependency graph
 
-**Outcome.** CREW-56-001 through CREW-56-005 are complete on main.
+**Consolidation (done on `main`).** CREW-56-001 through CREW-56-005 are complete.
 
 ```text
 CREW-56-001 (packages/crew scaffold — contracts + sdk source)
   +-- CREW-56-002 (./webhooks subpath)
   |     +-- CREW-56-003 (delivery agent migration)
   |                     +-- CREW-56-005 (delete legacy + tooling update)
+  |                               +-- CREW-56-006 (manual publish @daddia/crew private)
+  |                                         +-- CREW-56-007 (Changesets + release pipeline)
+  |                                                   +-- CREW-56-008 (agents use registry)
+  |                                                             +-- CREW-56-009 (local container)
   +-- CREW-56-003 (delivery agent migration — also needs CREW-56-002)
   +-- CREW-56-004 (code-reviewer migration — only needs CREW-56-001)
                   +-- CREW-56-005
 ```
 
-**Historical critical path:** CREW-56-001 → CREW-56-002 → CREW-56-003 → CREW-56-005
+**Historical critical path (001–005):** CREW-56-001 → CREW-56-002 → CREW-56-003 → CREW-56-005
 (nine points across four sequenced stories). CREW-56-002 and CREW-56-004 could run in parallel after CREW-56-001; CREW-56-005 gated on CREW-56-003 and CREW-56-004.
+
+**Follow-on critical path (006–009):** CREW-56-005 → CREW-56-006 → CREW-56-007 →
+CREW-56-008 → CREW-56-009 (11 points: 3 + 3 + 2 + 3), sequential.
 
 **Minimum viable slice (historical).** CREW-56-001 + CREW-56-002 delivered a
 usable `@daddia/crew` before legacy package deletion.
 
+**Registry slice.** CREW-56-006–009 prove install and deploy outside the pnpm
+workspace (manual publish, Changesets/CI, semver agents, Docker).
+
 ## 6. Risks
 
-Risks R1–R3 were closed with CREW-56-005: the obsolete dep-cruiser rule was
-removed, agents use `@daddia/crew` only, and tooling references `packages/crew`.
-Further runtime risks are tracked in `docs/product/backlog.md`.
+Risks from the consolidation phase (obsolete dep-cruiser rule, legacy package
+paths, `turbo`/`tsconfig` references) were closed with CREW-56-005. Follow-on
+work should watch for leaked publish tokens in CI logs, `workspace:*` left in
+agent manifests after CREW-56-008, and Docker builds that accidentally rely on
+monorepo paths. Further product-level risks are tracked in `docs/product/backlog.md`.
 
 ## 7. Handoff
 
@@ -347,8 +530,13 @@ Further runtime risks are tracked in `docs/product/backlog.md`.
 
 - CREW-54-001 (`AGENTS.md` names) was superseded by CREW-56: canonical package
   documentation is `@daddia/crew`, `@daddia/crew/webhooks`, and `@daddia/agent-*`.
-- Any new agent unit added after this WP should declare only `@daddia/crew`
-  (and optionally `@daddia/crew/webhooks`) as its shared library dependency.
+- **CREW-56-006–009:** Publish `@daddia/crew` to npm (manual first, then Changesets
+  + CI), switch agents from `workspace:*` to registry semver, validate container
+  build and deploy locally (see §3 follow-on stories).
+- Any new agent unit should declare `@daddia/crew` (and optionally
+  `@daddia/crew/webhooks`) as its shared library dependency; after CREW-56-008,
+  prefer a semver range from the registry rather than `workspace:*` when policy
+  requires consuming the published package.
 - Future additions to the shared library (observability, memory helpers, etc.)
   are added as new files under `packages/crew/src/` and exported from the
   appropriate entry point.
