@@ -1,6 +1,13 @@
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { readPromptFile, readSkillsDir, readSubagentsDir } from "@daddia/sdk";
+import {
+  resolveSession,
+  readPromptFile,
+  readSkillsDir,
+  readSubagentsDir,
+  buildAuditHook,
+} from "@daddia/sdk";
+import type { SDKResultMessage } from "@daddia/sdk";
 import type { Agent, AgentDefinition, AgentInput, AgentResult } from "@daddia/contracts";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -16,6 +23,9 @@ const ALLOWED_TOOLS = [
   "mcp__atlassian__jira_get_issue",
 ];
 
+const RESUME_WITHIN_MS = 0; // peer review always starts fresh
+const DEFAULT_MODEL = "claude-opus-4-5";
+
 async function buildDefinition(): Promise<AgentDefinition> {
   const base = __dirname;
   const [skillPaths, subagentPaths] = await Promise.all([
@@ -30,6 +40,7 @@ async function buildDefinition(): Promise<AgentDefinition> {
     subagentPaths,
     allowedTools: ALLOWED_TOOLS,
     mcpServerNames: ["atlassian", "gitlab"],
+    memory: "project",
   };
 }
 
@@ -37,11 +48,70 @@ async function run(input: AgentInput): Promise<AgentResult> {
   const definition = await buildDefinition();
   const prompt = await readPromptFile(definition.promptPath);
 
-  void prompt;
-  void definition;
-  void input;
+  // Belt-and-suspenders tool enforcement on top of the SDK allowedTools filter.
+  buildAuditHook(definition.allowedTools, () => {});
 
-  throw new Error("Senior engineer agent.run: Claude SDK integration not yet wired");
+  const { session, sessionId } = await resolveSession(
+    {
+      definition,
+      input,
+      resumeWithinMs: RESUME_WITHIN_MS,
+      model: process.env["ANTHROPIC_MODEL"] ?? DEFAULT_MODEL,
+    },
+  );
+
+  const taskPrompt = [
+    prompt,
+    "---",
+    `Issue: ${input.issueKey}`,
+    `Context: ${JSON.stringify(input.context)}`,
+  ].join("\n\n");
+
+  try {
+    await session.send(taskPrompt);
+
+    let resultMsg: SDKResultMessage | undefined;
+    for await (const msg of session.stream()) {
+      if (msg.type === "result") {
+        resultMsg = msg;
+        break;
+      }
+    }
+
+    if (!resultMsg) {
+      return {
+        success: false,
+        summary: "Session ended without a result message",
+        artefacts: { sessionId },
+        costUsd: 0,
+      };
+    }
+
+    if (resultMsg.subtype === "success") {
+      return {
+        success: true,
+        summary: resultMsg.result,
+        artefacts: { sessionId },
+        costUsd: resultMsg.total_cost_usd,
+      };
+    }
+
+    return {
+      success: false,
+      summary: resultMsg.errors.join("; "),
+      artefacts: { sessionId },
+      costUsd: resultMsg.total_cost_usd,
+    };
+  } catch (err) {
+    return {
+      success: false,
+      summary: err instanceof Error ? err.message : String(err),
+      artefacts: { sessionId },
+      costUsd: 0,
+    };
+  } finally {
+    await session[Symbol.asyncDispose]();
+  }
 }
 
 export const seniorEngineer: Agent = {
