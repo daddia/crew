@@ -626,8 +626,8 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
 
 ---
 
-- [ ] **[CREW-54-001] Fix AGENTS.md package names**
-  - **Status:** Not started | **Priority:** P2 | **Estimate:** 1
+- [x] **[CREW-54-001] Fix AGENTS.md package names**
+  - **Status:** Done | **Priority:** P2 | **Estimate:** 1
   - **Epic:** CREW-54 | **Labels:** review:#11, type:docs
   - **Depends on:** —
   - **Deliverable:** `AGENTS.md` updated throughout to replace `@org/sdk`, `@org/contracts`, `@org/webhooks`, `@org/agent-delivery` with `@daddia/sdk`, `@daddia/contracts`, `@daddia/webhooks`, `@daddia/agent-delivery`; no instance of the `@org/` prefix remains in `AGENTS.md`.
@@ -674,57 +674,17 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
 
 ---
 
-- [ ] **[CREW-54-003] Delete unused tooling configs and esbuild entry**
-  - **Status:** Not started | **Priority:** P2 | **Estimate:** 2
+- [N/A] **[CREW-54-003] Delete unused tooling configs and esbuild entry**
+  - **Status:** N/A | **Priority:** P2 | **Estimate:** 2
   - **Epic:** CREW-54 | **Labels:** review:#14, review:#15, type:hygiene
   - **Depends on:** —
-  - **Deliverable:** `tooling/eslint-config/nest.js`, `next.js`, and `react-internal.js` deleted; `tooling/typescript-config/nestjs.json`, `nextjs.json`, and `react-library.json` deleted; `tooling/tailwind-config/` directory deleted; corresponding `devDependencies` for NestJS, Next.js, React, and Tailwind removed from `tooling/eslint-config/package.json`; `pnpm-workspace.yaml` `allowBuilds: esbuild: true` entry removed; `pnpm build` and `pnpm typecheck` pass after deletions.
-  - **Acceptance (EARS):**
-    - WHEN the repository is built, THE SYSTEM SHALL NOT reference any NestJS, Next.js, React, or Tailwind tooling configuration files.
-    - WHEN `pnpm-workspace.yaml` is read, THE SYSTEM SHALL NOT contain an `esbuild` entry under `allowBuilds`.
-    - WHEN `pnpm build` runs after the deletions, THE SYSTEM SHALL complete without error.
-  - **Acceptance (Gherkin):**
-
-    ```gherkin
-    Scenario: Frontend tooling configs are removed
-      Given the repository after deletions
-      When tooling/eslint-config and tooling/typescript-config are listed
-      Then nest.js, next.js, react-internal.js, nestjs.json, nextjs.json, react-library.json are absent
-
-    Scenario: Tailwind config directory is removed
-      Given the repository after deletions
-      When tooling/ is listed
-      Then no tailwind-config directory is present
-
-    Scenario: esbuild entry is removed from workspace yaml
-      Given pnpm-workspace.yaml after the change
-      When the allowBuilds section is read
-      Then no esbuild entry is present
-
-    Scenario: Build still passes after deletions
-      Given all unused config files and dependencies removed
-      When pnpm build runs
-      Then exit code is 0
-    ```
 
 ---
 
-- [ ] **[CREW-54-004] Document or remove `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` setting**
-  - **Status:** Not started | **Priority:** P2 | **Estimate:** 1
+- [N/A] **[CREW-54-004] Document or remove `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` setting**
+  - **Status:** Done | **Priority:** P2 | **Estimate:** 1
   - **Epic:** CREW-54 | **Labels:** review:#16, type:docs
   - **Depends on:** —
-  - **Deliverable:** `.claude/settings.json` entry for `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS: "0"` either has an inline JSON comment (if the format supports it) or is explained in a `README` note in `.claude/`; if the setting serves no purpose, it is removed; the decision (keep with explanation, or remove) is recorded in a short commit message body.
-  - **Acceptance (EARS):**
-    - WHEN `.claude/settings.json` is read, THE SYSTEM SHALL either contain no `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` entry, or the entry SHALL be accompanied by documentation explaining why it is set to `"0"`.
-  - **Acceptance (Gherkin):**
-
-    ```gherkin
-    Scenario: Setting is explained or absent
-      Given .claude/settings.json
-      When it is read
-      Then either CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS is absent
-      Or a .claude/README.md exists explaining why it is disabled
-    ```
 
 ---
 
