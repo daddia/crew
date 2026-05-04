@@ -17,13 +17,9 @@
     "test": "vitest run --passWithNoTests",
     "clean": "rm -rf dist"
   },
-  "dependencies": {
-    "better-sqlite3": "^12.9.0"
-  },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
     "@repo/vitest-config": "workspace:*",
-    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^24.12.2",
     "typescript": "^6.0.3",
     "vitest": "^4.1.5"
