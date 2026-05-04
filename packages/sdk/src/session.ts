@@ -1,3 +1,8 @@
+import {
+  unstable_v2_createSession,
+  unstable_v2_resumeSession,
+  type SDKSession,
+} from "@anthropic-ai/claude-agent-sdk";
 import type { AgentDefinition, AgentInput } from "@daddia/contracts";
 
 export interface SessionOptions {
@@ -9,30 +14,45 @@ export interface SessionOptions {
    * Set to 0 to always start fresh.
    */
   resumeWithinMs: number;
+  /**
+   * Model identifier passed to the Claude Agent SDK.
+   * e.g. "claude-opus-4-5", "claude-sonnet-4-6"
+   */
+  model: string;
 }
 
 export interface ActiveSession {
   sessionId: string;
   isResumed: boolean;
+  /**
+   * The live SDK session handle. Callers use this to send messages and
+   * stream responses. Must be disposed when the run completes.
+   */
+  session: SDKSession;
 }
 
 /**
  * Resolve whether to start a new Claude session or resume an existing one.
- * The policy is: resume only for the address-feedback persona loop where
- * continuity of MR context matters. All other tasks start fresh.
+ * Calls unstable_v2_createSession when no prior sessionId exists, and
+ * unstable_v2_resumeSession when one does. Errors from the SDK are
+ * propagated directly to the caller.
  */
 export async function resolveSession(
   options: SessionOptions,
   previousSessionId?: string,
 ): Promise<ActiveSession> {
-  const { resumeWithinMs } = options;
+  const { resumeWithinMs, model, definition } = options;
+
+  const sdkOptions = {
+    model,
+    allowedTools: definition.allowedTools,
+  };
 
   if (previousSessionId && resumeWithinMs > 0) {
-    return { sessionId: previousSessionId, isResumed: true };
+    const session = unstable_v2_resumeSession(previousSessionId, sdkOptions);
+    return { sessionId: previousSessionId, isResumed: true, session };
   }
 
-  // Placeholder: real implementation calls the Claude SDK to create a session
-  // and returns the assigned session ID.
-  const sessionId = crypto.randomUUID();
-  return { sessionId, isResumed: false };
+  const session = unstable_v2_createSession(sdkOptions);
+  return { sessionId: session.sessionId, isResumed: false, session };
 }
