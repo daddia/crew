@@ -70,6 +70,8 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
 
 **Status.** Not started.
 
+**Branch.** `fix/CREW-50-sdk-session`
+
 ---
 
 - [ ] **[CREW-50-001] Wire `resolveSession()` to the Claude Code SDK**
