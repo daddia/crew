@@ -18,9 +18,9 @@ agents/
     mcp.json
     Dockerfile
 packages/
-  contracts/       # shared TypeScript interfaces — no runtime code
-  sdk/             # Claude Agent SDK wrappers: session, loaders, hooks
-  webhooks/        # HMAC verification, replay defence, idempotency
+  crew/              # @daddia/crew — shared types, session, loaders, hooks
+                     # subpath @daddia/crew/webhooks — verify, replay, idempotency
+tooling/             # shared eslint / typescript configs (workspace packages)
 ```
 
 Units depend on packages. Packages never depend on units. No unit imports from another unit.

@@ -1,4 +1,11 @@
-## Crew Codebase Review
+# Crew Codebase Review
+
+> **Archive.** This review reflects the repository **as of 2026-05-04**, before
+> package consolidation ([CREW-56](../work/crew-package/backlog.md)). Paths under
+> `packages/sdk`, `packages/contracts`, and `packages/webhooks` now live under
+> `packages/crew` (`@daddia/crew`, `@daddia/crew/webhooks`). Where a finding cites
+> an old path or package name, map it to the current tree when acting on the
+> issue.
 
 ### Executive Summary
 
@@ -26,7 +33,7 @@ The `AgentDefinition` is constructed correctly (prompt, skills, tools, MCP serve
 ### 2. `resolveSession()` returns a random UUID
 
 ```
-packages/sdk/src/session.ts:33
+packages/crew/src/session.ts:33
 ```
 
 The function never calls the Claude Code SDK. It always returns `crypto.randomUUID()`. There is no session creation, no session resumption. This needs to use the SDK's programmatic API (`query()` or equivalent) and properly handle the `isResumed` path so the engineer's address-feedback loop maintains MR context across turns.
@@ -60,7 +67,7 @@ No `.github/workflows/` or equivalent CI config exists. `AGENTS.md` states "CI f
 ```
 agents/delivery/src/state.ts:39      (createStateStore — opens DB_PATH)
 agents/delivery/src/idempotency.ts:10 (getIdempotency — also opens DB_PATH)
-packages/webhooks/src/idempotency.ts:30
+packages/crew/src/webhooks/idempotency.ts:30
 ```
 
 `createStateStore()` opens `DB_PATH` and its schema already creates the `webhook_events` table. `getIdempotency()` opens the same `DB_PATH` path and creates the same `webhook_events` table again via `CREATE TABLE IF NOT EXISTS`. The result is two `DatabaseSync` connections to the same file managing the same table. With WAL mode this won't corrupt, but it wastes a connection and creates confusing dual-ownership. Fix: pass the existing `db` from `createStateStore` to the idempotency logic, or fold `createIdempotencyStore` directly into the state store.
@@ -139,13 +146,13 @@ If the workflow crashes after MR creation but before `finishPhase("open-mr")` re
 AGENTS.md lines 43–55
 ```
 
-The documentation consistently refers to `@org/sdk`, `@org/contracts`, `@org/webhooks`, `@org/agent-delivery`. The actual published names are `@daddia/sdk`, `@daddia/contracts`, `@daddia/webhooks`, `@daddia/agent-delivery`. New contributors reading the docs will be confused. Update AGENTS.md to use `@daddia/...`.
+The documentation consistently refers to `@org/sdk`, `@org/contracts`, `@org/webhooks`, `@org/agent-delivery`. **Update (post-CREW-56):** `AGENTS.md` now documents `@daddia/crew`, `@daddia/crew/webhooks`, and the `@daddia/agent-*` units. At review time, aligning docs with published names was still open.
 
 ### 12. `subagentPaths` is loaded but has no consumption path
 
 ```
-packages/sdk/src/loaders.ts:27
-packages/contracts/src/agent.ts (AgentDefinition.subagentPaths)
+packages/crew/src/loaders.ts:27
+packages/crew/src/agent.ts (AgentDefinition.subagentPaths)
 ```
 
 Every persona builds an `AgentDefinition` with `subagentPaths`, but there is no code anywhere that reads these paths and passes subagent definitions to the Claude SDK session. When wiring `run()`, make sure `subagentPaths` are read and injected as subagent system prompts (or equivalent Claude Code SDK concept) — otherwise all that `.claude/agents/` discovery work is dead weight.
@@ -264,7 +271,7 @@ The loop runs `for (let iteration = 0; iteration < REFACTOR_LOOP_CAP + 1; iterat
 turbo.json
 ```
 
-Turbo is configured but uses local cache only. For team builds and CI, configuring a remote cache (Vercel, Turborepo Cloud, or self-hosted) would make CI meaningfully faster as the packages/sdk and packages/contracts build artifacts are stable between most PRs.
+Turbo is configured but uses local cache only. For team builds and CI, configuring a remote cache (Vercel, Turborepo Cloud, or self-hosted) would make CI meaningfully faster as the `packages/crew` build artifacts are stable between most PRs.
 
 ### 25. `getMrDiff()` fetches the full diff without pagination
 
@@ -296,4 +303,4 @@ agents/delivery/src/integrations/gitlab.ts:59
 | 16–18 | Settings comment, auth header, MR IID | Low | P2 — correctness/clarity |
 | 19–25 | Tracing, rate limiting, env examples, etc. | Various | P3 — hardening |
 
-The most valuable next step is implementing `resolveSession()` and the four `run()` methods in `packages/sdk/src/session.ts` and each `agent.ts` — everything else is scaffolding that works correctly once the SDK calls are live.
+The most valuable next step is implementing `resolveSession()` and the four `run()` methods in `packages/crew/src/session.ts` and each `agent.ts` — everything else is scaffolding that works correctly once the SDK calls are live.

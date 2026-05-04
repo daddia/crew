@@ -5,7 +5,7 @@ product: crew-runtime
 version: '1.0'
 owner: daddia
 status: Refined
-last_updated: 2026-05-04
+last_updated: 2026-05-05
 source_review: docs/reviews/20260504-solution-review.md
 related:
   - docs/reviews/20260504-solution-review.md
@@ -64,7 +64,7 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
 
 **Scope.** Wire `resolveSession()` and all four persona `run()` implementations to the `@anthropic-ai/claude-code` SDK. Until this epic closes the system is inert: every agent invocation throws immediately. `subagentPaths` consumption is also resolved here since it only has meaning once sessions are live. Project memory is activated here so the crew builds up cross-run knowledge from the first story.
 
-**Key deliverables.** `packages/sdk/src/session.ts` `resolveSession()` calling `unstable_v2_createSession()` for new sessions and `unstable_v2_resumeSession()` for existing ones; the Claude Code SDK owns the full conversation transcript in its own JSONL files — Crew stores only the `sessionId` as a resume key; `isResumed` path maintained so the engineer's address-feedback loop preserves session context across turns; `AgentResult` populated from SDK response; `engineer`, `senior-engineer`, `tech-lead`, and `code-quality` persona `run()` implementations each building `AgentDefinition` with `memory: 'project'` set, calling `resolveSession()`, and returning a structured `AgentResult`; `subagentPaths` read and injected into the session as subagent system prompts; initial project memory seeded on first run (CREW-50-007).
+**Key deliverables.** `packages/crew/src/session.ts` `resolveSession()` calling `unstable_v2_createSession()` for new sessions and `unstable_v2_resumeSession()` for existing ones; the Claude Code SDK owns the full conversation transcript in its own JSONL files — Crew stores only the `sessionId` as a resume key; `isResumed` path maintained so the engineer's address-feedback loop preserves session context across turns; `AgentResult` populated from SDK response; `engineer`, `senior-engineer`, `tech-lead`, and `code-quality` persona `run()` implementations each building `AgentDefinition` with `memory: 'project'` set, calling `resolveSession()`, and returning a structured `AgentResult`; `subagentPaths` read and injected into the session as subagent system prompts; initial project memory seeded on first run (CREW-50-007).
 
 **Dependencies.** None.
 
@@ -78,7 +78,7 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
   - **Status:** Not started | **Priority:** P0 | **Estimate:** 5
   - **Epic:** CREW-50 | **Labels:** review:#1, review:#2, type:infrastructure
   - **Depends on:** —
-  - **Deliverable:** `packages/sdk/src/session.ts` `resolveSession()` calls `unstable_v2_createSession()` when no prior `sessionId` exists for the given `issueKey`, and `unstable_v2_resumeSession(sessionId)` when one does; the Claude Code SDK owns the full conversation transcript in its own JSONL files under `~/.claude/projects/` — Crew stores only the `sessionId` in the `phases` table as a resume key and does not duplicate the transcript; `isResumed: true` is returned on the resume path so the address-feedback loop can detect it; `resolveSession()` no longer returns `crypto.randomUUID()` without a real SDK call; unit tests covering create-path, resume-path, and SDK error propagation.
+  - **Deliverable:** `packages/crew/src/session.ts` `resolveSession()` calls `unstable_v2_createSession()` when no prior `sessionId` exists for the given `issueKey`, and `unstable_v2_resumeSession(sessionId)` when one does; the Claude Code SDK owns the full conversation transcript in its own JSONL files under `~/.claude/projects/` — Crew stores only the `sessionId` in the `phases` table as a resume key and does not duplicate the transcript; `isResumed: true` is returned on the resume path so the address-feedback loop can detect it; `resolveSession()` no longer returns `crypto.randomUUID()` without a real SDK call; unit tests covering create-path, resume-path, and SDK error propagation.
   - **Acceptance (EARS):**
     - WHEN `resolveSession()` is called with no prior `sessionId` for the given `issueKey`, THE SYSTEM SHALL call `unstable_v2_createSession()` and return `{ sessionId, isResumed: false }`.
     - WHEN `resolveSession()` is called and a `sessionId` already exists for the given `issueKey`, THE SYSTEM SHALL call `unstable_v2_resumeSession(sessionId)` and return `{ sessionId, isResumed: true }`.
@@ -114,7 +114,7 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
   - **Status:** Not started | **Priority:** P0 | **Estimate:** 3
   - **Epic:** CREW-50 | **Labels:** review:#1, type:feature
   - **Depends on:** CREW-50-001
-  - **Deliverable:** `agents/delivery/src/agents/engineer/agent.ts` `run()` builds `AgentDefinition` from `promptPath`, `skillPaths`, `subagentPaths`, `allowedTools`, `mcpServerNames`, and `memory: 'project'`; calls `resolveSession()` from `@daddia/sdk`; executes the session using the SDK; returns a populated `AgentResult` with `success`, `summary`, `artefacts`, and `costUsd`; `buildAuditHook()` attached for every run; the function no longer throws `"not implemented"`. Setting `memory: 'project'` causes the SDK to create and maintain a persistent project memory directory, inject Read/Write/Edit tools into the session, and load `MEMORY.md` into context automatically.
+  - **Deliverable:** `agents/delivery/src/agents/engineer/agent.ts` `run()` builds `AgentDefinition` from `promptPath`, `skillPaths`, `subagentPaths`, `allowedTools`, `mcpServerNames`, and `memory: 'project'`; calls `resolveSession()` from `@daddia/crew`; executes the session using the SDK; returns a populated `AgentResult` with `success`, `summary`, `artefacts`, and `costUsd`; `buildAuditHook()` attached for every run; the function no longer throws `"not implemented"`. Setting `memory: 'project'` causes the SDK to create and maintain a persistent project memory directory, inject Read/Write/Edit tools into the session, and load `MEMORY.md` into context automatically.
   - **Acceptance (EARS):**
     - WHEN `engineer.run(input)` is called, THE SYSTEM SHALL build an `AgentDefinition` using the engineer's `prompt.md`, discovered skill paths, allowed tools list, MCP server names, and `memory: 'project'`.
     - WHEN `engineer.run(input)` is called, THE SYSTEM SHALL call `resolveSession()` and pass the resulting `sessionId` to the SDK execution call.
@@ -233,7 +233,7 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
   - **Status:** Not started | **Priority:** P1 | **Estimate:** 2
   - **Epic:** CREW-50 | **Labels:** review:#12, type:feature
   - **Depends on:** CREW-50-001
-  - **Deliverable:** `packages/sdk/src/loaders.ts` `readSubagentsDir()` output is read and passed to the SDK session as subagent system prompts (or the equivalent SDK concept for `.claude/agents/` files); each persona `run()` implementation passes `subagentPaths` from its `AgentDefinition` through to the session invocation; integration test confirming subagent files are loaded and injected when present; when `subagentPaths` is empty the session still starts without error.
+  - **Deliverable:** `packages/crew/src/loaders.ts` `readSubagentsDir()` output is read and passed to the SDK session as subagent system prompts (or the equivalent SDK concept for `.claude/agents/` files); each persona `run()` implementation passes `subagentPaths` from its `AgentDefinition` through to the session invocation; integration test confirming subagent files are loaded and injected when present; when `subagentPaths` is empty the session still starts without error.
   - **Acceptance (EARS):**
     - WHEN `subagentPaths` in an `AgentDefinition` is non-empty, THE SYSTEM SHALL read each file and inject its contents into the SDK session as a subagent definition before invoking the session.
     - WHEN `subagentPaths` is empty, THE SYSTEM SHALL start the SDK session without error and without attempting to read any subagent files.
@@ -352,7 +352,7 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
       And the workflow is marked as passed
 
     Scenario: Dependency boundary violation fails CI
-      Given a commit where packages/sdk imports from agents/delivery
+      Given a commit where packages/crew imports from agents/delivery
       When pnpm lint runs in CI
       Then dependency-cruiser reports a boundary violation
       And the CI workflow fails
@@ -630,7 +630,7 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
   - **Status:** Done | **Priority:** P2 | **Estimate:** 1
   - **Epic:** CREW-54 | **Labels:** review:#11, type:docs
   - **Depends on:** —
-  - **Deliverable:** `AGENTS.md` updated throughout to replace `@org/sdk`, `@org/contracts`, `@org/webhooks`, `@org/agent-delivery` with `@daddia/sdk`, `@daddia/contracts`, `@daddia/webhooks`, `@daddia/agent-delivery`; no instance of the `@org/` prefix remains in `AGENTS.md`.
+  - **Deliverable:** `AGENTS.md` updated throughout to replace `@org/*` placeholders with the actual package names: `@daddia/crew`, `@daddia/crew/webhooks`, `@daddia/agent-delivery`, `@daddia/agent-code-reviewer`; no instance of the `@org/` prefix remains in `AGENTS.md`. (Superseded in part by CREW-56 consolidation; current docs use the single shared library and subpath.)
   - **Acceptance (EARS):**
     - WHEN `AGENTS.md` is read, THE SYSTEM SHALL reference all packages under the `@daddia/` scope, not `@org/`.
     - THE SYSTEM SHALL NOT contain any `@org/` package reference in `AGENTS.md`.
@@ -644,8 +644,9 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
 
     Scenario: @daddia/ scope is used throughout
       Given AGENTS.md is read
-      When SDK, contracts, webhooks, and agent-delivery package names are inspected
-      Then each reads @daddia/sdk, @daddia/contracts, @daddia/webhooks, @daddia/agent-delivery
+      When shared library and agent package names are inspected
+      Then the shared library is documented as @daddia/crew and @daddia/crew/webhooks
+      And agent units are documented as @daddia/agent-delivery and @daddia/agent-code-reviewer
     ```
 
 ---
@@ -880,9 +881,9 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
     ```gherkin
     Scenario: Remote cache is used when credentials are present
       Given TURBO_TOKEN and TURBO_TEAM are set in CI
-      And packages/sdk and packages/contracts were built in a prior run
-      When a subsequent CI run builds with no changes to those packages
-      Then Turbo reports a cache hit for packages/sdk and packages/contracts
+      And packages/crew was built in a prior run
+      When a subsequent CI run builds with no changes to that package
+      Then Turbo reports a cache hit for packages/crew
       And the build completes faster than a cold build
 
     Scenario: Missing credentials fall back to local cache

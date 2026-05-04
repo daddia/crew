@@ -3,8 +3,8 @@ type: Backlog
 scope: work-package
 version: '0.1'
 owner: daddia
-status: Draft
-last_updated: 2026-05-04
+status: Complete
+last_updated: 2026-05-05
 related:
   - docs/product/product.md
   - docs/product/backlog.md
@@ -15,37 +15,33 @@ related:
 Story-level backlog for `docs/work/crew-package/`, implementing CREW-56 from
 `docs/product/backlog.md`.
 
-> **Note.** CREW-56 is a new epic to be appended to `docs/product/backlog.md`.
-> It is not a remediation item from the 2026-05-04 review; it is a structural
-> decision made after that review to collapse three low-volume packages
-> (`@daddia/contracts`, `@daddia/sdk`, `@daddia/webhooks`) into a single
-> `@daddia/crew` library with subpath exports.
+> **Status (2026-05).** CREW-56 is complete: `packages/crew` is the only shared
+> library (`@daddia/crew` and `@daddia/crew/webhooks`). Stories CREW-56-001
+> through CREW-56-005 are done. The sections below retain the original
+> deliverables and acceptance criteria for traceability.
 
 Companion artefacts: `docs/product/product.md` · `docs/product/backlog.md`
 
 ## 1. Summary
 
-- **Epic.** CREW-56 -- Consolidate packages into `@daddia/crew`
+- **Epic.** CREW-56 — Consolidate packages into `@daddia/crew`
 - **Phase.** Now / Quality
-- **Priority.** P1 (structural prerequisite for new agent units; unblocks CREW-54-001)
-- **Estimate.** 11 points across 5 stories
+- **Outcome.** Delivered (2026-05): 11 points across 5 stories; `packages/crew`
+  is the sole shared package; `AGENTS.md` and dependency-cruiser match the new
+  layout.
 
-**Scope.** Replace three separate workspace packages — `@daddia/contracts`,
-`@daddia/sdk`, `@daddia/webhooks` — with a single `@daddia/crew` package. The
-package exposes two entry points: `@daddia/crew` (types + session helpers + hooks
-+ loaders) and `@daddia/crew/webhooks` (signature verification, replay guard,
-idempotency store). Both agents are migrated to the new import path. The old
-packages are deleted and the tooling configuration is updated to reflect the
-new structure.
+**What shipped.** One workspace package (`@daddia/crew`) with two entry points:
+`@daddia/crew` (types, session helpers, hooks, loaders) and
+`@daddia/crew/webhooks` (signature verification, replay guard, idempotency).
+Both agents import from these entry points. Legacy `packages/contracts`,
+`packages/sdk`, and `packages/webhooks` are removed.
 
-**Rationale.** Three build pipelines and three `package.json` files for nine
-source files and two cross-package dependencies generates coordination overhead
-that exceeds its value at the current repo size. A single package with subpath
-exports preserves the logical separation between core utilities and the
-`better-sqlite3`-bearing webhook utilities without the per-package overhead.
+**Rationale (historical).** A single package with subpath exports preserves the
+separation between core utilities and the `better-sqlite3`-bearing webhook
+helpers without three separate build pipelines.
 
-**Out of scope (this WP).** Adding new exports to `@daddia/crew`; publishing the
-package to a registry; modifying any agent workflow, persona, or prompt logic.
+**Explicitly not part of this WP.** New exports beyond the consolidated surface;
+registry publish; changes to agent workflow, persona, or prompt logic.
 
 ## 2. Conventions
 
@@ -60,8 +56,8 @@ package to a registry; modifying any agent workflow, persona, or prompt logic.
 
 ## 3. Stories
 
-- [ ] **[CREW-56-001] Scaffold `@daddia/crew` package and migrate contracts + sdk source**
-  - **Status:** Not started | **Priority:** P0 | **Estimate:** 3
+- [x] **[CREW-56-001] Scaffold `@daddia/crew` package and migrate contracts + sdk source**
+  - **Status:** Done | **Priority:** P0 | **Estimate:** 3
   - **Epic:** CREW-56 | **Labels:** phase:now, type:refactor
   - **Depends on:** —
   - **Deliverable:** `packages/crew/` exists with `package.json` (`name: "@daddia/crew"`),
@@ -105,8 +101,8 @@ package to a registry; modifying any agent workflow, persona, or prompt logic.
       And the runtime behaviour is identical to the previous @daddia/sdk exports
     ```
 
-- [ ] **[CREW-56-002] Add `./webhooks` subpath export and migrate webhook source**
-  - **Status:** Not started | **Priority:** P0 | **Estimate:** 2
+- [x] **[CREW-56-002] Add `./webhooks` subpath export and migrate webhook source**
+  - **Status:** Done | **Priority:** P0 | **Estimate:** 2
   - **Epic:** CREW-56 | **Labels:** phase:now, type:refactor
   - **Depends on:** CREW-56-001
   - **Deliverable:** `packages/crew/src/webhooks/` contains all source previously
@@ -143,8 +139,8 @@ package to a registry; modifying any agent workflow, persona, or prompt logic.
       Then verifySignature and createIdempotencyStore are not available on that import
     ```
 
-- [ ] **[CREW-56-003] Migrate `agents/delivery` to import from `@daddia/crew`**
-  - **Status:** Not started | **Priority:** P1 | **Estimate:** 3
+- [x] **[CREW-56-003] Migrate `agents/delivery` to import from `@daddia/crew`**
+  - **Status:** Done | **Priority:** P1 | **Estimate:** 3
   - **Epic:** CREW-56 | **Labels:** phase:now, type:refactor
   - **Depends on:** CREW-56-001, CREW-56-002
   - **Deliverable:** Every `import … from "@daddia/contracts"`, `import … from "@daddia/sdk"`,
@@ -182,8 +178,8 @@ package to a registry; modifying any agent workflow, persona, or prompt logic.
       And no previously-passing test now fails
     ```
 
-- [ ] **[CREW-56-004] Migrate `agents/code-reviewer` to import from `@daddia/crew`**
-  - **Status:** Not started | **Priority:** P1 | **Estimate:** 1
+- [x] **[CREW-56-004] Migrate `agents/code-reviewer` to import from `@daddia/crew`**
+  - **Status:** Done | **Priority:** P1 | **Estimate:** 1
   - **Epic:** CREW-56 | **Labels:** phase:now, type:refactor
   - **Depends on:** CREW-56-001
   - **Deliverable:** Every `import … from "@daddia/contracts"` and
@@ -215,8 +211,8 @@ package to a registry; modifying any agent workflow, persona, or prompt logic.
       And no import path contains "@daddia/crew/webhooks"
     ```
 
-- [ ] **[CREW-56-005] Delete legacy packages, update dep-cruiser rules, and update AGENTS.md**
-  - **Status:** Not started | **Priority:** P1 | **Estimate:** 2
+- [x] **[CREW-56-005] Delete legacy packages, update dep-cruiser rules, and update AGENTS.md**
+  - **Status:** Done | **Priority:** P1 | **Estimate:** 2
   - **Epic:** CREW-56 | **Labels:** phase:now, type:hygiene
   - **Depends on:** CREW-56-003, CREW-56-004
   - **Deliverable:** `packages/contracts/`, `packages/sdk/`, and
@@ -282,24 +278,26 @@ package to a registry; modifying any agent workflow, persona, or prompt logic.
 
 | Story | Files touched |
 | --- | --- |
-| CREW-56-001 | `packages/crew/` (new), `packages/contracts/` (source stays until CREW-56-005), `packages/sdk/` (source stays until CREW-56-005) |
+| CREW-56-001 | `packages/crew/` (scaffold; contracts + sdk sources merged here) |
 | CREW-56-002 | `packages/crew/src/webhooks/` (new), `packages/crew/package.json` |
 | CREW-56-003 | `agents/delivery/src/**`, `agents/delivery/package.json` |
 | CREW-56-004 | `agents/code-reviewer/src/**`, `agents/code-reviewer/package.json` |
-| CREW-56-005 | `packages/contracts/` (delete), `packages/sdk/` (delete), `packages/webhooks/` (delete), `.dependency-cruiser.cjs`, `AGENTS.md` |
+| CREW-56-005 | Legacy package dirs removed; `.dependency-cruiser.cjs`, `AGENTS.md`, root tooling touched |
 
 ### Definition of Done
 
 A story in this backlog is done when:
 
-- [ ] All EARS statements hold and every Gherkin scenario passes.
-- [ ] `pnpm typecheck` exits with code 0 for every package or agent touched.
-- [ ] `pnpm test` exits with code 0; no previously-passing test now fails.
-- [ ] `pnpm lint` (dependency-cruiser) exits with code 0 from the repo root.
-- [ ] Code review approved by at least one engineer.
-- [ ] PR merged into main.
+- [x] All EARS statements hold and every Gherkin scenario passes.
+- [x] `pnpm typecheck` exits with code 0 for every package or agent touched.
+- [x] `pnpm test` exits with code 0; no previously-passing test now fails.
+- [x] `pnpm lint` (dependency-cruiser) exits with code 0 from the repo root.
+- [x] Code review approved by at least one engineer.
+- [x] PR merged into main.
 
 ## 5. Dependency graph
+
+**Outcome.** CREW-56-001 through CREW-56-005 are complete on main.
 
 ```text
 CREW-56-001 (packages/crew scaffold — contracts + sdk source)
@@ -311,27 +309,17 @@ CREW-56-001 (packages/crew scaffold — contracts + sdk source)
                   +-- CREW-56-005
 ```
 
-**Critical path:** CREW-56-001 → CREW-56-002 → CREW-56-003 → CREW-56-005
-(9 points, 4 stories in sequence)
+**Historical critical path:** CREW-56-001 → CREW-56-002 → CREW-56-003 → CREW-56-005
+(nine points across four sequenced stories). CREW-56-002 and CREW-56-004 could run in parallel after CREW-56-001; CREW-56-005 gated on CREW-56-003 and CREW-56-004.
 
-**Parallelisation.** Once CREW-56-001 merges, CREW-56-002 and CREW-56-004 can
-be worked simultaneously. CREW-56-005 is the single merge gate that requires
-CREW-56-003 and CREW-56-004 both complete first.
-
-**Minimum viable slice.** CREW-56-001 + CREW-56-002 delivers a working
-`@daddia/crew` package that any new agent unit can depend on immediately, before
-the legacy packages are removed.
+**Minimum viable slice (historical).** CREW-56-001 + CREW-56-002 delivered a
+usable `@daddia/crew` before legacy package deletion.
 
 ## 6. Risks
 
-| ID | Risk | Likelihood | Impact | Mitigation |
-| --- | --- | --- | --- | --- |
-| R1 | dep-cruiser `no-contracts-importing-packages` rule references a path that no longer exists after CREW-56-005, causing a silent lint no-op rather than an error | Low | Low | Verify `pnpm lint` still catches a synthetic boundary violation after the rule update in CREW-56-005 |
-| R2 | A new agent added between CREW-56-001 and CREW-56-005 is written to depend on the legacy packages, creating a merge conflict during cleanup | Low | Medium | Merge CREW-56-001 through CREW-56-005 in a single short-lived branch or communicate the timeline before starting |
-| R3 | TypeScript project references or `turbo.json` pipeline config reference `packages/sdk` or `packages/contracts` by path and silently break after deletion | Low | Medium | Check `turbo.json`, root `tsconfig.json`, and all agent `tsconfig.json` files for path references before merging CREW-56-005 |
-
-Technical and architecture risks are authoritative in `docs/product/backlog.md`
-and are not duplicated here.
+Risks R1–R3 were closed with CREW-56-005: the obsolete dep-cruiser rule was
+removed, agents use `@daddia/crew` only, and tooling references `packages/crew`.
+Further runtime risks are tracked in `docs/product/backlog.md`.
 
 ## 7. Handoff
 
@@ -345,9 +333,8 @@ and are not duplicated here.
 
 **What comes next:**
 
-- CREW-54-001 (fix AGENTS.md `@org/` package names) is superseded by
-  CREW-56-005 — the AGENTS.md update in CREW-56-005 should be coordinated with
-  or replace CREW-54-001 to avoid double-editing the same section.
+- CREW-54-001 (`AGENTS.md` names) was superseded by CREW-56: canonical package
+  documentation is `@daddia/crew`, `@daddia/crew/webhooks`, and `@daddia/agent-*`.
 - Any new agent unit added after this WP should declare only `@daddia/crew`
   (and optionally `@daddia/crew/webhooks`) as its shared library dependency.
 - Future additions to the shared library (observability, memory helpers, etc.)
