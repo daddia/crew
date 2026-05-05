@@ -1,19 +1,12 @@
 ---
 type: Runbook
-scope: work-package
 version: '0.1'
-owner: daddia
 status: Active
-last_updated: 2026-05-05
-related:
-  - docs/work/crew-package/backlog.md
-  - packages/crew/package.json
 ---
 
-# Publish Runbook -- `@daddia/crew` (CREW-56-006)
+# Publish Runbook
 
-Manual publish steps for `@daddia/crew`. Run these once to prove private
-scoped access works before wiring automated releases in CREW-56-007.
+Manual publish steps for `@daddia/crew`.
 
 ---
 
@@ -21,22 +14,19 @@ scoped access works before wiring automated releases in CREW-56-007.
 
 | Requirement | Notes |
 | --- | --- |
-| Node.js ≥ 22 | Match the version used in the repo |
+| Node.js ≥ 24 | Match the version used in the repo |
 | pnpm ≥ 10 | `npm i -g pnpm` if missing |
 | npm CLI | Bundled with Node; used for `npm publish` |
 | npm account | Must be a member of the `@daddia` npm org with **publish** rights |
 | `NPM_TOKEN` | Automation token (type: **Publish**) from npmjs.com → Access Tokens |
 
-To request org access, contact a `@daddia` org owner on npmjs.com. Read
-access for install (CREW-56-008) requires an **Automation** token with
-read-only scope.
+To request org access, contact a `@daddia` org owner on npmjs.com. Read access for install (CREW-56-008) requires an **Automation** token with read-only scope.
 
 ---
 
 ## 1. Authenticate
 
-`.npmrc` is gitignored in this repo. Create it locally in the repo root before
-publishing; delete it after.
+`.npmrc` is gitignored in this repo. Create it locally in the repo root before publishing; delete it after.
 
 ```sh
 # Write .npmrc scoping @daddia to the public npm registry and injecting the token.
@@ -90,9 +80,7 @@ cd packages/crew
 npm pack --dry-run
 ```
 
-Expected output should list only files under `dist/` plus `package.json`. If
-`src/` or `tests/` appear, the `files` field is misconfigured — stop and fix
-before proceeding.
+Expected output should list only files under `dist/` plus `package.json`. If `src/` or `tests/` appear, the `files` field is misconfigured — stop and fix before proceeding.
 
 ---
 
@@ -100,16 +88,15 @@ before proceeding.
 
 ```sh
 # Still inside packages/crew:
-npm publish --access restricted
+npm publish --access public
 ```
 
-`--access restricted` is redundant (it matches `publishConfig.access` in
-`package.json`) but explicit for safety.
+`--access public` is redundant (it matches `publishConfig.access` in `package.json`) but explicit for safety.
 
 Expected output:
 
 ```
-npm notice Publishing to https://registry.npmjs.org/ with tag latest and restricted access
+npm notice Publishing to https://registry.npmjs.org/ with tag latest and public access
 + @daddia/crew@0.1.0
 ```
 
@@ -117,17 +104,11 @@ npm notice Publishing to https://registry.npmjs.org/ with tag latest and restric
 
 ## 5. Verify
 
-From a separate directory (outside the monorepo) with only a valid **read**
-token configured:
+From a separate directory (outside the monorepo):
 
 ```sh
 mkdir /tmp/crew-verify && cd /tmp/crew-verify
 npm init -y
-
-# Write a minimal .npmrc for read access:
-echo "@daddia:registry=https://registry.npmjs.org/" > .npmrc
-echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN_READ}" >> .npmrc
-
 npm install @daddia/crew@0.1.0
 ```
 
@@ -173,11 +154,9 @@ unset NPM_TOKEN
 | --- | --- | --- |
 | Package publisher (this runbook) | Automation — Publish | `@daddia` org, `@daddia/crew` package |
 | CI pipeline (CREW-56-007) | Automation — Publish | `@daddia` org, stored as `NPM_TOKEN` secret |
-| Agent consumer / install (CREW-56-008) | Automation — Read-only | `@daddia` org |
+| Agent consumer / install (CREW-56-008) | None — public package | `npm install @daddia/crew` with no token |
 
 All tokens are created at [npmjs.com → Access Tokens](https://www.npmjs.com/settings/tokens).
-The `@daddia` org team that controls package access is managed at
-[npmjs.com/org/daddia/teams](https://www.npmjs.com/org/daddia/teams).
 
 ---
 
