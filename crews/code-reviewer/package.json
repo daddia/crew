@@ -1,28 +1,31 @@
 {
-  "name": "@daddia/agent-delivery",
-  "version": "0.0.0",
-  "private": true,
+  "name": "@daddia/crew-code-reviewer",
+  "version": "0.1.0",
   "type": "module",
-  "main": "./dist/index.js",
+  "bin": {
+    "code-reviewer": "./dist/cli.js"
+  },
+  "main": "./dist/cli.js",
+  "files": [
+    "dist",
+    "src/agents/code-quality/prompt.md",
+    "src/agents/code-quality/.claude"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "start": "node dist/index.js",
-    "dev": "node --watch dist/index.js",
+    "start": "node dist/cli.js",
+    "dev": "node --watch dist/cli.js",
     "test": "vitest run",
     "clean": "rm -rf dist"
   },
   "dependencies": {
     "@anthropic-ai/claude-code": "^2.1.126",
-    "@daddia/crew": "workspace:*",
-    "@hono/node-server": "^2.0.1",
-    "better-sqlite3": "^12.9.0",
-    "hono": "^4.12.16"
+    "@daddia/crew": "workspace:*"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
     "@repo/vitest-config": "workspace:*",
-    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^24.12.2",
     "typescript": "^6.0.3",
     "vitest": "^4.1.5"

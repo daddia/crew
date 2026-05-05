@@ -1,5 +1,5 @@
 # Build context is the workspace root.
-# docker build -f agents/delivery/Dockerfile -t crew-delivery .
+# docker build -f crews/delivery/Dockerfile -t crew-delivery .
 
 FROM node:22-slim AS base
 
@@ -14,7 +14,7 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
 COPY tooling/typescript-config/package.json ./tooling/typescript-config/
 COPY tooling/vitest-config/package.json      ./tooling/vitest-config/
 COPY packages/crew/package.json              ./packages/crew/
-COPY agents/delivery/package.json            ./agents/delivery/
+COPY crews/delivery/package.json             ./crews/delivery/
 
 RUN pnpm install --frozen-lockfile
 
@@ -22,16 +22,16 @@ RUN pnpm install --frozen-lockfile
 COPY tsconfig.base.json ./
 COPY tooling/           ./tooling/
 COPY packages/          ./packages/
-COPY agents/delivery/   ./agents/delivery/
+COPY crews/delivery/    ./crews/delivery/
 
 # Build in dependency order.
 RUN pnpm --filter @repo/vitest-config        build
 RUN pnpm --filter @daddia/crew                 build
-RUN pnpm --filter @daddia/agent-delivery       build
+RUN pnpm --filter @daddia/crew-delivery        build
 
 # Mirror markdown assets (prompts, skills, subagents) into dist so that
 # __dirname-relative lookups in agent.ts resolve correctly at runtime.
-RUN set -e; cd agents/delivery; \
+RUN set -e; cd crews/delivery; \
     for f in $(find src -name "*.md"); do \
       rel="${f#src/}"; \
       mkdir -p "dist/$(dirname "$rel")"; \
@@ -40,7 +40,7 @@ RUN set -e; cd agents/delivery; \
 
 # Bundle the service with its production dependencies into a self-contained
 # directory. Workspace dependencies are bundled from their built dist/.
-RUN cd agents/delivery && pnpm deploy /deploy
+RUN cd crews/delivery && pnpm deploy /deploy
 
 # ---- runtime image ----
 FROM node:22-slim AS runtime

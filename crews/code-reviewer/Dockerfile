@@ -1,5 +1,5 @@
 # Build context is the workspace root.
-# docker build -f agents/code-reviewer/Dockerfile -t crew-code-reviewer .
+# docker build -f crews/code-reviewer/Dockerfile -t crew-code-reviewer .
 
 FROM node:22-slim AS base
 RUN npm install -g pnpm@9
@@ -11,7 +11,7 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
 COPY tooling/typescript-config/package.json ./tooling/typescript-config/
 COPY tooling/vitest-config/package.json ./tooling/vitest-config/
 COPY packages/crew/package.json ./packages/crew/
-COPY agents/code-reviewer/package.json ./agents/code-reviewer/
+COPY crews/code-reviewer/package.json ./crews/code-reviewer/
 
 RUN pnpm install --frozen-lockfile
 
@@ -19,12 +19,12 @@ RUN pnpm install --frozen-lockfile
 COPY tsconfig.base.json ./
 COPY tooling/ ./tooling/
 COPY packages/ ./packages/
-COPY agents/code-reviewer/ ./agents/code-reviewer/
+COPY crews/code-reviewer/ ./crews/code-reviewer/
 
 # Build in dependency order.
 RUN pnpm --filter @repo/vitest-config build
 RUN pnpm --filter @daddia/crew build
-RUN pnpm --filter @daddia/agent-code-reviewer build
+RUN pnpm --filter @daddia/crew-code-reviewer build
 
 # ---- runtime image ----
 FROM node:22-slim AS runtime
@@ -33,9 +33,9 @@ WORKDIR /app
 
 COPY --from=base /workspace/node_modules ./node_modules
 COPY --from=base /workspace/packages ./packages
-COPY --from=base /workspace/agents/code-reviewer ./agents/code-reviewer
+COPY --from=base /workspace/crews/code-reviewer ./crews/code-reviewer
 
-WORKDIR /app/agents/code-reviewer
+WORKDIR /app/crews/code-reviewer
 
 ENV NODE_ENV=production
 

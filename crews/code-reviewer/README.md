@@ -1,6 +1,6 @@
-# agent: code-reviewer
+# crew: code-reviewer
 
-A publishable CLI unit that reviews GitLab merge requests using the Claude Agent SDK. It runs to completion and exits — no server, no database, no webhook handlers.
+A publishable CLI crew that reviews GitLab merge requests using the Claude Agent SDK. It runs to completion and exits — no server, no database, no webhook handlers.
 
 ## What it does
 
@@ -26,7 +26,7 @@ ai-review:
     ANTHROPIC_API_KEY: $ANTHROPIC_API_KEY
     GITLAB_TOKEN: $AI_REVIEWER_BOT_TOKEN
   script:
-    - npx -y @daddia/agent-code-reviewer@^1
+    - npx -y @daddia/crew-code-reviewer@^1
   allow_failure: true
 ```
 
@@ -42,7 +42,7 @@ cd ../../         # workspace root
 pnpm install
 pnpm build
 
-cd agents/code-reviewer
+cd crews/code-reviewer
 pnpm start
 ```
 

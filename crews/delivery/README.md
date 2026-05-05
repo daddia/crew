@@ -1,6 +1,6 @@
-# agent: delivery
+# crew: delivery
 
-The delivery unit runs the Track 4 autonomous software delivery loop.
+The delivery crew runs the Track 4 autonomous software delivery loop.
 
 ## What it does
 
@@ -15,12 +15,12 @@ Human feedback injected as MR comments is handled by `POST /webhooks/gitlab`, wh
 
 ## Deploying to Railway
 
-`railway.json` lives alongside this agent. Because the Dockerfile copies from `packages/` and `tooling/`, it needs the **repository root** as its Docker build context. Configure the Railway service with two settings:
+`railway.json` lives alongside this crew. Because the Dockerfile copies from `packages/` and `tooling/`, it needs the **repository root** as its Docker build context. Configure the Railway service with two settings:
 
 | Dashboard field | Value |
 |---|---|
 | Root Directory | *(leave blank — defaults to repo root)* |
-| Config File Path | `agents/delivery/railway.json` |
+| Config File Path | `crews/delivery/railway.json` |
 
 **Required environment variables** (set in the Railway service dashboard):
 
@@ -54,7 +54,7 @@ cd ../../         # workspace root
 pnpm install
 pnpm build
 
-cd agents/delivery
+cd crews/delivery
 pnpm start
 ```
 
@@ -70,9 +70,9 @@ See [.env.example](.env.example) for all required variables.
 
 ## MCP servers
 
-MCP server definitions live in [mcp.json](mcp.json). The unit starts `atlassian` and `gitlab` as child processes.
+MCP server definitions live in [mcp.json](mcp.json). The crew starts `atlassian` and `gitlab` as child processes.
 
-**Note for local dev:** The workspace-level `.claude/` is not automatically aware of this unit's `mcp.json`. Run the server directly (`pnpm start`) or point your editor's Claude integration at `agents/delivery/mcp.json` explicitly. This inconsistency is a known dev-experience gap for MVP; it will be addressed when a second unit is added.
+**Note for local dev:** The workspace-level `.claude/` is not automatically aware of this crew's `mcp.json`. Run the server directly (`pnpm start`) or point your editor's Claude integration at `crews/delivery/mcp.json` explicitly. This inconsistency is a known dev-experience gap for MVP; it will be addressed when a second crew is added.
 
 ## Adding a skill
 

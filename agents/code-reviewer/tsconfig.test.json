@@ -1,9 +1,0 @@
-{
-  "extends": "@repo/typescript-config/library",
-  "compilerOptions": {
-    "outDir": "./dist",
-    "rootDir": "./"
-  },
-  "include": ["src", "tests"],
-  "exclude": ["node_modules", "dist"]
-}

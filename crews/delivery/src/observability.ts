@@ -1,6 +1,6 @@
 /**
  * Structured JSON logging to stdout.
- * OTel spans are deferred until a second unit requires them.
+ * OTel spans are deferred until a second crew requires them.
  */
 
 export type LogLevel = "debug" | "info" | "warn" | "error";
