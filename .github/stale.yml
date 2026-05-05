@@ -1,0 +1,43 @@
+daysUntilStale: 60
+daysUntilClose: 14
+
+exemptLabels:
+  - 'pinned'
+  - 'security'
+  - 'bug'
+  - 'enhancement'
+  - 'good first issue'
+  - 'help wanted'
+  - 'roadmap'
+  - 'wontfix'
+
+staleLabel: 'stale'
+
+markComment: >
+  This issue has been automatically marked as stale because it has not had recent activity. It will be closed if no further activity occurs within 14 days. If this issue is still relevant, please comment to keep it open.
+
+closeComment: >
+  This issue has been automatically closed due to inactivity. If you believe this issue is still relevant, please reopen it or create a new issue with updated information.
+
+daysUntilPrStale: 30
+daysUntilPrClose: 14
+
+exemptPrLabels:
+  - 'pinned'
+  - 'security'
+  - 'work-in-progress'
+  - 'wip'
+  - 'dependencies'
+  - 'do-not-merge'
+
+stalePrLabel: 'stale'
+
+markPrComment: >
+  This pull request has been automatically marked as stale because it has not had recent activity. It will be closed if no further activity occurs within 14 days. If this pull request is still relevant, please comment or push new commits to keep it open.
+
+closePrComment: >
+  This pull request has been automatically closed due to inactivity. If you believe this pull request is still relevant, please reopen it or create a new pull request.
+
+exemptDraftPr: true
+operationsPerRun: 30
+removeStaleWhenUpdated: true

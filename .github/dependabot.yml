@@ -1,0 +1,16 @@
+version: 2
+
+updates:
+  # pnpm workspace root — Dependabot reads pnpm-workspace.yaml and updates
+  # all workspace members from the single root lockfile.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
