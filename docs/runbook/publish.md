@@ -153,16 +153,14 @@ unset NPM_TOKEN
 | Role | Token type | Scope needed |
 | --- | --- | --- |
 | Package publisher (this runbook) | Automation — Publish | `@daddia` org, `@daddia/crew` package |
-| CI pipeline (CREW-56-007) | Automation — Publish | `@daddia` org, stored as `NPM_TOKEN` secret |
-| Agent consumer / install (CREW-56-008) | None — public package | `npm install @daddia/crew` with no token |
+| CI pipeline | Automation — Publish | `@daddia` org, stored as `NPM_TOKEN` secret |
+| Agent consumer / install | None — public package | `npm install @daddia/crew` with no token |
 
 All tokens are created at [npmjs.com → Access Tokens](https://www.npmjs.com/settings/tokens).
 
 ---
 
-## Version policy (until CREW-56-007)
+## Version policy
 
 Bump `packages/crew/package.json` → `version` manually before each release.
-Follow semver: breaking API changes → major, new exports → minor, fixes →
-patch. Once Changesets (CREW-56-007) is in place, version bumps are
-automated via changeset files.
+Follow semver: breaking API changes → major, new exports → minor, fixes → patch. Once Changesets (CREW-56-007) is in place, version bumps are automated via changeset files.
