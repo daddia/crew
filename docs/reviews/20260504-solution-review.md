@@ -22,10 +22,10 @@ The primary concern is that **no agent actually runs**: all four `run()` impleme
 Every persona (`engineer`, `senior-engineer`, `tech-lead`, `code-quality`) throws at runtime:
 
 ```
-agents/delivery/src/agents/engineer/agent.ts:44
-agents/delivery/src/agents/senior-engineer/agent.ts:44
-agents/delivery/src/agents/tech-lead/agent.ts:44
-agents/code-reviewer/src/agents/code-quality/agent.ts:42
+crews/delivery/src/agents/engineer/agent.ts:44
+crews/delivery/src/agents/senior-engineer/agent.ts:44
+crews/delivery/src/agents/tech-lead/agent.ts:44
+crews/code-reviewer/src/agents/code-quality/agent.ts:42
 ```
 
 The `AgentDefinition` is constructed correctly (prompt, skills, tools, MCP servers). The missing step is calling the `@anthropic-ai/claude-code` SDK to create a session, run the query, and return a structured `AgentResult`. This is the top priority.
@@ -41,7 +41,7 @@ The function never calls the Claude Code SDK. It always returns `crypto.randomUU
 ### 3. Code-reviewer Dockerfile installs `pnpm@9` against a pnpm 10 lockfile
 
 ```
-agents/code-reviewer/Dockerfile:2
+crews/code-reviewer/Dockerfile:2
 ```
 
 ```dockerfile
@@ -65,8 +65,8 @@ No `.github/workflows/` or equivalent CI config exists. `AGENTS.md` states "CI f
 ### 5. Duplicate SQLite connections to the same file
 
 ```
-agents/delivery/src/state.ts:39      (createStateStore — opens DB_PATH)
-agents/delivery/src/idempotency.ts:10 (getIdempotency — also opens DB_PATH)
+crews/delivery/src/state.ts:39      (createStateStore — opens DB_PATH)
+crews/delivery/src/idempotency.ts:10 (getIdempotency — also opens DB_PATH)
 packages/crew/src/webhooks/idempotency.ts:30
 ```
 
@@ -75,7 +75,7 @@ packages/crew/src/webhooks/idempotency.ts:30
 ### 6. `finishPhase()` ignores the `phase` argument
 
 ```
-agents/delivery/src/state.ts:105
+crews/delivery/src/state.ts:105
 ```
 
 ```typescript
@@ -90,9 +90,9 @@ The `UPDATE` finds the phase by `WHERE issue_key = ? AND finished_at IS NULL ORD
 ### 7. No startup validation of required environment variables
 
 ```
-agents/delivery/src/integrations/jira.ts:10
-agents/delivery/src/integrations/gitlab.ts:10
-agents/delivery/src/index.ts
+crews/delivery/src/integrations/jira.ts:10
+crews/delivery/src/integrations/gitlab.ts:10
+crews/delivery/src/index.ts
 ```
 
 `ATLASSIAN_BASE_URL`, `ATLASSIAN_EMAIL`, `ATLASSIAN_API_TOKEN`, `GITLAB_PERSONAL_ACCESS_TOKEN`, `ANTHROPIC_API_KEY` all silently default to `""`. A misconfigured deployment will start successfully and only fail when the first workflow runs, making debugging harder. Add an eager validation block to `index.ts`:
@@ -108,8 +108,8 @@ if (missing.length) { log.error('server.missing-env', { missing }); process.exit
 ### 8. No workflow crash recovery
 
 ```
-agents/delivery/src/handlers/jira.ts:52
-agents/delivery/src/handlers/gitlab.ts:54
+crews/delivery/src/handlers/jira.ts:52
+crews/delivery/src/handlers/gitlab.ts:54
 ```
 
 Both handlers use `setImmediate()` fire-and-forget. If the server restarts while a workflow is mid-flight, the in-progress story is silently abandoned. The `phases` table already records `started_at`/`finished_at` pairs that can detect this: rows with `started_at IS NOT NULL AND finished_at IS NULL` are interrupted phases. A startup recovery scan over these rows (or a persistent job queue like BullMQ/pg-boss) would prevent silent story loss.
@@ -117,8 +117,8 @@ Both handlers use `setImmediate()` fire-and-forget. If the server restarts while
 ### 9. MCP server versions are unpinned in `mcp.json`
 
 ```
-agents/delivery/mcp.json
-agents/code-reviewer/mcp.json
+crews/delivery/mcp.json
+crews/code-reviewer/mcp.json
 ```
 
 ```json
@@ -130,8 +130,8 @@ agents/code-reviewer/mcp.json
 ### 10. `createMr()` has no idempotency guard
 
 ```
-agents/delivery/src/integrations/gitlab.ts:44
-agents/delivery/src/workflow.ts:42
+crews/delivery/src/integrations/gitlab.ts:44
+crews/delivery/src/workflow.ts:42
 ```
 
 If the workflow crashes after MR creation but before `finishPhase("open-mr")` records the verdict, a replay will call `createMr()` again and create a duplicate MR on the same branch (which will 422 or create a second MR on a different branch). Fix by calling `GET /merge_requests?source_branch=<branchName>` before `POST /merge_requests` and returning the existing MR URL if found.
@@ -160,8 +160,8 @@ Every persona builds an `AgentDefinition` with `subagentPaths`, but there is no 
 ### 13. Test mock `makeState()` has a spurious `db` property
 
 ```
-agents/delivery/tests/workflow.test.ts:36
-agents/delivery/tests/handlers.jira.test.ts:27
+crews/delivery/tests/workflow.test.ts:36
+crews/delivery/tests/handlers.jira.test.ts:27
 ```
 
 ```typescript
@@ -207,7 +207,7 @@ This disables the experimental agent teams feature in the project's Claude Code 
 ### 17. Auth header is constructed eagerly at module load in `integrations/jira.ts`
 
 ```
-agents/delivery/src/integrations/jira.ts:14
+crews/delivery/src/integrations/jira.ts:14
 ```
 
 ```typescript
@@ -219,7 +219,7 @@ This runs at import time before any env var validation (see #7). If `EMAIL` or `
 ### 18. GitLab `extractMrIid()` is fragile for cross-project MR URLs
 
 ```
-agents/delivery/src/integrations/gitlab.ts:74
+crews/delivery/src/integrations/gitlab.ts:74
 ```
 
 ```typescript
@@ -246,13 +246,13 @@ The Hono server has no rate limiting. Signature verification protects against un
 .env.example (root level only)
 ```
 
-The root `.env.example` only documents `ANTHROPIC_API_KEY`. Neither `agents/delivery/.env.example` nor `agents/code-reviewer/.env.example` exists, leaving contributors to discover required vars from source code. Add per-agent example files documenting every required and optional env var with descriptions.
+The root `.env.example` only documents `ANTHROPIC_API_KEY`. Neither `crews/delivery/.env.example` nor `crews/code-reviewer/.env.example` exists, leaving contributors to discover required vars from source code. Add per-agent example files documenting every required and optional env var with descriptions.
 
 ### 22. `pnpm-lock.yaml` is excluded from Dockerfile `COPY`
 
 ```
-agents/code-reviewer/Dockerfile:13
-agents/delivery/Dockerfile:12
+crews/code-reviewer/Dockerfile:13
+crews/delivery/Dockerfile:12
 ```
 
 Both use `pnpm-lock.yaml*` (glob with optional suffix). This is defensive coding for the case where no lockfile exists, but with `--frozen-lockfile` a missing lockfile is a hard error anyway. Removing the glob and using a plain `COPY pnpm-lock.yaml ./` makes the intent explicit and prevents the layer from silently installing without a lockfile.
@@ -260,7 +260,7 @@ Both use `pnpm-lock.yaml*` (glob with optional suffix). This is defensive coding
 ### 23. `workflow.ts` loop bound is off-by-one in documentation
 
 ```
-agents/delivery/src/workflow.ts:55
+crews/delivery/src/workflow.ts:55
 ```
 
 The loop runs `for (let iteration = 0; iteration < REFACTOR_LOOP_CAP + 1; iteration++)`. With `REFACTOR_LOOP_CAP=2`, this allows 3 peer-review calls (iterations 0, 1, 2) but only 2 address-feedback calls (the check `if (iteration >= REFACTOR_LOOP_CAP) break` prevents the third). The test in `workflow.test.ts` correctly documents `cap + 1` senior-engineer calls, but AGENTS.md says "The cap applies to both the internal peer-review loop and the external-comment path" without specifying the asymmetry. Clarify the semantics in a comment.
@@ -276,7 +276,7 @@ Turbo is configured but uses local cache only. For team builds and CI, configuri
 ### 25. `getMrDiff()` fetches the full diff without pagination
 
 ```
-agents/delivery/src/integrations/gitlab.ts:59
+crews/delivery/src/integrations/gitlab.ts:59
 ```
 
 `GET /merge_requests/:iid/diffs` returns all diffs in one call. For large MRs this can be a multi-MB response that gets passed directly into the agent context. Add a file-count guard (similar to `code-reviewer`'s `diffFileCap`) and a total diff size cap before feeding to the agent.

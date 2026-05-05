@@ -6,7 +6,7 @@ export type {
   AgentDefinition,
 } from "./agent.js";
 
-export type { AgentUnit } from "./unit.js";
+export type { AgentCrew } from "./unit.js";
 
 export { resolveSession } from "./session.js";
 export type { SessionOptions, ActiveSession } from "./session.js";
@@ -21,3 +21,8 @@ export {
   IterationCapReached,
 } from "./hooks.js";
 export type { ToolUseEvent, PostToolUseHandler } from "./hooks.js";
+
+export { createLogger } from "./observability/index.js";
+export type { Logger, LogLevel, LogRecord } from "./observability/index.js";
+
+export { seedProjectMemory, memoryPath } from "./memory/index.js";

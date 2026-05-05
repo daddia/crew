@@ -1,13 +1,13 @@
-# Adding an Agent Team Unit
+# Adding an Agent Crew
 
-A team unit is a deployable agent service containing two or more personas that hand off work in a defined sequence. The delivery unit (`engineer → senior-engineer → tech-lead`) is the canonical example.
+An agent crew is a deployable agent service containing two or more personas that hand off work in a defined sequence. The delivery crew (`engineer → senior-engineer → tech-lead`) is the canonical example.
 
-Use a team unit when:
+Use an agent crew when:
 - the workflow has distinct phases with different authority or skill requirements (implement, review, approve);
 - no single persona should both produce and gate output (separation of concerns);
 - a bounded feedback loop needs a separate actor to address and re-review.
 
-Use a solo persona (see `adding-a-persona.md`) when a unit does one job end-to-end with no internal handoff.
+Use a solo persona (see `adding-a-persona.md`) when a crew does one job end-to-end with no internal handoff.
 
 ## 1. Design the team
 
@@ -23,22 +23,22 @@ Before writing code, define the roster in terms of phases, not job titles.
 
 Keep the roster minimal. A two-persona team (producer + gatekeeper) covers most workflows.
 
-## 2. Scaffold the unit
+## 2. Scaffold the crew
 
 ```bash
-cp -r agents/delivery agents/<name>
+cp -r crews/delivery crews/<name>
 ```
 
-Update `package.json` to set `"name": "@daddia/agent-<name>"`.
+Update `package.json` to set `"name": "@daddia/crew-<name>"`.
 
-`pnpm-workspace.yaml` already globs `agents/*`, so no workspace change is needed. Copy and adapt the delivery unit's `Dockerfile` — the build context must be the workspace root so `packages/*` are available. Add a build and test job for the new unit in the pipeline.
+`pnpm-workspace.yaml` already globs `crews/*`, so no workspace change is needed. Copy and adapt the delivery crew's `Dockerfile` — the build context must be the workspace root so `packages/*` are available. Add a build and test job for the new crew in the pipeline.
 
 ## 3. Directory layout
 
-Each persona gets its own directory under the unit's `agents/` folder:
+Each persona gets its own directory under the crew's `agents/` folder:
 
 ```
-agents/<unit>/src/
+crews/<crew>/src/
   agents/
     <producer>/
       agent.ts           # exports const <producer>: Agent
@@ -60,7 +60,7 @@ agents/<unit>/src/
   state.ts                # Phase type lists every phase in the workflow
 ```
 
-Only `workflow.ts` imports persona modules. Personas never import each other. Units must not import from each other — only `packages/*` are shared. Run `pnpm lint` to verify the boundary is clean from day one.
+Only `workflow.ts` imports persona modules. Personas never import each other. Crews must not import from each other — only `packages/*` are shared. Run `pnpm lint` to verify the boundary is clean from day one.
 
 ## 4. Write the workflow
 
@@ -153,7 +153,7 @@ Each persona must declare a minimal `allowedTools` list. A reviewer should have 
 
 ## Checklist
 
-- [ ] `package.json` name is `@daddia/agent-<name>`
+- [ ] `package.json` name is `@daddia/crew-<name>`
 - [ ] `Dockerfile` builds from workspace root
 - [ ] Phase sequence is documented in a comment at the top of `workflow.ts`
 - [ ] `Phase` union in `state.ts` covers every phase name used in `workflow.ts`
@@ -164,4 +164,4 @@ Each persona must declare a minimal `allowedTools` list. A reviewer should have 
 - [ ] Tool-scoping test added for each persona
 - [ ] `pnpm typecheck` passes
 - [ ] `pnpm test` passes
-- [ ] `pnpm lint` passes (no cross-unit imports)
+- [ ] `pnpm lint` passes (no cross-crew imports)

@@ -4,18 +4,18 @@ This file gives AI coding agents the context needed to work effectively in this 
 
 ## What this is
 
-A pnpm monorepo of autonomous delivery agents. Each agent unit is a self-contained, independently deployable service that uses the Claude Agent SDK to run software delivery tasks: picking up stories, implementing them, opening MRs, running peer review, addressing feedback, and closing the loop.
+A pnpm monorepo of autonomous delivery agents. Each agent crew is a self-contained, independently deployable service that uses the Claude Agent SDK to run software delivery tasks: picking up stories, implementing them, opening MRs, running peer review, addressing feedback, and closing the loop.
 
 The architecture has two layers:
 
-- **`agents/`** — deployable agent units. Each unit owns its server, workflow, state, handlers, and team of personas. A unit can be moved to its own repository by replacing `workspace:*` dependencies with published package versions.
-- **`packages/`** — shared libraries. Pure TypeScript with no side effects on import. Only agents depend on packages; packages never depend on agents.
+- **`crews/`** — deployable agent crews. Each crew owns its server, workflow, state, handlers, and team of personas. A crew can be moved to its own repository by replacing `workspace:*` dependencies with published package versions.
+- **`packages/`** — shared libraries. Pure TypeScript with no side effects on import. Only crews depend on packages; packages never depend on crews.
 
 ## Repository layout
 
 ```
-agents/
-  delivery/           # The delivery unit (tech-lead, engineer, senior-engineer)
+crews/
+  delivery/           # The delivery crew (tech-lead, engineer, senior-engineer)
     src/
       index.ts        # Hono server entry
       workflow.ts     # Delivery sequence: implement → peer-review → final-review
@@ -33,7 +33,7 @@ agents/
         gitlab.ts
     mcp.json          # MCP server config (Atlassian, GitLab)
     Dockerfile
-    package.json      # @daddia/agent-delivery
+    package.json      # @daddia/crew-delivery
 
 packages/
   crew/               # @daddia/crew — shared library (main entry + ./webhooks subpath)
@@ -47,12 +47,12 @@ tooling/
 
 ### `@daddia/crew` (main entry)
 
-Shared types and Claude Agent SDK helpers. Every persona module implements `Agent`. Every deployable service satisfies `AgentUnit`. Import session utilities and contract types from this package.
+Shared types and Claude Agent SDK helpers. Every persona module implements `Agent`. Every deployable service satisfies `AgentCrew`. Import session utilities and contract types from this package.
 
 | Type | Purpose |
 |---|---|
 | `Agent` | Interface every persona `agent.ts` must export |
-| `AgentUnit` | Interface every deployable unit must satisfy |
+| `AgentCrew` | Interface every deployable crew must satisfy |
 | `AgentInput` | `{ issueKey, context }` passed into every `agent.run()` |
 | `AgentResult` | `{ success, summary, artefacts, costUsd }` returned by every run |
 | `AgentDefinition` | Configuration passed to `resolveSession()` to boot a Claude session |
@@ -70,7 +70,7 @@ Shared types and Claude Agent SDK helpers. Every persona module implements `Agen
 
 ### `@daddia/crew/webhooks` (subpath)
 
-Security primitives for inbound webhook handlers. Import only from this subpath in units that receive webhooks so consumers without ingress do not pull optional native dependencies.
+Security primitives for inbound webhook handlers. Import only from this subpath in crews that receive webhooks so consumers without ingress do not pull optional native dependencies.
 
 | Export | Purpose |
 |---|---|
@@ -86,40 +86,40 @@ Run from the repository root:
 
 | Command | Description |
 |---|---|
-| `pnpm build` | Build all packages and agents |
+| `pnpm build` | Build all packages and crews |
 | `pnpm typecheck` | Type-check everything |
 | `pnpm test` | Run Vitest suite |
 | `pnpm lint` | Enforce dependency boundaries with dependency-cruiser |
 | `pnpm clean` | Remove build artefacts |
 
-Per-unit commands (run inside `agents/{name}/`):
+Per-crew commands (run inside `crews/{name}/`):
 
 | Command | Description |
 |---|---|
-| `pnpm build` | Build this unit |
+| `pnpm build` | Build this crew |
 | `pnpm dev` | Start the server with `--watch` |
-| `pnpm typecheck` | Type-check this unit |
+| `pnpm typecheck` | Type-check this crew |
 
 ## Dependency rules (enforced by dependency-cruiser)
 
 These rules are non-negotiable. `pnpm lint` runs dependency-cruiser and must pass before a change merges; fix boundary violations rather than bypassing them.
 
-1. `agents/*` may import from `packages/*` only. Never from another `agents/*`.
-2. `packages/*` may not import from `agents/*`.
+1. `crews/*` may import from `packages/*` only. Never from another `crews/*`.
+2. `packages/*` may not import from `crews/*`.
 3. No circular dependencies within `packages/*`.
 
 There is no GitHub Actions workflow in this repository yet; contributors rely on local `pnpm lint`. When CI is added (see product backlog CREW-51-002), it should run the same lint, typecheck, and test commands on every push and PR.
 
-## Agent unit conventions
+## Agent crew conventions
 
-Every agent unit under `agents/` must follow this layout:
+Every agent crew under `crews/` must follow this layout:
 
 ```
-agents/{name}/
+crews/{name}/
   src/
     index.ts          # Hono server; mounts handlers; handles SIGTERM/SIGINT
-    workflow.ts       # Sequence logic; imports only agents from this unit
-    state.ts          # SQLite schema and store; unit-owned, never shared
+    workflow.ts       # Sequence logic; imports only agents from this crew
+    state.ts          # SQLite schema and store; crew-owned, never shared
     observability.ts  # OTLP bootstrap + structured logger
     agents/           # Team members
       {persona}/
@@ -130,13 +130,13 @@ agents/{name}/
           agents/     # Subagent .md files loaded via readSubagentsDir()
     handlers/         # One file per inbound event source
     integrations/     # Idempotent clients for external systems
-  mcp.json            # MCP server definitions for this unit
+  mcp.json            # MCP server definitions for this crew
   Dockerfile
-  package.json        # scoped as @daddia/agent-{name}
+  package.json        # scoped as @daddia/crew-{name}
   tsconfig.json       # extends @repo/typescript-config/library
 ```
 
-A solo unit (single agent, no team) uses the same shape but omits the inner `agents/` subdirectory.
+A solo crew (single agent, no team) uses the same shape but omits the inner `agents/` subdirectory.
 
 ## Persona conventions
 
@@ -159,7 +159,7 @@ Tool allowlists are enforced at two levels: the Claude Agent SDK `allowedTools` 
 
 ## State store conventions
 
-Each unit owns its own SQLite database (path injected via `DB_PATH` env var). The standard schema has three tables:
+Each crew owns its own SQLite database (path injected via `DB_PATH` env var). The standard schema has three tables:
 
 - `stories` — one row per story, tracking `current_phase`.
 - `phases` — one row per phase execution, recording `session_id`, `started_at`, `finished_at`, `cost_usd`, `verdict`.
@@ -169,7 +169,7 @@ Write phase state **before** calling `agent.run()`, not after. This allows crash
 
 ## Workflow conventions
 
-`workflow.ts` is the only file that knows the delivery sequence. It imports personas directly from the local `agents/` folder. It never imports from another unit.
+`workflow.ts` is the only file that knows the delivery sequence. It imports personas directly from the local `agents/` folder. It never imports from another crew.
 
 Escalation on failure or loop cap: call `commentOnIssue` + `transitionIssue("Needs human review")` and return. Never let the workflow throw to the caller.
 
@@ -185,7 +185,7 @@ Every inbound handler must:
 
 ## MCP configuration
 
-Each unit's `mcp.json` declares the MCP servers it needs. Environment variable interpolation uses `${VAR_NAME}` syntax. The SDK resolves these at session start. Do not hardcode credentials.
+Each crew's `mcp.json` declares the MCP servers it needs. Environment variable interpolation uses `${VAR_NAME}` syntax. The SDK resolves these at session start. Do not hardcode credentials.
 
 Currently configured servers:
 - `atlassian` — Jira read/write via `@anthropic-ai/mcp-server-atlassian`

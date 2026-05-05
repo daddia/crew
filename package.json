@@ -7,7 +7,7 @@
     "build": "turbo build",
     "typecheck": "turbo typecheck",
     "test": "turbo test",
-    "lint": "dependency-cruiser --config .dependency-cruiser.cjs agents packages",
+    "lint": "dependency-cruiser --config .dependency-cruiser.cjs crews packages",
     "clean": "turbo clean",
     "dev": "turbo dev"
   },

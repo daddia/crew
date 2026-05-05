@@ -2,32 +2,32 @@
 module.exports = {
   forbidden: [
     {
-      name: "no-cross-agent-imports",
+      name: "no-cross-crew-imports",
       comment:
-        "Agent units must not import from other agent units. " +
+        "Agent crews must not import from other agent crews. " +
         "Shared code belongs in packages/*.",
       severity: "error",
-      from: { path: "^agents/([^/]+)/" },
+      from: { path: "^crews/([^/]+)/" },
       to: {
-        path: "^agents/",
-        pathNot: "^agents/$1/",
+        path: "^crews/",
+        pathNot: "^crews/$1/",
       },
     },
     {
-      name: "no-packages-importing-agents",
-      comment: "Shared packages must not depend on agent units.",
+      name: "no-packages-importing-crews",
+      comment: "Shared packages must not depend on agent crews.",
       severity: "error",
       from: { path: "^packages/" },
-      to: { path: "^agents/" },
+      to: { path: "^crews/" },
     },
     {
-      name: "no-agents-outside-own-scope",
+      name: "no-crews-outside-own-scope",
       comment:
-        "Agent units may only import from their own src tree or from packages/*.",
+        "Agent crews may only import from their own src tree or from packages/*.",
       severity: "error",
-      from: { path: "^agents/([^/]+)/src/" },
+      from: { path: "^crews/([^/]+)/src/" },
       to: {
-        pathNot: ["^agents/$1/", "^packages/", "^node_modules/"],
+        pathNot: ["^crews/$1/", "^packages/", "^node_modules/"],
         dependencyTypesNot: ["core"],
       },
     },

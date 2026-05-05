@@ -1,12 +1,12 @@
 # crew
 
-Autonomous software delivery crew. A monorepo of agent units that pick up Jira stories, implement them, open GitLab MRs, run peer review, address feedback, and close the loop — end to end, without human intervention.
+Autonomous software delivery crew. A monorepo of agent crews that pick up Jira stories, implement them, open GitLab MRs, run peer review, address feedback, and close the loop — end to end, without human intervention.
 
 ## Structure
 
 ```
-agents/
-  {unit}/
+crews/
+  {crew}/
     src/
       agents/          # directory per persona - agent.ts, prompt.md, skills
       handlers/        # inbound webhook handlers
@@ -23,19 +23,19 @@ packages/
 tooling/             # shared eslint / typescript configs (workspace packages)
 ```
 
-Units depend on packages. Packages never depend on units. No unit imports from another unit.
+Crews depend on packages. Packages never depend on crews. No crew imports from another crew.
 
 ## Quick start
 
 ```bash
 cp .env.example .env
-cp agents/{unit}/.env.example agents/{unit}/.env
+cp crews/{crew}/.env.example crews/{crew}/.env
 # fill in values in both files
 
 pnpm install
 pnpm build
 
-cd agents/{unit}
+cd crews/{crew}
 pnpm start
 ```
 
@@ -45,13 +45,13 @@ The server starts on `PORT` (default `3000`). Point a Jira webhook (issue transi
 
 ```bash
 pnpm lint       # dependency-cruiser boundary checks
-pnpm typecheck  # TypeScript across all packages and agents
+pnpm typecheck  # TypeScript across all packages and crews
 pnpm test       # Vitest suite
 ```
 
 ## Contributing
 
-See [`contributing/`](contributing/) for guides on adding personas, units, and packages.
+See [`contributing/`](contributing/) for guides on adding personas, crews, and packages.
 
 ## Licence
 

@@ -1,13 +1,13 @@
 # Adding a Persona
 
-Personas are the team members inside an agent unit. Each persona owns a prompt, a skill set, and an allowed-tools list, and is wired into the unit's workflow.
+Personas are the team members inside an agent crew. Each persona owns a prompt, a skill set, and an allowed-tools list, and is wired into the crew's workflow.
 
 ## Directory layout
 
-Create a new directory under the unit's `agents/` folder:
+Create a new directory under the crew's `agents/` folder:
 
 ```
-agents/delivery/src/agents/<name>/
+crews/delivery/src/agents/<name>/
   agent.ts       # exports const <name>: Agent
   prompt.md      # system prompt — no code
   .claude/

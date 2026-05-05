@@ -73,7 +73,7 @@ logic beyond what is required to consume `@daddia/crew` from the registry.
 
 **Repository contract (current):** The only workspace library under `packages/` is
 `packages/crew`, published as `@daddia/crew` with a `./webhooks` subpath
-(`@daddia/crew/webhooks`). Agent units list `@daddia/crew: workspace:*`; units
+(`@daddia/crew/webhooks`). Agent crews list `@daddia/crew: workspace:*`; crews
 with webhook ingress also import `@daddia/crew/webhooks`. There are no
 `packages/contracts`, `packages/sdk`, or `packages/webhooks` directories. See
 [`AGENTS.md`](../../../AGENTS.md) for the authoritative layout.
@@ -369,33 +369,33 @@ build and deploy locally.
   - **Status:** Not started | **Priority:** P1 | **Estimate:** 2
   - **Epic:** CREW-56 | **Labels:** phase:now, type:refactor
   - **Depends on:** CREW-56-007
-  - **Deliverable:** `agents/delivery` and `agents/code-reviewer` declare
+  - **Deliverable:** `crews/delivery` and `crews/code-reviewer` declare
     `@daddia/crew` with a semver range (or exact version) that resolves to the
     published package on the registry, not `workspace:*`. Root `pnpm` / lockfile
     configuration allows resolution from the registry in CI and locally (e.g.
     `.npmrc` for the scope or documented token setup). `pnpm install`, `pnpm
-    typecheck`, and `pnpm test` pass for both agents from the repo root. No
-    agent `package.json` uses `workspace:*` for `@daddia/crew`.
+    typecheck`, and `pnpm test` pass for both crews from the repo root. No
+    crew `package.json` uses `workspace:*` for `@daddia/crew`.
   - **Design:** design is captured in `docs/work/crew-package/backlog.md` §3 (this document)
   - **Acceptance (EARS):**
     - THE SYSTEM SHALL NOT list `workspace:*` (or any workspace protocol) for
-      `@daddia/crew` in `agents/delivery/package.json` or
-      `agents/code-reviewer/package.json`.
+      `@daddia/crew` in `crews/delivery/package.json` or
+      `crews/code-reviewer/package.json`.
     - WHEN `pnpm install` is run at the repository root, THE SYSTEM SHALL resolve
       `@daddia/crew` from the configured registry in line with the semver range.
-    - WHEN `pnpm typecheck` and `pnpm test` are run for each agent, THE SYSTEM
+    - WHEN `pnpm typecheck` and `pnpm test` are run for each crew, THE SYSTEM
       SHALL exit with code 0.
   - **Acceptance (Gherkin):**
 
     ```gherkin
-    Scenario: Agent manifests reference the registry, not the monorepo link
-      Given agents/delivery/package.json and agents/code-reviewer/package.json
+    Scenario: Crew manifests reference the registry, not the monorepo link
+      Given crews/delivery/package.json and crews/code-reviewer/package.json
       When the @daddia/crew dependency is inspected
       Then the version spec is a semver range or exact version, not "workspace:*"
 
     Scenario: CI and local dev still pass
       Given dependencies are installed from the registry
-      When pnpm typecheck and pnpm test are run for each agent
+      When pnpm typecheck and pnpm test are run for each crew
       Then both complete with exit code 0
     ```
 
@@ -455,12 +455,12 @@ build and deploy locally.
 | --- | --- |
 | CREW-56-001 | `packages/crew/` (scaffold; contracts + sdk sources merged here) |
 | CREW-56-002 | `packages/crew/src/webhooks/` (new), `packages/crew/package.json` |
-| CREW-56-003 | `agents/delivery/src/**`, `agents/delivery/package.json` |
-| CREW-56-004 | `agents/code-reviewer/src/**`, `agents/code-reviewer/package.json` |
+| CREW-56-003 | `crews/delivery/src/**`, `crews/delivery/package.json` |
+| CREW-56-004 | `crews/code-reviewer/src/**`, `crews/code-reviewer/package.json` |
 | CREW-56-005 | Legacy package dirs removed; `.dependency-cruiser.cjs`, `AGENTS.md`, root tooling touched |
 | CREW-56-006 | `packages/crew/package.json`, manual publish runbook, npm org settings |
 | CREW-56-007 | `.changeset/`, CI workflow(s) for version/publish, `CHANGELOG.md` (if generated), secrets docs |
-| CREW-56-008 | `agents/delivery/package.json`, `agents/code-reviewer/package.json`, lockfile, `.npmrc` (if added) |
+| CREW-56-008 | `crews/delivery/package.json`, `crews/code-reviewer/package.json`, lockfile, `.npmrc` (if added) |
 | CREW-56-009 | `Dockerfile` / `docker-compose.yml` or equivalent, ops/runbook snippet |
 
 ### Definition of Done
@@ -529,11 +529,11 @@ monorepo paths. Further product-level risks are tracked in `docs/product/backlog
 **What comes next:**
 
 - CREW-54-001 (`AGENTS.md` names) was superseded by CREW-56: canonical package
-  documentation is `@daddia/crew`, `@daddia/crew/webhooks`, and `@daddia/agent-*`.
+  documentation is `@daddia/crew`, `@daddia/crew/webhooks`, and `@daddia/crew-*`.
 - **CREW-56-006–009:** Publish `@daddia/crew` to npm (manual first, then Changesets
-  + CI), switch agents from `workspace:*` to registry semver, validate container
+  + CI), switch crews from `workspace:*` to registry semver, validate container
   build and deploy locally (see §3 follow-on stories).
-- Any new agent unit should declare `@daddia/crew` (and optionally
+- Any new agent crew should declare `@daddia/crew` (and optionally
   `@daddia/crew/webhooks`) as its shared library dependency; after CREW-56-008,
   prefer a semver range from the registry rather than `workspace:*` when policy
   requires consuming the published package.

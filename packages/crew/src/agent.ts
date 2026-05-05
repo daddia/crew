@@ -1,4 +1,4 @@
-/** Personas across all agent units. */
+/** Personas across all agent crews. */
 export type PersonaName = "tech-lead" | "engineer" | "senior-engineer" | "code-quality";
 
 /** Input passed to every agent run. */
@@ -38,7 +38,7 @@ export interface AgentDefinition {
   subagentPaths: string[];
   /** Tool names this agent is permitted to call. Enforced as a hard filter. */
   allowedTools: string[];
-  /** Keys into the unit's mcp.json servers map. */
+  /** Keys into the crew's mcp.json servers map. */
   mcpServerNames: string[];
   /**
    * Scope for agent memory files.

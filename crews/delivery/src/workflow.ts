@@ -4,7 +4,7 @@ import { seniorEngineer } from "./agents/senior-engineer/agent.js";
 import { techLead } from "./agents/tech-lead/agent.js";
 import { createMr, getMrDiff } from "./integrations/gitlab.js";
 import { commentOnIssue, transitionIssue } from "./integrations/jira.js";
-import { seedProjectMemory } from "./memory.js";
+import { seedEngineerMemory } from "./memory.js";
 import { log } from "./observability.js";
 import type { StateStore } from "./state.js";
 
@@ -35,7 +35,7 @@ export async function runStory(ctx: WorkflowContext): Promise<void> {
 
   log.info("workflow.start", { issueKey });
 
-  await seedProjectMemory(process.env["PROJECT_DIR"] ?? process.cwd());
+  await seedEngineerMemory(process.env["PROJECT_DIR"] ?? process.cwd());
 
   // ── Phase 1: Implement ────────────────────────────────────────────────────
   state.upsertStory(issueKey, "implement");

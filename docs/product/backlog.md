@@ -114,7 +114,7 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
   - **Status:** Not started | **Priority:** P0 | **Estimate:** 3
   - **Epic:** CREW-50 | **Labels:** review:#1, type:feature
   - **Depends on:** CREW-50-001
-  - **Deliverable:** `agents/delivery/src/agents/engineer/agent.ts` `run()` builds `AgentDefinition` from `promptPath`, `skillPaths`, `subagentPaths`, `allowedTools`, `mcpServerNames`, and `memory: 'project'`; calls `resolveSession()` from `@daddia/crew`; executes the session using the SDK; returns a populated `AgentResult` with `success`, `summary`, `artefacts`, and `costUsd`; `buildAuditHook()` attached for every run; the function no longer throws `"not implemented"`. Setting `memory: 'project'` causes the SDK to create and maintain a persistent project memory directory, inject Read/Write/Edit tools into the session, and load `MEMORY.md` into context automatically.
+  - **Deliverable:** `crews/delivery/src/agents/engineer/agent.ts` `run()` builds `AgentDefinition` from `promptPath`, `skillPaths`, `subagentPaths`, `allowedTools`, `mcpServerNames`, and `memory: 'project'`; calls `resolveSession()` from `@daddia/crew`; executes the session using the SDK; returns a populated `AgentResult` with `success`, `summary`, `artefacts`, and `costUsd`; `buildAuditHook()` attached for every run; the function no longer throws `"not implemented"`. Setting `memory: 'project'` causes the SDK to create and maintain a persistent project memory directory, inject Read/Write/Edit tools into the session, and load `MEMORY.md` into context automatically.
   - **Acceptance (EARS):**
     - WHEN `engineer.run(input)` is called, THE SYSTEM SHALL build an `AgentDefinition` using the engineer's `prompt.md`, discovered skill paths, allowed tools list, MCP server names, and `memory: 'project'`.
     - WHEN `engineer.run(input)` is called, THE SYSTEM SHALL call `resolveSession()` and pass the resulting `sessionId` to the SDK execution call.
@@ -152,7 +152,7 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
   - **Status:** Not started | **Priority:** P0 | **Estimate:** 2
   - **Epic:** CREW-50 | **Labels:** review:#1, type:feature
   - **Depends on:** CREW-50-001
-  - **Deliverable:** `agents/delivery/src/agents/senior-engineer/agent.ts` `run()` follows the same pattern as CREW-50-002; builds `AgentDefinition` from persona-specific paths, tools, and `memory: 'project'`; calls `resolveSession()`; returns populated `AgentResult`; `buildAuditHook()` attached; no longer throws.
+  - **Deliverable:** `crews/delivery/src/agents/senior-engineer/agent.ts` `run()` follows the same pattern as CREW-50-002; builds `AgentDefinition` from persona-specific paths, tools, and `memory: 'project'`; calls `resolveSession()`; returns populated `AgentResult`; `buildAuditHook()` attached; no longer throws.
   - **Acceptance (EARS):**
     - WHEN `seniorEngineer.run(input)` is called, THE SYSTEM SHALL build an `AgentDefinition` using the senior-engineer's `prompt.md`, skill paths, allowed tools, MCP server names, and `memory: 'project'`.
     - WHEN the SDK completes execution, THE SYSTEM SHALL return an `AgentResult` with `success`, `summary`, `artefacts`, and `costUsd` populated.
@@ -179,7 +179,7 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
   - **Status:** Not started | **Priority:** P0 | **Estimate:** 2
   - **Epic:** CREW-50 | **Labels:** review:#1, type:feature
   - **Depends on:** CREW-50-001
-  - **Deliverable:** `agents/delivery/src/agents/tech-lead/agent.ts` `run()` builds `AgentDefinition` with `memory: 'project'`; calls `resolveSession()`; returns populated `AgentResult`; `buildAuditHook()` attached; no longer throws.
+  - **Deliverable:** `crews/delivery/src/agents/tech-lead/agent.ts` `run()` builds `AgentDefinition` with `memory: 'project'`; calls `resolveSession()`; returns populated `AgentResult`; `buildAuditHook()` attached; no longer throws.
   - **Acceptance (EARS):**
     - WHEN `techLead.run(input)` is called, THE SYSTEM SHALL build an `AgentDefinition` using the tech-lead's `prompt.md`, skill paths, allowed tools, MCP server names, and `memory: 'project'`.
     - WHEN the SDK completes execution, THE SYSTEM SHALL return an `AgentResult` with all fields populated.
@@ -206,7 +206,7 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
   - **Status:** Not started | **Priority:** P0 | **Estimate:** 2
   - **Epic:** CREW-50 | **Labels:** review:#1, type:feature
   - **Depends on:** CREW-50-001
-  - **Deliverable:** `agents/code-reviewer/src/agents/code-quality/agent.ts` `run()` builds `AgentDefinition` with `memory: 'project'`; calls `resolveSession()`; returns populated `AgentResult`; `buildAuditHook()` attached; no longer throws.
+  - **Deliverable:** `crews/code-reviewer/src/agents/code-quality/agent.ts` `run()` builds `AgentDefinition` with `memory: 'project'`; calls `resolveSession()`; returns populated `AgentResult`; `buildAuditHook()` attached; no longer throws.
   - **Acceptance (EARS):**
     - WHEN `codeQuality.run(input)` is called, THE SYSTEM SHALL build an `AgentDefinition` using the code-quality `prompt.md`, skill paths, allowed tools, MCP server names, and `memory: 'project'`.
     - WHEN the SDK completes execution, THE SYSTEM SHALL return an `AgentResult` with all fields populated.
@@ -297,7 +297,7 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
 
 **Scope.** Three targeted fixes that make builds reproducible and protected: fix the pnpm version mismatch in the code-reviewer Dockerfile, add a GitHub Actions CI pipeline, and make the Dockerfile `COPY` for the lockfile explicit.
 
-**Key deliverables.** `agents/code-reviewer/Dockerfile` using `corepack enable` instead of `pnpm@9`; `.github/workflows/ci.yml` running lint, typecheck, and test on push and pull request; both Dockerfiles using a plain `COPY pnpm-lock.yaml ./` without the optional glob suffix.
+**Key deliverables.** `crews/code-reviewer/Dockerfile` using `corepack enable` instead of `pnpm@9`; `.github/workflows/ci.yml` running lint, typecheck, and test on push and pull request; both Dockerfiles using a plain `COPY pnpm-lock.yaml ./` without the optional glob suffix.
 
 **Dependencies.** None.
 
@@ -309,7 +309,7 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
   - **Status:** Not started | **Priority:** P0 | **Estimate:** 1
   - **Epic:** CREW-51 | **Labels:** review:#3, type:infrastructure
   - **Depends on:** —
-  - **Deliverable:** `agents/code-reviewer/Dockerfile` line 2 changed from `RUN npm install -g pnpm@9` to `RUN corepack enable`; `pnpm install --frozen-lockfile` succeeds against the existing `pnpm-lock.yaml` (pnpm 10 lockfile format) in CI and local Docker builds.
+  - **Deliverable:** `crews/code-reviewer/Dockerfile` line 2 changed from `RUN npm install -g pnpm@9` to `RUN corepack enable`; `pnpm install --frozen-lockfile` succeeds against the existing `pnpm-lock.yaml` (pnpm 10 lockfile format) in CI and local Docker builds.
   - **Acceptance (EARS):**
     - WHEN the code-reviewer Docker image is built, THE SYSTEM SHALL use `corepack enable` to activate the pnpm version declared in `packageManager` in `package.json`.
     - WHEN `pnpm install --frozen-lockfile` runs inside the built image, THE SYSTEM SHALL complete without a lockfile format version mismatch error.
@@ -318,7 +318,7 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
     ```gherkin
     Scenario: Code-reviewer image builds with pnpm 10
       Given the code-reviewer Dockerfile uses corepack enable
-      When docker build runs for agents/code-reviewer
+      When docker build runs for crews/code-reviewer
       Then the build completes without error
       And pnpm install --frozen-lockfile succeeds inside the container
 
@@ -352,7 +352,7 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
       And the workflow is marked as passed
 
     Scenario: Dependency boundary violation fails CI
-      Given a commit where packages/crew imports from agents/delivery
+      Given a commit where packages/crew imports from crews/delivery
       When pnpm lint runs in CI
       Then dependency-cruiser reports a boundary violation
       And the CI workflow fails
@@ -374,7 +374,7 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
   - **Status:** Not started | **Priority:** P3 | **Estimate:** 1
   - **Epic:** CREW-51 | **Labels:** review:#22, type:infrastructure
   - **Depends on:** —
-  - **Deliverable:** Both `agents/delivery/Dockerfile` and `agents/code-reviewer/Dockerfile` changed from `COPY pnpm-lock.yaml* ./` to `COPY pnpm-lock.yaml ./`; the intent is explicit and `--frozen-lockfile` will error loudly rather than silently install without a lockfile.
+  - **Deliverable:** Both `crews/delivery/Dockerfile` and `crews/code-reviewer/Dockerfile` changed from `COPY pnpm-lock.yaml* ./` to `COPY pnpm-lock.yaml ./`; the intent is explicit and `--frozen-lockfile` will error loudly rather than silently install without a lockfile.
   - **Acceptance (EARS):**
     - WHEN the Dockerfile is evaluated, THE SYSTEM SHALL use `COPY pnpm-lock.yaml ./` without an optional glob suffix in both agent Dockerfiles.
     - WHEN `pnpm-lock.yaml` is absent during a Docker build, THE SYSTEM SHALL fail the build at the `COPY` step rather than silently proceeding.
@@ -382,7 +382,7 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
 
     ```gherkin
     Scenario: Lockfile is copied explicitly
-      Given agents/delivery/Dockerfile and agents/code-reviewer/Dockerfile
+      Given crews/delivery/Dockerfile and crews/code-reviewer/Dockerfile
       When the COPY instruction for the lockfile is inspected
       Then it reads "COPY pnpm-lock.yaml ./" without a wildcard suffix
     ```
@@ -393,7 +393,7 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
 
 **Scope.** Four changes that make the runtime safe to deploy and restart without silent failure. Startup env validation catches misconfiguration before any request is handled. Moving the auth header construction inside `jiraFetch()` ensures validation runs before credentials are encoded. Crash-recovery detects and re-queues interrupted phases on restart. Pinning MCP server versions prevents silent prod breakage on upstream updates.
 
-**Key deliverables.** `agents/delivery/src/index.ts` eager env validation block; Jira auth header moved into `jiraFetch()`; startup scan over `phases` rows with `started_at IS NOT NULL AND finished_at IS NULL`; both `mcp.json` files with pinned version strings.
+**Key deliverables.** `crews/delivery/src/index.ts` eager env validation block; Jira auth header moved into `jiraFetch()`; startup scan over `phases` rows with `started_at IS NOT NULL AND finished_at IS NULL`; both `mcp.json` files with pinned version strings.
 
 **Dependencies.** CREW-50-001 (the SDK must be wired before crash-recovery is worth testing end-to-end, but the scan itself can be written independently).
 
@@ -405,7 +405,7 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
   - **Status:** Not started | **Priority:** P1 | **Estimate:** 1
   - **Epic:** CREW-52 | **Labels:** review:#7, type:reliability
   - **Depends on:** —
-  - **Deliverable:** `agents/delivery/src/index.ts` checks `ANTHROPIC_API_KEY`, `ATLASSIAN_BASE_URL`, `ATLASSIAN_EMAIL`, `ATLASSIAN_API_TOKEN`, `GITLAB_PERSONAL_ACCESS_TOKEN`, `JIRA_WEBHOOK_SECRET`, and `GITLAB_WEBHOOK_SECRET` before the Hono server starts; if any are absent, logs the missing keys at `error` level and calls `process.exit(1)`.
+  - **Deliverable:** `crews/delivery/src/index.ts` checks `ANTHROPIC_API_KEY`, `ATLASSIAN_BASE_URL`, `ATLASSIAN_EMAIL`, `ATLASSIAN_API_TOKEN`, `GITLAB_PERSONAL_ACCESS_TOKEN`, `JIRA_WEBHOOK_SECRET`, and `GITLAB_WEBHOOK_SECRET` before the Hono server starts; if any are absent, logs the missing keys at `error` level and calls `process.exit(1)`.
   - **Acceptance (EARS):**
     - WHEN the server starts and one or more required env vars are absent, THE SYSTEM SHALL log the names of all missing vars at `error` level and exit with code 1 before accepting any requests.
     - WHEN all required env vars are present, THE SYSTEM SHALL start the server normally without logging an error.
@@ -431,9 +431,9 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
   - **Status:** Not started | **Priority:** P2 | **Estimate:** 1
   - **Epic:** CREW-52 | **Labels:** review:#17, type:reliability
   - **Depends on:** CREW-52-001
-  - **Deliverable:** `agents/delivery/src/integrations/jira.ts` constant `authHeader` moved from module-load scope into `jiraFetch()` body; the Base64 encoding of `:` on empty credentials is no longer silently baked in at import time; startup validation (CREW-52-001) runs before any `jiraFetch()` call is made.
+  - **Deliverable:** `crews/delivery/src/integrations/jira.ts` constant `authHeader` moved from module-load scope into `jiraFetch()` body; the Base64 encoding of `:` on empty credentials is no longer silently baked in at import time; startup validation (CREW-52-001) runs before any `jiraFetch()` call is made.
   - **Acceptance (EARS):**
-    - WHEN `agents/delivery/src/integrations/jira.ts` is imported, THE SYSTEM SHALL NOT evaluate `Buffer.from(...).toString("base64")` using the env vars at module-load time.
+    - WHEN `crews/delivery/src/integrations/jira.ts` is imported, THE SYSTEM SHALL NOT evaluate `Buffer.from(...).toString("base64")` using the env vars at module-load time.
     - WHEN `jiraFetch()` is called, THE SYSTEM SHALL construct the `Authorization` header from the current values of `ATLASSIAN_EMAIL` and `ATLASSIAN_API_TOKEN` at call time.
   - **Acceptance (Gherkin):**
 
@@ -455,7 +455,7 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
   - **Status:** Not started | **Priority:** P1 | **Estimate:** 5
   - **Epic:** CREW-52 | **Labels:** review:#8, type:reliability
   - **Depends on:** CREW-50-001
-  - **Deliverable:** `agents/delivery/src/index.ts` (or a dedicated `recovery.ts`) runs a scan on startup over `phases` rows where `started_at IS NOT NULL AND finished_at IS NULL`; for each interrupted row the `session_id` is read from the database and passed to `unstable_v2_resumeSession(sessionId)` so the agent resumes the exact conversation context rather than starting a fresh session; the recovered workflow is re-dispatched from the interrupted phase; the recovery scan result is logged at `info` level with the `issueKey`, `phase`, and `sessionId` of each recovered row; if no interrupted phases are found the scan exits silently. The Claude Code SDK's conversation transcript on disk provides the agent's full prior context on resume — Crew's database provides only the `sessionId` needed to address it.
+  - **Deliverable:** `crews/delivery/src/index.ts` (or a dedicated `recovery.ts`) runs a scan on startup over `phases` rows where `started_at IS NOT NULL AND finished_at IS NULL`; for each interrupted row the `session_id` is read from the database and passed to `unstable_v2_resumeSession(sessionId)` so the agent resumes the exact conversation context rather than starting a fresh session; the recovered workflow is re-dispatched from the interrupted phase; the recovery scan result is logged at `info` level with the `issueKey`, `phase`, and `sessionId` of each recovered row; if no interrupted phases are found the scan exits silently. The Claude Code SDK's conversation transcript on disk provides the agent's full prior context on resume — Crew's database provides only the `sessionId` needed to address it.
   - **Acceptance (EARS):**
     - WHEN the server starts and the `phases` table contains one or more rows with `started_at IS NOT NULL AND finished_at IS NULL`, THE SYSTEM SHALL treat each such row as an interrupted phase and call `unstable_v2_resumeSession(sessionId)` using the stored `session_id`.
     - WHEN the server starts and no interrupted phases exist, THE SYSTEM SHALL complete the scan without logging at `warn` or `error` level.
@@ -496,7 +496,7 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
   - **Status:** Not started | **Priority:** P1 | **Estimate:** 1
   - **Epic:** CREW-52 | **Labels:** review:#9, type:reliability
   - **Depends on:** —
-  - **Deliverable:** `agents/delivery/mcp.json` and `agents/code-reviewer/mcp.json` updated so `@anthropic-ai/mcp-server-gitlab` and `@anthropic-ai/mcp-server-atlassian` are pinned to specific version strings (e.g. `@anthropic-ai/mcp-server-gitlab@1.2.3`); `npx -y` no longer downloads the latest version on every agent invocation.
+  - **Deliverable:** `crews/delivery/mcp.json` and `crews/code-reviewer/mcp.json` updated so `@anthropic-ai/mcp-server-gitlab` and `@anthropic-ai/mcp-server-atlassian` are pinned to specific version strings (e.g. `@anthropic-ai/mcp-server-gitlab@1.2.3`); `npx -y` no longer downloads the latest version on every agent invocation.
   - **Acceptance (EARS):**
     - WHEN the MCP server config is read, THE SYSTEM SHALL reference the MCP server packages with explicit version strings rather than unversioned package names.
     - WHEN a new version of `mcp-server-gitlab` or `mcp-server-atlassian` is published, THE SYSTEM SHALL NOT automatically upgrade unless the version string in `mcp.json` is explicitly updated.
@@ -504,7 +504,7 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
 
     ```gherkin
     Scenario: MCP server args include pinned version
-      Given agents/delivery/mcp.json and agents/code-reviewer/mcp.json
+      Given crews/delivery/mcp.json and crews/code-reviewer/mcp.json
       When the args array for the mcp-server-gitlab entry is inspected
       Then the package name includes a version specifier (e.g. @1.2.3)
 
@@ -532,7 +532,7 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
   - **Status:** Not started | **Priority:** P1 | **Estimate:** 2
   - **Epic:** CREW-53 | **Labels:** review:#5, type:reliability
   - **Depends on:** —
-  - **Deliverable:** `agents/delivery/src/idempotency.ts` `getIdempotency()` no longer opens a second `DatabaseSync` connection to `DB_PATH`; the existing `db` instance from `createStateStore()` is passed into `createIdempotencyStore()` (or `getIdempotency()` is merged into the state store); there is exactly one `DatabaseSync` connection to `DB_PATH` at runtime; the `webhook_events` table is created once, not twice; all existing tests pass.
+  - **Deliverable:** `crews/delivery/src/idempotency.ts` `getIdempotency()` no longer opens a second `DatabaseSync` connection to `DB_PATH`; the existing `db` instance from `createStateStore()` is passed into `createIdempotencyStore()` (or `getIdempotency()` is merged into the state store); there is exactly one `DatabaseSync` connection to `DB_PATH` at runtime; the `webhook_events` table is created once, not twice; all existing tests pass.
   - **Acceptance (EARS):**
     - WHEN the delivery agent starts, THE SYSTEM SHALL open exactly one `DatabaseSync` connection to `DB_PATH`.
     - WHEN the `webhook_events` table is initialised, THE SYSTEM SHALL create it once using the single shared connection.
@@ -557,7 +557,7 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
   - **Status:** Not started | **Priority:** P1 | **Estimate:** 1
   - **Epic:** CREW-53 | **Labels:** review:#6, type:correctness
   - **Depends on:** —
-  - **Deliverable:** `agents/delivery/src/state.ts` `finishPhaseStmt` SQL updated from `WHERE issue_key = ? AND finished_at IS NULL ORDER BY started_at DESC LIMIT 1` to `WHERE issue_key = ? AND phase = ? AND finished_at IS NULL`; `finishPhase()` passes `phase` as the second bind parameter; the `void phase` comment is removed; a unit test covering the two-phase replay scenario confirms the correct row is updated.
+  - **Deliverable:** `crews/delivery/src/state.ts` `finishPhaseStmt` SQL updated from `WHERE issue_key = ? AND finished_at IS NULL ORDER BY started_at DESC LIMIT 1` to `WHERE issue_key = ? AND phase = ? AND finished_at IS NULL`; `finishPhase()` passes `phase` as the second bind parameter; the `void phase` comment is removed; a unit test covering the two-phase replay scenario confirms the correct row is updated.
   - **Acceptance (EARS):**
     - WHEN `finishPhase(issueKey, phase, result)` is called, THE SYSTEM SHALL update the `phases` row matching both `issue_key = issueKey` AND `phase = phase` with `finished_at IS NULL`.
     - WHEN two phases for the same `issueKey` are simultaneously in-flight, THE SYSTEM SHALL update the correct phase row as specified by the `phase` argument.
@@ -583,7 +583,7 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
   - **Status:** Not started | **Priority:** P1 | **Estimate:** 3
   - **Epic:** CREW-53 | **Labels:** review:#10, type:correctness
   - **Depends on:** —
-  - **Deliverable:** `agents/delivery/src/integrations/gitlab.ts` `createMr()` calls `GET /merge_requests?source_branch=<branchName>&state=opened` before `POST /merge_requests`; if an open MR for that branch already exists, the function returns the existing MR's `web_url` without posting a new MR; if no existing MR is found, the function proceeds with `POST /merge_requests` as before; unit tests for the existing-MR path and the no-existing-MR path.
+  - **Deliverable:** `crews/delivery/src/integrations/gitlab.ts` `createMr()` calls `GET /merge_requests?source_branch=<branchName>&state=opened` before `POST /merge_requests`; if an open MR for that branch already exists, the function returns the existing MR's `web_url` without posting a new MR; if no existing MR is found, the function proceeds with `POST /merge_requests` as before; unit tests for the existing-MR path and the no-existing-MR path.
   - **Acceptance (EARS):**
     - WHEN `createMr()` is called and an open merge request already exists for `branchName`, THE SYSTEM SHALL return the existing MR's `web_url` without issuing a `POST /merge_requests` request.
     - WHEN `createMr()` is called and no open merge request exists for `branchName`, THE SYSTEM SHALL proceed with `POST /merge_requests` and return the new MR's `web_url`.
@@ -630,7 +630,7 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
   - **Status:** Done | **Priority:** P2 | **Estimate:** 1
   - **Epic:** CREW-54 | **Labels:** review:#11, type:docs
   - **Depends on:** —
-  - **Deliverable:** `AGENTS.md` updated throughout to replace `@org/*` placeholders with the actual package names: `@daddia/crew`, `@daddia/crew/webhooks`, `@daddia/agent-delivery`, `@daddia/agent-code-reviewer`; no instance of the `@org/` prefix remains in `AGENTS.md`. (Superseded in part by CREW-56 consolidation; current docs use the single shared library and subpath.)
+  - **Deliverable:** `AGENTS.md` updated throughout to replace `@org/*` placeholders with the actual package names: `@daddia/crew`, `@daddia/crew/webhooks`, `@daddia/crew-delivery`, `@daddia/crew-code-reviewer`; no instance of the `@org/` prefix remains in `AGENTS.md`. (Superseded in part by CREW-56 consolidation; current docs use the single shared library and subpath.)
   - **Acceptance (EARS):**
     - WHEN `AGENTS.md` is read, THE SYSTEM SHALL reference all packages under the `@daddia/` scope, not `@org/`.
     - THE SYSTEM SHALL NOT contain any `@org/` package reference in `AGENTS.md`.
@@ -646,7 +646,7 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
       Given AGENTS.md is read
       When shared library and agent package names are inspected
       Then the shared library is documented as @daddia/crew and @daddia/crew/webhooks
-      And agent units are documented as @daddia/agent-delivery and @daddia/agent-code-reviewer
+      And agent crews are documented as @daddia/crew-delivery and @daddia/crew-code-reviewer
     ```
 
 ---
@@ -655,7 +655,7 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
   - **Status:** Not started | **Priority:** P2 | **Estimate:** 1
   - **Epic:** CREW-54 | **Labels:** review:#13, type:test
   - **Depends on:** —
-  - **Deliverable:** `agents/delivery/tests/workflow.test.ts` and `agents/delivery/tests/handlers.jira.test.ts` `makeState()` helpers have `db: {} as never` removed; `pnpm typecheck` passes with no excess-property errors on the state mock literal; if the production `StateStore` interface is later extended to include `db`, it is added to the interface first.
+  - **Deliverable:** `crews/delivery/tests/workflow.test.ts` and `crews/delivery/tests/handlers.jira.test.ts` `makeState()` helpers have `db: {} as never` removed; `pnpm typecheck` passes with no excess-property errors on the state mock literal; if the production `StateStore` interface is later extended to include `db`, it is added to the interface first.
   - **Acceptance (EARS):**
     - WHEN `makeState()` is called in the test helpers, THE SYSTEM SHALL return an object whose properties are a subset of the `StateStore` interface with no excess properties.
     - WHEN `pnpm typecheck` runs, THE SYSTEM SHALL report zero TypeScript errors related to `db` in the test mock objects.
@@ -693,7 +693,7 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
   - **Status:** Not started | **Priority:** P2 | **Estimate:** 2
   - **Epic:** CREW-54 | **Labels:** review:#18, type:correctness
   - **Depends on:** —
-  - **Deliverable:** `agents/delivery/src/integrations/gitlab.ts` `extractMrIid()` validates that the extracted project path (from the URL) matches `GITLAB_PROJECT_ID` before returning the IID; if there is a mismatch, the function throws a typed error rather than silently returning a wrong IID; alternatively, the IID is typed and passed as a field on the MR object rather than re-extracted from the URL.
+  - **Deliverable:** `crews/delivery/src/integrations/gitlab.ts` `extractMrIid()` validates that the extracted project path (from the URL) matches `GITLAB_PROJECT_ID` before returning the IID; if there is a mismatch, the function throws a typed error rather than silently returning a wrong IID; alternatively, the IID is typed and passed as a field on the MR object rather than re-extracted from the URL.
   - **Acceptance (EARS):**
     - WHEN `extractMrIid()` is called with a URL whose project path does not match `GITLAB_PROJECT_ID`, THE SYSTEM SHALL throw a typed error rather than returning an IID from the wrong project.
     - WHEN `extractMrIid()` is called with a valid URL matching `GITLAB_PROJECT_ID`, THE SYSTEM SHALL return the correct numeric IID.
@@ -731,7 +731,7 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
   - **Status:** Not started | **Priority:** P3 | **Estimate:** 5
   - **Epic:** CREW-55 | **Labels:** review:#19, type:observability
   - **Depends on:** CREW-50-001
-  - **Deliverable:** `agents/delivery/src/observability.ts` bootstraps an OTLP trace exporter (configurable via `OTEL_EXPORTER_OTLP_ENDPOINT`); `workflow.ts` wraps each phase execution in a trace span named `crew.phase.<phaseName>` with attributes `issueKey`, `phase`, and `sessionId`; each `agent.run()` call is wrapped in a child span named `crew.agent.<personaName>` with attributes `persona`, `issueKey`; `phaseRow.sessionId` is used as the correlation field linking the phase span to the agent span; spans are exported even when OTLP endpoint is absent (no-op exporter used as fallback).
+  - **Deliverable:** `crews/delivery/src/observability.ts` bootstraps an OTLP trace exporter (configurable via `OTEL_EXPORTER_OTLP_ENDPOINT`); `workflow.ts` wraps each phase execution in a trace span named `crew.phase.<phaseName>` with attributes `issueKey`, `phase`, and `sessionId`; each `agent.run()` call is wrapped in a child span named `crew.agent.<personaName>` with attributes `persona`, `issueKey`; `phaseRow.sessionId` is used as the correlation field linking the phase span to the agent span; spans are exported even when OTLP endpoint is absent (no-op exporter used as fallback).
   - **Acceptance (EARS):**
     - WHEN a workflow phase executes, THE SYSTEM SHALL emit an OpenTelemetry span named `crew.phase.<phaseName>` with `issueKey` and `phase` attributes.
     - WHEN an agent `run()` executes within a phase, THE SYSTEM SHALL emit a child span named `crew.agent.<personaName>` with `persona` and `issueKey` attributes.
@@ -794,22 +794,22 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
   - **Status:** Not started | **Priority:** P3 | **Estimate:** 1
   - **Epic:** CREW-55 | **Labels:** review:#21, type:docs
   - **Depends on:** CREW-52-001
-  - **Deliverable:** `agents/delivery/.env.example` documents every required env var (`ANTHROPIC_API_KEY`, `ATLASSIAN_BASE_URL`, `ATLASSIAN_EMAIL`, `ATLASSIAN_API_TOKEN`, `GITLAB_PERSONAL_ACCESS_TOKEN`, `JIRA_WEBHOOK_SECRET`, `GITLAB_WEBHOOK_SECRET`, `DB_PATH`) and optional env vars (`OTEL_EXPORTER_OTLP_ENDPOINT`, `WORKFLOW_CONCURRENCY_PER_ISSUE`, `REFACTOR_LOOP_CAP`) with a one-line description for each; `agents/code-reviewer/.env.example` documents its own required and optional vars; the root `.env.example` is updated to cross-reference the per-agent files.
+  - **Deliverable:** `crews/delivery/.env.example` documents every required env var (`ANTHROPIC_API_KEY`, `ATLASSIAN_BASE_URL`, `ATLASSIAN_EMAIL`, `ATLASSIAN_API_TOKEN`, `GITLAB_PERSONAL_ACCESS_TOKEN`, `JIRA_WEBHOOK_SECRET`, `GITLAB_WEBHOOK_SECRET`, `DB_PATH`) and optional env vars (`OTEL_EXPORTER_OTLP_ENDPOINT`, `WORKFLOW_CONCURRENCY_PER_ISSUE`, `REFACTOR_LOOP_CAP`) with a one-line description for each; `crews/code-reviewer/.env.example` documents its own required and optional vars; the root `.env.example` is updated to cross-reference the per-agent files.
   - **Acceptance (EARS):**
-    - WHEN `agents/delivery/.env.example` is read, THE SYSTEM SHALL document every required env var identified in CREW-52-001, each with a non-empty description.
-    - WHEN `agents/code-reviewer/.env.example` is read, THE SYSTEM SHALL document every required and optional env var for that agent.
+    - WHEN `crews/delivery/.env.example` is read, THE SYSTEM SHALL document every required env var identified in CREW-52-001, each with a non-empty description.
+    - WHEN `crews/code-reviewer/.env.example` is read, THE SYSTEM SHALL document every required and optional env var for that agent.
   - **Acceptance (Gherkin):**
 
     ```gherkin
     Scenario: Delivery agent env example documents all required vars
-      Given agents/delivery/.env.example
+      Given crews/delivery/.env.example
       When it is read
       Then ANTHROPIC_API_KEY, ATLASSIAN_BASE_URL, ATLASSIAN_EMAIL, ATLASSIAN_API_TOKEN,
            GITLAB_PERSONAL_ACCESS_TOKEN, JIRA_WEBHOOK_SECRET, GITLAB_WEBHOOK_SECRET, and DB_PATH
            are all present with descriptions
 
     Scenario: Code reviewer env example exists
-      Given agents/code-reviewer/.env.example
+      Given crews/code-reviewer/.env.example
       When it is read
       Then it documents at least the ANTHROPIC_API_KEY and any agent-specific required vars
     ```
@@ -820,7 +820,7 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
   - **Status:** Not started | **Priority:** P3 | **Estimate:** 1
   - **Epic:** CREW-55 | **Labels:** review:#23, type:docs
   - **Depends on:** —
-  - **Deliverable:** `agents/delivery/src/workflow.ts` loop at line 55 has a code comment explaining the asymmetry: with `REFACTOR_LOOP_CAP=2` the loop runs `cap + 1` peer-review calls (iterations 0, 1, 2) but only `cap` address-feedback calls (the `if (iteration >= REFACTOR_LOOP_CAP) break` check prevents the third address-feedback call); `AGENTS.md` updated to reflect this semantic precisely.
+  - **Deliverable:** `crews/delivery/src/workflow.ts` loop at line 55 has a code comment explaining the asymmetry: with `REFACTOR_LOOP_CAP=2` the loop runs `cap + 1` peer-review calls (iterations 0, 1, 2) but only `cap` address-feedback calls (the `if (iteration >= REFACTOR_LOOP_CAP) break` check prevents the third address-feedback call); `AGENTS.md` updated to reflect this semantic precisely.
   - **Acceptance (EARS):**
     - WHEN `workflow.ts` is read, THE SYSTEM SHALL contain a comment at the loop bound explaining the cap + 1 senior-engineer call count versus the cap address-feedback call count.
     - WHEN `AGENTS.md` documents the loop cap, THE SYSTEM SHALL accurately state the asymmetry between peer-review and address-feedback call counts.
@@ -839,7 +839,7 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
   - **Status:** Not started | **Priority:** P3 | **Estimate:** 3
   - **Epic:** CREW-55 | **Labels:** review:#25, type:reliability
   - **Depends on:** CREW-50-001
-  - **Deliverable:** `agents/delivery/src/integrations/gitlab.ts` `getMrDiff()` adds a file-count cap (`DIFF_FILE_CAP`, default 50) and a total diff-size cap in bytes (`DIFF_SIZE_CAP_BYTES`, default 500 000); when the response exceeds the file cap, only the first `DIFF_FILE_CAP` files are included and a note is appended to the returned diff string; when the byte cap is exceeded, the diff is truncated and a note is appended; both caps are configurable via env vars.
+  - **Deliverable:** `crews/delivery/src/integrations/gitlab.ts` `getMrDiff()` adds a file-count cap (`DIFF_FILE_CAP`, default 50) and a total diff-size cap in bytes (`DIFF_SIZE_CAP_BYTES`, default 500 000); when the response exceeds the file cap, only the first `DIFF_FILE_CAP` files are included and a note is appended to the returned diff string; when the byte cap is exceeded, the diff is truncated and a note is appended; both caps are configurable via env vars.
   - **Acceptance (EARS):**
     - WHEN `getMrDiff()` returns more than `DIFF_FILE_CAP` files, THE SYSTEM SHALL truncate to the first `DIFF_FILE_CAP` files and append a note indicating how many files were omitted.
     - WHEN the total diff size exceeds `DIFF_SIZE_CAP_BYTES`, THE SYSTEM SHALL truncate the diff and append a note indicating truncation.
