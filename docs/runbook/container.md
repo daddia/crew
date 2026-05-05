@@ -53,7 +53,7 @@ The build runs in two stages:
 | Stage | What happens |
 | --- | --- |
 | `base` | pnpm installs `@daddia/crew@^0.1.0` from npm (no workspace source needed); TypeScript compiles `@daddia/crew-delivery` |
-| `runtime` | `pnpm deploy` bundles production deps into `/deploy`; slim `node:22-slim` image runs `node dist/index.js` |
+| `runtime` | `pnpm deploy` bundles production deps into `/deploy`; slim `node:24-slim` image runs `node dist/index.js` |
 
 Expected final output:
 

@@ -18,7 +18,7 @@ Add to `.gitlab-ci.yml`:
 ```yaml
 ai-review:
   stage: review
-  image: node:22-alpine
+  image: node:24-alpine
   rules:
     - if: $CI_MERGE_REQUEST_EVENT_TYPE == 'merge_request_event'
       when: on_success
