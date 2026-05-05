@@ -21,7 +21,7 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
-  agents/code-reviewer:
+  crews/code-reviewer:
     dependencies:
       '@anthropic-ai/claude-code':
         specifier: ^2.1.126
@@ -46,7 +46,7 @@ importers:
         specifier: ^4.1.5
         version: 4.1.5(@types/node@24.12.2)(@vitest/coverage-istanbul@4.1.5)(@vitest/ui@4.1.5)(jsdom@29.1.1)(vite@6.4.2(@types/node@24.12.2)(jiti@2.6.1)(lightningcss@1.32.0))
 
-  agents/delivery:
+  crews/delivery:
     dependencies:
       '@anthropic-ai/claude-code':
         specifier: ^2.1.126

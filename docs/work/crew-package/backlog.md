@@ -102,7 +102,7 @@ state of the repo, not what exists today.
     - THE SYSTEM SHALL provide `packages/crew/package.json` with `name` set to
       `"@daddia/crew"` and a `"."` export pointing to `./dist/index.js`.
     - THE SYSTEM SHALL export all types previously exported by `@daddia/contracts`
-      (`Agent`, `AgentUnit`, `AgentInput`, `AgentResult`, `AgentDefinition`,
+      (`Agent`, `AgentCrew`, `AgentInput`, `AgentResult`, `AgentDefinition`,
       `PersonaName`) from the `"."` entry point.
     - THE SYSTEM SHALL export all functions and types previously exported by
       `@daddia/sdk` (`resolveSession`, `readPromptFile`, `readSkillsDir`,
@@ -119,7 +119,7 @@ state of the repo, not what exists today.
     ```gherkin
     Scenario: Core entry point resolves all contracts types
       Given packages/crew is built
-      When a TypeScript file imports { Agent, AgentUnit, AgentInput, AgentResult, AgentDefinition, PersonaName } from "@daddia/crew"
+      When a TypeScript file imports { Agent, AgentCrew, AgentInput, AgentResult, AgentDefinition, PersonaName } from "@daddia/crew"
       Then the import resolves without error
       And the types match the definitions previously in packages/contracts/src/
 
@@ -168,72 +168,72 @@ state of the repo, not what exists today.
       Then verifySignature and createIdempotencyStore are not available on that import
     ```
 
-- [x] **[CREW-56-003] Migrate `agents/delivery` to import from `@daddia/crew`**
+- [x] **[CREW-56-003] Migrate `crews/delivery` to import from `@daddia/crew`**
   - **Status:** Done | **Priority:** P1 | **Estimate:** 3
   - **Epic:** CREW-56 | **Labels:** phase:now, type:refactor
   - **Depends on:** CREW-56-001, CREW-56-002
   - **Deliverable:** Every `import … from "@daddia/contracts"`, `import … from "@daddia/sdk"`,
-    and `import … from "@daddia/webhooks"` in `agents/delivery/src/` is replaced
+    and `import … from "@daddia/webhooks"` in `crews/delivery/src/` is replaced
     with `import … from "@daddia/crew"` or `import … from "@daddia/crew/webhooks"`
-    as appropriate. `agents/delivery/package.json` removes `@daddia/contracts`,
+    as appropriate. `crews/delivery/package.json` removes `@daddia/contracts`,
     `@daddia/sdk`, and `@daddia/webhooks` from `dependencies` and adds
     `@daddia/crew: workspace:*`. `pnpm typecheck` and `pnpm test` pass for
-    `agents/delivery`.
+    `crews/delivery`.
   - **Design:** design is captured in `docs/work/crew-package/backlog.md` §3 (this document)
   - **Acceptance (EARS):**
     - THE SYSTEM SHALL NOT contain any `import … from "@daddia/contracts"`,
       `import … from "@daddia/sdk"`, or `import … from "@daddia/webhooks"`
-      statement in `agents/delivery/src/`.
+      statement in `crews/delivery/src/`.
     - THE SYSTEM SHALL list `@daddia/crew` (not `@daddia/contracts`,
       `@daddia/sdk`, or `@daddia/webhooks`) under `dependencies` in
-      `agents/delivery/package.json`.
-    - WHEN `pnpm typecheck` is run for `agents/delivery`, THE SYSTEM SHALL
+      `crews/delivery/package.json`.
+    - WHEN `pnpm typecheck` is run for `crews/delivery`, THE SYSTEM SHALL
       exit with code 0.
-    - WHEN `pnpm test` is run for `agents/delivery`, THE SYSTEM SHALL exit
+    - WHEN `pnpm test` is run for `crews/delivery`, THE SYSTEM SHALL exit
       with code 0 and all previously passing tests shall continue to pass.
   - **Acceptance (Gherkin):**
 
     ```gherkin
-    Scenario: Delivery agent has no legacy package imports
-      Given agents/delivery/src/ is scanned for import statements
+    Scenario: Delivery crew has no legacy package imports
+      Given crews/delivery/src/ is scanned for import statements
       When the imports are inspected
       Then no import path contains "@daddia/contracts", "@daddia/sdk", or "@daddia/webhooks"
       And at least one import path contains "@daddia/crew"
 
-    Scenario: Delivery agent tests pass after migration
-      Given agents/delivery is built with the updated imports
-      When pnpm test is run for agents/delivery
+    Scenario: Delivery crew tests pass after migration
+      Given crews/delivery is built with the updated imports
+      When pnpm test is run for crews/delivery
       Then the test suite exits with code 0
       And no previously-passing test now fails
     ```
 
-- [x] **[CREW-56-004] Migrate `agents/code-reviewer` to import from `@daddia/crew`**
+- [x] **[CREW-56-004] Migrate `crews/code-reviewer` to import from `@daddia/crew`**
   - **Status:** Done | **Priority:** P1 | **Estimate:** 1
   - **Epic:** CREW-56 | **Labels:** phase:now, type:refactor
   - **Depends on:** CREW-56-001
   - **Deliverable:** Every `import … from "@daddia/contracts"` and
-    `import … from "@daddia/sdk"` in `agents/code-reviewer/src/` is replaced
-    with `import … from "@daddia/crew"`. `agents/code-reviewer/package.json`
+    `import … from "@daddia/sdk"` in `crews/code-reviewer/src/` is replaced
+    with `import … from "@daddia/crew"`. `crews/code-reviewer/package.json`
     removes `@daddia/contracts` and `@daddia/sdk` from `dependencies` and adds
     `@daddia/crew: workspace:*`. `pnpm typecheck` and `pnpm test` pass for
-    `agents/code-reviewer`. Note: `agents/code-reviewer` does not use
+    `crews/code-reviewer`. Note: `crews/code-reviewer` does not use
     `@daddia/webhooks` and MUST NOT gain a dependency on `@daddia/crew/webhooks`
     through this story.
   - **Design:** design is captured in `docs/work/crew-package/backlog.md` §3 (this document)
   - **Acceptance (EARS):**
     - THE SYSTEM SHALL NOT contain any `import … from "@daddia/contracts"` or
-      `import … from "@daddia/sdk"` statement in `agents/code-reviewer/src/`.
+      `import … from "@daddia/sdk"` statement in `crews/code-reviewer/src/`.
     - THE SYSTEM SHALL list `@daddia/crew` (not `@daddia/contracts` or
-      `@daddia/sdk`) under `dependencies` in `agents/code-reviewer/package.json`.
+      `@daddia/sdk`) under `dependencies` in `crews/code-reviewer/package.json`.
     - THE SYSTEM SHALL NOT import from `"@daddia/crew/webhooks"` in
-      `agents/code-reviewer/src/`.
-    - WHEN `pnpm typecheck` is run for `agents/code-reviewer`, THE SYSTEM
+      `crews/code-reviewer/src/`.
+    - WHEN `pnpm typecheck` is run for `crews/code-reviewer`, THE SYSTEM
       SHALL exit with code 0.
   - **Acceptance (Gherkin):**
 
     ```gherkin
-    Scenario: Code-reviewer agent has no legacy package imports
-      Given agents/code-reviewer/src/ is scanned for import statements
+    Scenario: Code-reviewer crew has no legacy package imports
+      Given crews/code-reviewer/src/ is scanned for import statements
       When the imports are inspected
       Then no import path contains "@daddia/contracts" or "@daddia/sdk"
       And at least one import path contains "@daddia/crew"
