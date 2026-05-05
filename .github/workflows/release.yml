@@ -23,7 +23,7 @@ jobs:
           # Full history so Changesets can compare versions correctly.
           fetch-depth: 0
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 10
 
