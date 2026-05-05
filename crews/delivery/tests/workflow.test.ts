@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { AgentInput, AgentResult } from "@daddia/crew";
 
 vi.mock("../src/memory.js", () => ({
-  seedProjectMemory: vi.fn().mockResolvedValue(undefined),
+  seedEngineerMemory: vi.fn().mockResolvedValue(undefined),
 }));
 
 // Mock all three agents before importing workflow.
