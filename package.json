@@ -9,9 +9,11 @@
     "test": "turbo test",
     "lint": "dependency-cruiser --config .dependency-cruiser.cjs crews packages",
     "clean": "turbo clean",
-    "dev": "turbo dev"
+    "dev": "turbo dev",
+    "release": "changeset publish"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.31.0",
     "@types/node": "^24.12.2",
     "dependency-cruiser": "^17.4.0",
     "turbo": "^2.9.8",

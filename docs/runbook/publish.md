@@ -20,7 +20,7 @@ Manual publish steps for `@daddia/crew`.
 | npm account | Must be a member of the `@daddia` npm org with **publish** rights |
 | `NPM_TOKEN` | Automation token (type: **Publish**) from npmjs.com → Access Tokens |
 
-To request org access, contact a `@daddia` org owner on npmjs.com. Read access for install (CREW-56-008) requires an **Automation** token with read-only scope.
+To request org access, contact a `@daddia` org owner on npmjs.com. `@daddia/crew` is published with public access, so no token is required to install it.
 
 ---
 
@@ -160,7 +160,45 @@ All tokens are created at [npmjs.com → Access Tokens](https://www.npmjs.com/se
 
 ---
 
-## Version policy
+## Changesets workflow (automated releases)
 
-Bump `packages/crew/package.json` → `version` manually before each release.
-Follow semver: breaking API changes → major, new exports → minor, fixes → patch. Once Changesets (CREW-56-007) is in place, version bumps are automated via changeset files.
+Releases for `@daddia/crew` are driven by [Changesets](https://github.com/changesets/changesets).
+The manual publish steps above are only needed for exceptional one-off publishes.
+
+### Adding a changeset to a PR
+
+Every PR that changes `packages/crew/src/` must include a changeset file:
+
+```sh
+# From the repo root:
+pnpm changeset
+```
+
+The interactive prompt asks for:
+- **Which packages** are affected → select `@daddia/crew`
+- **Semver bump type** → `patch` (bug fix), `minor` (new export), `major` (breaking change)
+- **Summary** → one line describing the change for the `CHANGELOG.md` entry
+
+Commit the generated `.changeset/<random-name>.md` file with the PR.
+
+### How the release pipeline works
+
+The `.github/workflows/release.yml` workflow runs on every push to `main`:
+
+1. **Pending changesets exist** → the pipeline opens (or updates) a PR titled
+   "chore: version packages". That PR bumps `packages/crew/package.json` version,
+   collects changeset summaries into `CHANGELOG.md`, and deletes the consumed
+   changeset files.
+2. **The version PR is merged** → on the next push to `main`, no pending changesets
+   remain. The pipeline runs `pnpm run release` (`changeset publish`), which
+   publishes the new version to npm using the `NPM_TOKEN` secret.
+
+**Required GitHub secret:** `NPM_TOKEN` — an npm Automation token with publish
+rights to `@daddia/crew`. Set it at:
+`Settings → Secrets and variables → Actions → New repository secret`.
+
+### Version policy
+
+Follow semver: breaking API changes → major, new exports → minor, fixes → patch.
+Do not edit `packages/crew/package.json` → `version` by hand; let the Changesets
+version PR do it.
