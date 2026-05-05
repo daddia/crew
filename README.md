@@ -1,10 +1,10 @@
-# crew
+# Crew
 
 Autonomous software delivery crew. A monorepo of agent crews that pick up Jira stories, implement them, open GitLab MRs, run peer review, address feedback, and close the loop — end to end, without human intervention.
 
 ## Structure
 
-```
+```ts
 crews/
   {crew}/
     src/
@@ -32,8 +32,7 @@ cp .env.example .env
 cp crews/{crew}/.env.example crews/{crew}/.env
 # fill in values in both files
 
-pnpm install
-pnpm build
+pnpm install && pnpm build
 
 cd crews/{crew}
 pnpm start
