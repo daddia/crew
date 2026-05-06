@@ -73,6 +73,15 @@ export function createGitlabClient(
   return {
     async createMr(options) {
       const { branchName, title, targetBranch = "main" } = options;
+
+      const lookupRes = await gitlabFetch(
+        `/projects/${encodeURIComponent(projectId)}/merge_requests?source_branch=${encodeURIComponent(branchName)}&state=opened`,
+      );
+      const existing = (await lookupRes.json()) as Array<{ web_url: string }>;
+      if (existing.length > 0) {
+        return existing[0]!.web_url;
+      }
+
       const res = await gitlabFetch(
         `/projects/${encodeURIComponent(projectId)}/merge_requests`,
         {
