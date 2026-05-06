@@ -2,30 +2,70 @@ import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { jiraHandler } from "./handlers/jira.js";
 import { gitlabHandler } from "./handlers/gitlab.js";
+import { createJiraClient } from "./integrations/jira.js";
+import { createGitlabClient } from "./integrations/gitlab.js";
 import { log } from "./observability.js";
 import { startPoller } from "./poller.js";
 import { createStateStore } from "./state.js";
 import { recoverInterruptedSteps } from "./workflow.js";
+import { loadConfig } from "./config.js";
+import type { WorkflowCtxBase } from "./workflow.js";
 
-const PORT = parseInt(process.env["PORT"] ?? "3000", 10);
-const DB_PATH = process.env["DB_PATH"] ?? "./data/delivery-build.db";
+const config = loadConfig();
 
-const state = createStateStore(DB_PATH);
+const jira = createJiraClient(config.identity.jira, {
+  atlassianApiToken: config.secrets.atlassianApiToken,
+});
+const gitlab = createGitlabClient(config.identity.gitlab, {
+  gitlabAccessToken: config.secrets.gitlabAccessToken,
+});
 
-await recoverInterruptedSteps(state);
+const ctxBase: WorkflowCtxBase = {
+  behaviour: {
+    refactorLoopCap: config.behaviour.refactorLoopCap,
+    ciRetryCap: config.behaviour.ciRetryCap,
+    ciPollIntervalMs: config.behaviour.ciPollIntervalMs,
+    anthropicModel: config.behaviour.anthropicModel,
+  },
+  jira,
+  gitlab,
+  projectDir: config.infrastructure.projectDir,
+};
+
+const state = createStateStore(config.infrastructure.dbPath);
+
+await recoverInterruptedSteps(state, ctxBase);
 
 const app = new Hono();
 
-app.post("/webhooks/jira", (c) => jiraHandler(c, state));
-app.post("/webhooks/gitlab", (c) => gitlabHandler(c, state));
+app.post("/webhooks/jira", (c) =>
+  jiraHandler(c, state, String(config.secrets.jiraWebhookSecret), ctxBase),
+);
+app.post("/webhooks/gitlab", (c) =>
+  gitlabHandler(c, state, String(config.secrets.gitlabWebhookSecret), ctxBase),
+);
 
 app.get("/healthz", (c) => c.json({ ok: true }));
 
-const server = serve({ fetch: app.fetch, port: PORT }, () => {
-  log.info("server.start", { port: PORT, db: DB_PATH });
-});
+const server = serve(
+  { fetch: app.fetch, port: config.infrastructure.port },
+  () => {
+    log.info("server.start", {
+      port: config.infrastructure.port,
+      db: config.infrastructure.dbPath,
+    });
+  },
+);
 
-const pollInterval = startPoller(state);
+const pollerDeps = {
+  identity: config.identity,
+  behaviour: config.behaviour,
+  jira,
+  gitlab,
+  projectDir: config.infrastructure.projectDir,
+};
+
+const pollInterval = startPoller(pollerDeps, state);
 
 // Graceful shutdown
 function shutdown(): void {

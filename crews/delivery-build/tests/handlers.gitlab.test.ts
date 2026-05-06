@@ -8,9 +8,33 @@ vi.mock("../src/workflow.js", () => ({
 import { gitlabHandler } from "../src/handlers/gitlab.js";
 import { addressFeedback } from "../src/workflow.js";
 import type { StateStore } from "../src/state.js";
+import type { WorkflowCtxBase } from "../src/workflow.js";
+import type { JiraClient } from "../src/integrations/jira.js";
+import type { GitlabClient } from "../src/integrations/gitlab.js";
 
 const SECRET = "gl-test-secret";
-process.env["GITLAB_WEBHOOK_SECRET"] = SECRET;
+
+const mockJira = {
+  transitionIssue: vi.fn(),
+  getIssue: vi.fn(),
+  commentOnIssue: vi.fn(),
+  getComments: vi.fn(),
+  searchIssues: vi.fn(),
+} satisfies JiraClient;
+
+const mockGitlab = {
+  createMr: vi.fn(),
+  getPipelineStatus: vi.fn(),
+  getMrDiff: vi.fn(),
+  postReviewComment: vi.fn(),
+} satisfies GitlabClient;
+
+const ctxBase: WorkflowCtxBase = {
+  behaviour: { refactorLoopCap: 2, ciRetryCap: 3, ciPollIntervalMs: 0 },
+  jira: mockJira,
+  gitlab: mockGitlab,
+  projectDir: "/project",
+};
 
 function makeState(): StateStore {
   return {
@@ -29,7 +53,7 @@ function makeState(): StateStore {
 
 function makeApp(state: StateStore): Hono {
   const app = new Hono();
-  app.post("/webhooks/gitlab", (c) => gitlabHandler(c, state));
+  app.post("/webhooks/gitlab", (c) => gitlabHandler(c, state, SECRET, ctxBase));
   return app;
 }
 

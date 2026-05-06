@@ -2,17 +2,16 @@ import type { Context } from "hono";
 import { checkReplayWindow, verifySignature } from "@daddia/crew/webhooks";
 import { log } from "../observability.js";
 import type { StateStore } from "../state.js";
-import { runStory } from "../workflow.js";
+import { runStory, type WorkflowCtxBase } from "../workflow.js";
 
 export async function jiraHandler(
   c: Context,
   state: StateStore,
+  secret: string,
+  ctxBase: WorkflowCtxBase,
 ): Promise<Response> {
   const rawBody = await c.req.arrayBuffer();
   const bodyBuffer = Buffer.from(rawBody);
-
-  // Read lazily so tests can set the env var before the first request.
-  const secret = process.env["JIRA_WEBHOOK_SECRET"] ?? "";
 
   // 1. Verify HMAC signature.
   try {
@@ -57,7 +56,7 @@ export async function jiraHandler(
 
   // Fire-and-forget — webhook must return quickly.
   setImmediate(() => {
-    runStory({ issueKey, state }).catch((err) => {
+    runStory({ issueKey, state, ...ctxBase }).catch((err) => {
       log.error("jira.handler.workflow-error", { issueKey, err: String(err) });
     });
   });

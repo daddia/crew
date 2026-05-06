@@ -2,17 +2,16 @@ import type { Context } from "hono";
 import { verifySignature } from "@daddia/crew/webhooks";
 import { log } from "../observability.js";
 import type { StateStore } from "../state.js";
-import { addressFeedback } from "../workflow.js";
+import { addressFeedback, type WorkflowCtxBase } from "../workflow.js";
 
 export async function gitlabHandler(
   c: Context,
   state: StateStore,
+  secret: string,
+  ctxBase: WorkflowCtxBase,
 ): Promise<Response> {
   const rawBody = await c.req.arrayBuffer();
   const bodyBuffer = Buffer.from(rawBody);
-
-  // Read lazily so tests can set the env var before the first request.
-  const secret = process.env["GITLAB_WEBHOOK_SECRET"] ?? "";
 
   // 1. Verify token.
   try {
@@ -61,7 +60,7 @@ export async function gitlabHandler(
   log.info("gitlab.handler.dispatch", { issueKey, eventId });
 
   setImmediate(() => {
-    addressFeedback({ issueKey, state }, comment, mrUrl).catch((err) => {
+    addressFeedback({ issueKey, state, ...ctxBase }, comment, mrUrl).catch((err) => {
       log.error("gitlab.handler.workflow-error", { issueKey, err: String(err) });
     });
   });

@@ -2,18 +2,32 @@ import { unstable_v2_resumeSession } from "@anthropic-ai/claude-agent-sdk";
 import { type AgentInput } from "@daddia/crew";
 import { engineer } from "./agents/engineer/agent.js";
 import { seniorEngineer } from "./agents/senior-engineer/agent.js";
-import { createMr, getPipelineStatus } from "./integrations/gitlab.js";
-import { commentOnIssue, getIssue, transitionIssue, type JiraIssue } from "./integrations/jira.js";
+import type { GitlabClient } from "./integrations/gitlab.js";
+import type { JiraClient, JiraIssue } from "./integrations/jira.js";
 import { seedEngineerMemory } from "./memory.js";
 import { log } from "./observability.js";
 import type { StateStore } from "./state.js";
 
-const REFACTOR_LOOP_CAP = parseInt(process.env["REFACTOR_LOOP_CAP"] ?? "2", 10);
-
 export interface WorkflowContext {
   issueKey: string;
   state: StateStore;
+  behaviour: {
+    refactorLoopCap: number;
+    ciRetryCap: number;
+    ciPollIntervalMs: number;
+    anthropicModel?: string;
+  };
+  jira: JiraClient;
+  gitlab: GitlabClient;
+  projectDir: string;
 }
+
+/**
+ * The parts of WorkflowContext that are shared across all stories — everything
+ * except issueKey and state. Handlers and recovery use this to build a full
+ * WorkflowContext at call time.
+ */
+export type WorkflowCtxBase = Omit<WorkflowContext, "issueKey" | "state">;
 
 /**
  * Run the delivery build sequence for one story.
@@ -24,24 +38,19 @@ export interface WorkflowContext {
  *       → questions required → comment + transition to Clarification Needed + halt
  *   → engineer implements story on branch
  *   → senior-engineer peer-code-review
- *   → bounded address-feedback loop (cap: REFACTOR_LOOP_CAP)
+ *   → bounded address-feedback loop (cap: ctx.behaviour.refactorLoopCap)
  *       → cap exceeded → escalate to human review → halt (MR NOT opened)
  *   → engineer raises merge request (only after peer review approves)
- *   → CI monitoring loop: poll pipeline, fix on failure (cap: CI_RETRY_CAP)
+ *   → CI monitoring loop: poll pipeline, fix on failure (cap: ctx.behaviour.ciRetryCap)
  *       → cap exceeded → escalate to human review → halt
  *   → status update: `in progress` → `in qa`
  *   → log handoff-to-qa; delivery-qa crew picks up "In QA" tickets
  *   → done
  *
  * On loop cap: transition to "Needs human review", comment with unresolved items, stop.
- *
- * Loop caps:
- *   REFACTOR_LOOP_CAP - max engineer address-feedback runs; the internal loop may
- *     run one more senior peer review (see Step 4)
- *   CI_RETRY_CAP      - max CI fix attempts before escalation
  */
 export async function runStory(ctx: WorkflowContext): Promise<void> {
-  const { issueKey, state } = ctx;
+  const { issueKey } = ctx;
   const input: AgentInput = { issueKey, context: {} };
 
   log.info("workflow.start", { issueKey });
@@ -50,7 +59,7 @@ export async function runStory(ctx: WorkflowContext): Promise<void> {
     await runStoryInner(ctx, input);
   } catch (err) {
     log.error("workflow.unhandled-error", { issueKey, err: String(err) });
-    await escalateToHumanReview(issueKey, "Unexpected workflow error", []);
+    await escalateToHumanReview(ctx.jira, issueKey, "Unexpected workflow error", []);
   }
 }
 
@@ -58,9 +67,9 @@ async function runStoryInner(
   ctx: WorkflowContext,
   input: AgentInput,
 ): Promise<void> {
-  const { issueKey, state } = ctx;
+  const { issueKey, state, jira, gitlab, behaviour, projectDir } = ctx;
 
-  await seedEngineerMemory(process.env["PROJECT_DIR"] ?? process.cwd());
+  await seedEngineerMemory(projectDir);
 
   // ── Step 1: Context seed ───────────────────────────────────────────────────
   // Fetch the Jira ticket before implementation so agents have full story
@@ -71,7 +80,7 @@ async function runStoryInner(
 
   let ticket: JiraIssue | null = null;
   try {
-    ticket = await getIssue(issueKey);
+    ticket = await jira.getIssue(issueKey);
   } catch (err) {
     log.warn("workflow.context-seed.failed", { issueKey, err: String(err) });
   }
@@ -100,7 +109,7 @@ async function runStoryInner(
   });
 
   if (!assessResult.success) {
-    await escalateToHumanReview(issueKey, "Engineer failed to assess ticket clarity", []);
+    await escalateToHumanReview(jira, issueKey, "Engineer failed to assess ticket clarity", []);
     return;
   }
 
@@ -110,8 +119,8 @@ async function runStoryInner(
         ? assessResult.artefacts["questions"]
         : "The engineer requires clarification before proceeding.";
 
-    await commentOnIssue(issueKey, questions);
-    await transitionIssue(issueKey, "Clarification Needed");
+    await jira.commentOnIssue(issueKey, questions);
+    await jira.transitionIssue(issueKey, "Clarification Needed");
 
     state.upsertStory(issueKey, "clarification-pending");
     state.startStep(issueKey, "clarification-pending");
@@ -123,7 +132,7 @@ async function runStoryInner(
 
   // ── Step 3: Implement ─────────────────────────────────────────────────────
   state.upsertStory(issueKey, "implement");
-  await transitionIssue(issueKey, "In Progress");
+  await jira.transitionIssue(issueKey, "In Progress");
 
   const implResult = await engineer.run({
     ...input,
@@ -148,12 +157,12 @@ async function runStoryInner(
   });
 
   if (!implResult.success) {
-    await escalateToHumanReview(issueKey, "Engineer failed to implement story", []);
+    await escalateToHumanReview(jira, issueKey, "Engineer failed to implement story", []);
     return;
   }
 
   if (!branchName) {
-    await escalateToHumanReview(issueKey, "Engineer did not produce a branch name", []);
+    await escalateToHumanReview(jira, issueKey, "Engineer did not produce a branch name", []);
     return;
   }
 
@@ -161,14 +170,7 @@ async function runStoryInner(
   let reviewPassed = false;
   let unresolvedItems: string[] = [];
 
-  // With REFACTOR_LOOP_CAP = N, the loop index runs 0..N (N+1 iterations). Each
-  // iteration begins with senior-engineer peer review, so there are up to N+1
-  // peer-review calls. Address-feedback runs only after a failed review when
-  // iteration < N; when iteration === N the guard below breaks before address-feedback,
-  // so at most N engineer runs. The extra peer-review pass observes the outcome of
-  // the Nth fix attempt without scheduling another fix.
-  for (let iteration = 0; iteration < REFACTOR_LOOP_CAP + 1; iteration++) {
-    // Peer review
+  for (let iteration = 0; iteration < behaviour.refactorLoopCap + 1; iteration++) {
     state.upsertStory(issueKey, "peer-code-review");
     state.startStep(issueKey, "peer-code-review");
 
@@ -189,8 +191,7 @@ async function runStoryInner(
 
     unresolvedItems = (reviewResult.artefacts["comments"] as string[]) ?? [];
 
-    // Address feedback — check cap before running
-    if (iteration >= REFACTOR_LOOP_CAP) {
+    if (iteration >= behaviour.refactorLoopCap) {
       break;
     }
 
@@ -219,7 +220,7 @@ async function runStoryInner(
   }
 
   if (!reviewPassed) {
-    await escalateToHumanReview(issueKey, "Refactor loop cap reached", unresolvedItems);
+    await escalateToHumanReview(jira, issueKey, "Refactor loop cap reached", unresolvedItems);
     return;
   }
 
@@ -227,7 +228,7 @@ async function runStoryInner(
   state.upsertStory(issueKey, "open-mr");
   state.startStep(issueKey, "open-mr");
 
-  const mrUrl = await createMr({
+  const mrUrl = await gitlab.createMr({
     issueKey,
     branchName,
     title: `[${issueKey}] ${implResult.artefacts["title"] as string ?? "Automated delivery"}`,
@@ -236,16 +237,13 @@ async function runStoryInner(
   state.finishStep(issueKey, "open-mr", { verdict: mrUrl });
 
   // ── Step 6: CI monitoring loop ────────────────────────────────────────────
-  // Read caps inside the function so tests can override via process.env.
-  const ciRetryCap = parseInt(process.env["CI_RETRY_CAP"] ?? "3", 10);
-  const ciPollInterval = parseInt(process.env["CI_POLL_INTERVAL_MS"] ?? "30000", 10);
   let ciFixAttempts = 0;
 
   while (true) {
     state.upsertStory(issueKey, "ci-check");
     state.startStep(issueKey, "ci-check");
 
-    const pipelineStatus = await getPipelineStatus(mrUrl);
+    const pipelineStatus = await gitlab.getPipelineStatus(mrUrl);
 
     state.finishStep(issueKey, "ci-check", { verdict: pipelineStatus });
 
@@ -254,8 +252,8 @@ async function runStoryInner(
     }
 
     if (pipelineStatus === "failed") {
-      if (ciFixAttempts >= ciRetryCap) {
-        await escalateToHumanReview(issueKey, "CI fix cap reached", []);
+      if (ciFixAttempts >= behaviour.ciRetryCap) {
+        await escalateToHumanReview(jira, issueKey, "CI fix cap reached", []);
         return;
       }
 
@@ -275,13 +273,13 @@ async function runStoryInner(
       ciFixAttempts++;
     } else {
       // created, pending, running, canceled — transient; wait before re-polling
-      await sleep(ciPollInterval);
+      await sleep(behaviour.ciPollIntervalMs);
     }
   }
 
   // ── Done: transition to "In QA" — delivery-qa crew picks up from here
   state.upsertStory(issueKey, "in-qa");
-  await transitionIssue(issueKey, "In QA");
+  await jira.transitionIssue(issueKey, "In QA");
   log.info("workflow.handoff-to-qa", { issueKey, mrUrl });
 }
 
@@ -298,16 +296,13 @@ export async function addressFeedback(
   comment: string,
   mrUrl: string,
 ): Promise<void> {
-  const { issueKey, state } = ctx;
+  const { issueKey, state, jira, behaviour } = ctx;
 
   try {
     const iterationCount = state.countRefactorIterations(issueKey);
-    if (iterationCount >= REFACTOR_LOOP_CAP) {
-      log.warn("workflow.address-feedback.cap-exceeded", {
-        issueKey,
-        iterationCount,
-      });
-      await escalateToHumanReview(issueKey, "Refactor loop cap reached on human feedback", [comment]);
+    if (iterationCount >= behaviour.refactorLoopCap) {
+      log.warn("workflow.address-feedback.cap-exceeded", { issueKey, iterationCount });
+      await escalateToHumanReview(jira, issueKey, "Refactor loop cap reached on human feedback", [comment]);
       return;
     }
 
@@ -318,7 +313,6 @@ export async function addressFeedback(
       context: { task: "address-feedback", mrUrl, comments: [comment] },
     });
 
-    // Post-run startStep: captures sessionId; upsertStory above is the in-flight signal.
     const sessionId = result.artefacts["sessionId"] as string | undefined;
     state.startStep(issueKey, "address-feedback", sessionId);
 
@@ -330,11 +324,12 @@ export async function addressFeedback(
     log.info("workflow.address-feedback.done", { issueKey, success: result.success });
   } catch (err) {
     log.error("workflow.address-feedback.unhandled-error", { issueKey, err: String(err) });
-    await escalateToHumanReview(issueKey, "Unexpected error addressing feedback", []);
+    await escalateToHumanReview(jira, issueKey, "Unexpected error addressing feedback", []);
   }
 }
 
 async function escalateToHumanReview(
+  jira: JiraClient,
   issueKey: string,
   reason: string,
   unresolvedItems: string[],
@@ -347,8 +342,8 @@ async function escalateToHumanReview(
       ? `Unresolved items:\n${unresolvedItems.map((i) => `- ${i}`).join("\n")}`
       : "");
 
-  await commentOnIssue(issueKey, body);
-  await transitionIssue(issueKey, "Needs human review");
+  await jira.commentOnIssue(issueKey, body);
+  await jira.transitionIssue(issueKey, "Needs human review");
 }
 
 const DEFAULT_RECOVERY_MODEL = "claude-opus-4-5";
@@ -362,21 +357,35 @@ const DEFAULT_RECOVERY_MODEL = "claude-opus-4-5";
  * Called once on startup, before the HTTP server and poller are initialised,
  * so no new stories begin processing while recovery is in progress.
  */
-export async function recoverInterruptedSteps(state: StateStore): Promise<void> {
+export async function recoverInterruptedSteps(
+  state: StateStore,
+  ctxBase: WorkflowCtxBase,
+): Promise<void> {
   const interrupted = state.getInterruptedSteps();
 
   for (const row of interrupted) {
     const { issueKey, step, sessionId } = row;
 
     try {
+      // Probe whether the SDK session is still accessible. The returned handle
+      // is intentionally discarded: the workflow restarts from context-seed
+      // rather than resuming mid-step, because the step's intermediate state
+      // is not persisted. A future enhancement could persist and replay step
+      // state to continue from where the crash occurred.
       unstable_v2_resumeSession(sessionId!, {
-        model: process.env["ANTHROPIC_MODEL"] ?? DEFAULT_RECOVERY_MODEL,
+        model: ctxBase.behaviour.anthropicModel ?? DEFAULT_RECOVERY_MODEL,
       });
       log.info("recovery.session-resumed", { issueKey, step, sessionId });
-      await runStory({ issueKey, state });
+      await runStory({ issueKey, state, ...ctxBase });
     } catch (err) {
       log.warn("recovery.session-failed", { issueKey, step, sessionId, err: String(err) });
-      await escalateToHumanReview(issueKey, "Crash recovery failed: " + String(err), []);
+      try {
+        await escalateToHumanReview(ctxBase.jira, issueKey, "Crash recovery failed: " + String(err), []);
+      } catch (escalateErr) {
+        // Escalation can fail when the Jira API is unreachable. Log and
+        // continue so the remaining interrupted rows are still attempted.
+        log.error("recovery.escalation-failed", { issueKey, err: String(escalateErr) });
+      }
     }
   }
 }

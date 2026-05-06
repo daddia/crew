@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-
-process.env["GITLAB_API_URL"] = "https://gitlab.test/api/v4";
-process.env["GITLAB_PERSONAL_ACCESS_TOKEN"] = "test-token";
-process.env["GITLAB_PROJECT_ID"] = "my-project";
+import { createGitlabClient, GitLabApiError } from "../src/integrations/gitlab.js";
 
 const fetchMock = vi.fn();
 vi.stubGlobal("fetch", fetchMock);
 
-import { getPipelineStatus, GitLabApiError } from "../src/integrations/gitlab.js";
+const client = createGitlabClient(
+  { apiUrl: "https://gitlab.test/api/v4", projectId: "my-project" },
+  { gitlabAccessToken: "test-token" },
+);
 
 const MR_URL = "https://gitlab.test/org/repo/-/merge_requests/42";
 
@@ -26,7 +26,7 @@ describe("getPipelineStatus", () => {
       mockJson([{ status: "success" }, { status: "failed" }]),
     );
 
-    const status = await getPipelineStatus(MR_URL);
+    const status = await client.getPipelineStatus(MR_URL);
 
     expect(status).toBe("success");
     expect(fetchMock).toHaveBeenCalledWith(
@@ -38,7 +38,7 @@ describe("getPipelineStatus", () => {
   it("returns 'pending' when no pipelines exist yet", async () => {
     fetchMock.mockResolvedValueOnce(mockJson([]));
 
-    const status = await getPipelineStatus(MR_URL);
+    const status = await client.getPipelineStatus(MR_URL);
 
     expect(status).toBe("pending");
   });
@@ -48,7 +48,7 @@ describe("getPipelineStatus", () => {
       mockJson([{ status: "failed" }, { status: "success" }]),
     );
 
-    const status = await getPipelineStatus(MR_URL);
+    const status = await client.getPipelineStatus(MR_URL);
 
     expect(status).toBe("failed");
   });
@@ -56,6 +56,6 @@ describe("getPipelineStatus", () => {
   it("throws GitLabApiError on a non-2xx response", async () => {
     fetchMock.mockResolvedValueOnce(new Response("Not Found", { status: 404 }));
 
-    await expect(getPipelineStatus(MR_URL)).rejects.toThrow(GitLabApiError);
+    await expect(client.getPipelineStatus(MR_URL)).rejects.toThrow(GitLabApiError);
   });
 });

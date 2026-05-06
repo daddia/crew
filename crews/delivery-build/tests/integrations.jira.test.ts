@@ -1,14 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { createJiraClient, JiraApiError } from "../src/integrations/jira.js";
 
 const BASE_URL = "https://test.atlassian.net";
-process.env["ATLASSIAN_BASE_URL"] = BASE_URL;
-process.env["ATLASSIAN_EMAIL"] = "bot@example.com";
-process.env["ATLASSIAN_API_TOKEN"] = "token";
-
 const fetchMock = vi.fn();
 vi.stubGlobal("fetch", fetchMock);
 
-import { transitionIssue, commentOnIssue, getIssue, searchIssues, getComments, JiraApiError } from "../src/integrations/jira.js";
+const client = createJiraClient(
+  { baseUrl: BASE_URL, email: "bot@example.com" },
+  { atlassianApiToken: "token" },
+);
 
 function mockTransitionsResponse(
   transitions: Array<{ id: string; name: string; to: { name: string } }>,
@@ -36,7 +36,7 @@ describe("transitionIssue", () => {
       )
       .mockResolvedValueOnce(mockOk());
 
-    await transitionIssue("ENG-1", "In Progress");
+    await client.transitionIssue("ENG-1", "In Progress");
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     const [, postCall] = fetchMock.mock.calls as [unknown[], unknown[]][];
@@ -53,7 +53,7 @@ describe("transitionIssue", () => {
       ]),
     );
 
-    await transitionIssue("ENG-1", "Done");
+    await client.transitionIssue("ENG-1", "Done");
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
@@ -72,10 +72,7 @@ describe("getIssue", () => {
               type: "doc",
               version: 1,
               content: [
-                {
-                  type: "paragraph",
-                  content: [{ type: "text", text: "Do this work." }],
-                },
+                { type: "paragraph", content: [{ type: "text", text: "Do this work." }] },
               ],
             },
           },
@@ -84,7 +81,7 @@ describe("getIssue", () => {
       ),
     );
 
-    const issue = await getIssue("ENG-1");
+    const issue = await client.getIssue("ENG-1");
 
     expect(issue.summary).toBe("Build the feature");
     expect(issue.description).toBe("Do this work.");
@@ -99,7 +96,7 @@ describe("getIssue", () => {
       ),
     );
 
-    const issue = await getIssue("ENG-1");
+    const issue = await client.getIssue("ENG-1");
     expect(issue.description).toBeNull();
   });
 
@@ -122,14 +119,14 @@ describe("getIssue", () => {
       ),
     );
 
-    const issue = await getIssue("ENG-1");
+    const issue = await client.getIssue("ENG-1");
     expect(issue.description).toBe("Line one.\nLine two.");
   });
 
   it("throws JiraApiError when the API returns a non-2xx status", async () => {
     fetchMock.mockResolvedValueOnce(new Response("Not Found", { status: 404 }));
 
-    await expect(getIssue("ENG-999")).rejects.toThrow(JiraApiError);
+    await expect(client.getIssue("ENG-999")).rejects.toThrow(JiraApiError);
   });
 });
 
@@ -139,22 +136,14 @@ describe("searchIssues", () => {
   it("returns an array of issueKey objects from the search response", async () => {
     fetchMock.mockResolvedValueOnce(
       new Response(
-        JSON.stringify({
-          issues: [
-            { key: "CREW-1" },
-            { key: "CREW-2" },
-          ],
-        }),
+        JSON.stringify({ issues: [{ key: "CREW-1" }, { key: "CREW-2" }] }),
         { status: 200, headers: { "Content-Type": "application/json" } },
       ),
     );
 
-    const results = await searchIssues('project = "CREW" AND status = "To Do"');
+    const results = await client.searchIssues('project = "CREW" AND status = "To Do"');
 
-    expect(results).toEqual([
-      { issueKey: "CREW-1" },
-      { issueKey: "CREW-2" },
-    ]);
+    expect(results).toEqual([{ issueKey: "CREW-1" }, { issueKey: "CREW-2" }]);
   });
 
   it("passes the JQL as a query parameter and targets the search endpoint", async () => {
@@ -166,11 +155,10 @@ describe("searchIssues", () => {
     );
 
     const jql = 'project = "CREW" AND status = "To Do"';
-    await searchIssues(jql);
+    await client.searchIssues(jql);
 
     const [rawUrl] = fetchMock.mock.calls[0] as [string];
-    // The path is relative; prepend a dummy origin so URL can parse it.
-    const url = new URL(rawUrl, "https://test.atlassian.net");
+    const url = new URL(rawUrl);
     expect(url.pathname).toContain("/issue/search");
     expect(url.searchParams.get("jql")).toBe(jql);
   });
@@ -183,7 +171,7 @@ describe("searchIssues", () => {
       }),
     );
 
-    const results = await searchIssues('project = "CREW" AND status = "To Do"');
+    const results = await client.searchIssues('project = "CREW" AND status = "To Do"');
     expect(results).toEqual([]);
   });
 
@@ -191,7 +179,7 @@ describe("searchIssues", () => {
     fetchMock.mockResolvedValueOnce(new Response("Internal Server Error", { status: 500 }));
 
     await expect(
-      searchIssues('project = "CREW" AND status = "To Do"'),
+      client.searchIssues('project = "CREW" AND status = "To Do"'),
     ).rejects.toThrow(JiraApiError);
   });
 });
@@ -202,7 +190,7 @@ describe("commentOnIssue", () => {
   it("posts a comment with the correct ADF structure", async () => {
     fetchMock.mockResolvedValueOnce(mockOk());
 
-    await commentOnIssue("ENG-1", "hello world");
+    await client.commentOnIssue("ENG-1", "hello world");
 
     const [call] = fetchMock.mock.calls as [unknown[], unknown[]][];
     const body = JSON.parse((call?.[1] as { body: string })?.body ?? "{}") as {
@@ -235,7 +223,7 @@ describe("getComments", () => {
       ),
     );
 
-    const comments = await getComments("ENG-1");
+    const comments = await client.getComments("ENG-1");
 
     expect(comments).toHaveLength(1);
     expect(comments[0]).toMatchObject({
@@ -262,7 +250,7 @@ describe("getComments", () => {
       ),
     );
 
-    const comments = await getComments("ENG-1");
+    const comments = await client.getComments("ENG-1");
 
     expect(comments[0]?.accountId).toBe("acc-ext");
     expect(comments[0]?.author).toBe("External User");
@@ -277,7 +265,7 @@ describe("getComments", () => {
       }),
     );
 
-    const comments = await getComments("ENG-1");
+    const comments = await client.getComments("ENG-1");
     expect(comments).toEqual([]);
   });
 
@@ -289,7 +277,7 @@ describe("getComments", () => {
       }),
     );
 
-    await getComments("ENG-42");
+    await client.getComments("ENG-42");
 
     const [url] = fetchMock.mock.calls[0] as [string];
     expect(url).toContain("/issue/ENG-42/comment");
@@ -298,6 +286,25 @@ describe("getComments", () => {
   it("throws JiraApiError when the API returns a non-2xx status", async () => {
     fetchMock.mockResolvedValueOnce(new Response("Not Found", { status: 404 }));
 
-    await expect(getComments("ENG-999")).rejects.toThrow(JiraApiError);
+    await expect(client.getComments("ENG-999")).rejects.toThrow(JiraApiError);
+  });
+});
+
+describe("createJiraClient — uses the supplied base URL", () => {
+  it("targets the provided base URL, not any environment variable", async () => {
+    fetchMock.mockReset();
+    const customClient = createJiraClient(
+      { baseUrl: "https://custom.atlassian.net", email: "user@example.com" },
+      { atlassianApiToken: "custom-token" },
+    );
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ issues: [] }), { status: 200 }),
+    );
+
+    await customClient.searchIssues("project = X");
+
+    const [url] = fetchMock.mock.calls[0] as [string];
+    expect(url).toContain("custom.atlassian.net");
+    expect(url).not.toContain("test.atlassian.net");
   });
 });

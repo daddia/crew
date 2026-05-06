@@ -1,6 +1,8 @@
-import { searchIssues, getComments, commentOnIssue, transitionIssue } from "./integrations/jira.js";
+import type { JiraClient } from "./integrations/jira.js";
+import type { GitlabClient } from "./integrations/gitlab.js";
 import { log } from "./observability.js";
 import { runStory } from "./workflow.js";
+import type { WorkflowCtxBase } from "./workflow.js";
 import type { Step, StateStore } from "./state.js";
 
 const TERMINAL_STEPS = new Set<Step>(["in-qa", "needs-human-review"]);
@@ -12,6 +14,32 @@ const TERMINAL_STEPS = new Set<Step>(["in-qa", "needs-human-review"]);
 export const inFlight = new Set<string>();
 
 /**
+ * Dependencies for the poller — all values are injected at construction time
+ * rather than read from the environment.
+ */
+export interface PollerDeps {
+  identity: {
+    jira: {
+      projectKey: string;
+      assigneeAccountId: string;
+      email: string;
+      botAccountId?: string;
+    };
+  };
+  behaviour: {
+    pollIntervalMs: number;
+    clarificationTimeoutHours: number;
+    refactorLoopCap: number;
+    ciRetryCap: number;
+    ciPollIntervalMs: number;
+    anthropicModel?: string;
+  };
+  jira: JiraClient;
+  gitlab: GitlabClient;
+  projectDir: string;
+}
+
+/**
  * Execute one poll tick: query Jira for eligible To Do stories and fire
  * runStory() for each result.
  *
@@ -20,32 +48,40 @@ export const inFlight = new Set<string>();
  *   emit a debug log; terminal steps are silently ignored because Jira
  *   sometimes returns tickets that have already been handed off).
  * - If the story is already running in this process, skip it.
- *
- * Env vars are read on every call so tests can override them without
- * re-importing the module.
  */
-export async function pollTick(state: StateStore): Promise<void> {
-  const projectKey = process.env["JIRA_PROJECT_KEY"] ?? "";
-  const assignee = process.env["JIRA_ASSIGNEE_ACCOUNT_ID"] ?? "";
+export async function pollTick(deps: PollerDeps, state: StateStore): Promise<void> {
+  const { projectKey, assigneeAccountId } = deps.identity.jira;
 
-  if (!projectKey || !assignee) {
+  if (!projectKey || !assigneeAccountId) {
     const missing = [
-      !projectKey && "JIRA_PROJECT_KEY",
-      !assignee && "JIRA_ASSIGNEE_ACCOUNT_ID",
+      !projectKey && "identity.jira.projectKey",
+      !assigneeAccountId && "identity.jira.assigneeAccountId",
     ].filter(Boolean);
     log.warn("poller.misconfigured", { missing });
     return;
   }
 
-  const jql = `project = "${projectKey}" AND status = "To Do" AND assignee = "${assignee}"`;
+  const jql = `project = "${projectKey}" AND status = "To Do" AND assignee = "${assigneeAccountId}"`;
 
   let issues: Array<{ issueKey: string }>;
   try {
-    issues = await searchIssues(jql);
+    issues = await deps.jira.searchIssues(jql);
   } catch (err) {
     log.warn("poller.search-error", { err: String(err) });
     return;
   }
+
+  const ctxBase: WorkflowCtxBase = {
+    behaviour: {
+      refactorLoopCap: deps.behaviour.refactorLoopCap,
+      ciRetryCap: deps.behaviour.ciRetryCap,
+      ciPollIntervalMs: deps.behaviour.ciPollIntervalMs,
+      anthropicModel: deps.behaviour.anthropicModel,
+    },
+    jira: deps.jira,
+    gitlab: deps.gitlab,
+    projectDir: deps.projectDir,
+  };
 
   for (const { issueKey } of issues) {
     const existing = state.getStory(issueKey);
@@ -62,7 +98,7 @@ export async function pollTick(state: StateStore): Promise<void> {
     }
 
     inFlight.add(issueKey);
-    void runStory({ issueKey, state })
+    void runStory({ issueKey, state, ...ctxBase })
       .catch((err) => {
         log.error("poller.run-story-error", { issueKey, err: String(err) });
       })
@@ -72,13 +108,8 @@ export async function pollTick(state: StateStore): Promise<void> {
   }
 
   // ── Clarification resume check ─────────────────────────────────────────────
-  // For every story parked in clarification-pending, check whether a human
-  // has replied. If so, resume the workflow. If the timeout has elapsed with
-  // no reply, escalate to human review and update state so we don't re-fire.
-  const botEmail = process.env["ATLASSIAN_EMAIL"] ?? "";
-  const botAccountId = process.env["ATLASSIAN_ACCOUNT_ID"] ?? "";
-  const timeoutHours = parseInt(process.env["CLARIFICATION_TIMEOUT_HOURS"] ?? "24", 10);
-  const timeoutMs = timeoutHours * 60 * 60 * 1000;
+  const { email: botEmail, botAccountId } = deps.identity.jira;
+  const timeoutMs = deps.behaviour.clarificationTimeoutHours * 60 * 60 * 1000;
 
   const pendingStories = state.getStoriesAtStep("clarification-pending");
 
@@ -90,9 +121,9 @@ export async function pollTick(state: StateStore): Promise<void> {
       continue;
     }
 
-    let comments: Awaited<ReturnType<typeof getComments>>;
+    let comments: Awaited<ReturnType<typeof deps.jira.getComments>>;
     try {
-      comments = await getComments(issueKey);
+      comments = await deps.jira.getComments(issueKey);
     } catch (err) {
       log.warn("poller.clarification-check-error", { issueKey, err: String(err) });
       continue;
@@ -111,10 +142,10 @@ export async function pollTick(state: StateStore): Promise<void> {
     }
     const pendingStartedAt = pendingStep.startedAt;
 
-    // Identify human responses. When ATLASSIAN_ACCOUNT_ID is configured, match
-    // on accountId (reliable even when Jira email visibility is restricted).
+    // Identify human responses. When botAccountId is configured, match on
+    // accountId (reliable even when Jira email visibility is restricted).
     // Fall back to email comparison for deployments without the account ID set.
-    const isHumanComment = (c: Awaited<ReturnType<typeof getComments>>[number]) =>
+    const isHumanComment = (c: Awaited<ReturnType<typeof deps.jira.getComments>>[number]) =>
       botAccountId ? c.accountId !== botAccountId : c.author !== botEmail;
 
     const humanResponse = comments.find(
@@ -124,7 +155,7 @@ export async function pollTick(state: StateStore): Promise<void> {
     if (humanResponse) {
       log.info("poller.clarification-resolved", { issueKey });
       inFlight.add(issueKey);
-      void runStory({ issueKey, state })
+      void runStory({ issueKey, state, ...ctxBase })
         .catch((err) => {
           log.error("poller.run-story-error", { issueKey, err: String(err) });
         })
@@ -135,13 +166,16 @@ export async function pollTick(state: StateStore): Promise<void> {
     }
 
     if (Date.now() - pendingStartedAt > timeoutMs) {
-      log.warn("poller.clarification-timeout", { issueKey, timeoutHours });
+      log.warn("poller.clarification-timeout", {
+        issueKey,
+        timeoutHours: deps.behaviour.clarificationTimeoutHours,
+      });
       try {
-        await commentOnIssue(
+        await deps.jira.commentOnIssue(
           issueKey,
-          `*Escalated to human review.*\n\nReason: Clarification timeout — no human response received within ${timeoutHours} hours.`,
+          `*Escalated to human review.*\n\nReason: Clarification timeout — no human response received within ${deps.behaviour.clarificationTimeoutHours} hours.`,
         );
-        await transitionIssue(issueKey, "Needs human review");
+        await deps.jira.transitionIssue(issueKey, "Needs human review");
         // Update state only after both Jira calls succeed. If either call
         // throws, state stays clarification-pending so the next tick retries.
         state.upsertStory(issueKey, "needs-human-review");
@@ -156,13 +190,9 @@ export async function pollTick(state: StateStore): Promise<void> {
  * Start the recurring poll interval and return the handle so callers can
  * clear it on shutdown.
  */
-export function startPoller(state: StateStore): ReturnType<typeof setInterval> {
-  const intervalMs = parseInt(
-    process.env["POLL_INTERVAL_MS"] ?? "300000",
-    10,
-  );
-  log.info("poller.start", { intervalMs });
+export function startPoller(deps: PollerDeps, state: StateStore): ReturnType<typeof setInterval> {
+  log.info("poller.start", { intervalMs: deps.behaviour.pollIntervalMs });
   return setInterval(() => {
-    void pollTick(state);
-  }, intervalMs);
+    void pollTick(deps, state);
+  }, deps.behaviour.pollIntervalMs);
 }

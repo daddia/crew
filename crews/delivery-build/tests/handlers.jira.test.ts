@@ -9,9 +9,33 @@ vi.mock("../src/workflow.js", () => ({
 import { jiraHandler } from "../src/handlers/jira.js";
 import { runStory } from "../src/workflow.js";
 import type { StateStore } from "../src/state.js";
+import type { WorkflowCtxBase } from "../src/workflow.js";
+import type { JiraClient } from "../src/integrations/jira.js";
+import type { GitlabClient } from "../src/integrations/gitlab.js";
 
 const SECRET = "test-secret";
-process.env["JIRA_WEBHOOK_SECRET"] = SECRET;
+
+const mockJira = {
+  transitionIssue: vi.fn(),
+  getIssue: vi.fn(),
+  commentOnIssue: vi.fn(),
+  getComments: vi.fn(),
+  searchIssues: vi.fn(),
+} satisfies JiraClient;
+
+const mockGitlab = {
+  createMr: vi.fn(),
+  getPipelineStatus: vi.fn(),
+  getMrDiff: vi.fn(),
+  postReviewComment: vi.fn(),
+} satisfies GitlabClient;
+
+const ctxBase: WorkflowCtxBase = {
+  behaviour: { refactorLoopCap: 2, ciRetryCap: 3, ciPollIntervalMs: 0 },
+  jira: mockJira,
+  gitlab: mockGitlab,
+  projectDir: "/project",
+};
 
 function makeState(): StateStore {
   return {
@@ -34,7 +58,7 @@ function signBody(body: string): string {
 
 function makeApp(state: StateStore): Hono {
   const app = new Hono();
-  app.post("/webhooks/jira", (c) => jiraHandler(c, state));
+  app.post("/webhooks/jira", (c) => jiraHandler(c, state, SECRET, ctxBase));
   return app;
 }
 
@@ -83,7 +107,6 @@ describe("POST /webhooks/jira", () => {
       },
     });
     expect(res.status).toBe(200);
-    // setImmediate is used — flush the microtask queue
     await new Promise((r) => setImmediate(r));
     expect(runStory).toHaveBeenCalledWith(
       expect.objectContaining({ issueKey: "ENG-99" }),
