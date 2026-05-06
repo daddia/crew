@@ -128,6 +128,19 @@ export async function commentOnIssue(
   });
 }
 
+/**
+ * Search for issues matching a JQL query.
+ * Returns one `{ issueKey }` entry per matching issue.
+ */
+export async function searchIssues(
+  jql: string,
+): Promise<Array<{ issueKey: string }>> {
+  const params = new URLSearchParams({ jql, fields: "key", maxResults: "50" });
+  const res = await jiraFetch(`/issue/search?${params.toString()}`);
+  const data = (await res.json()) as { issues: Array<{ key: string }> };
+  return data.issues.map((issue) => ({ issueKey: issue.key }));
+}
+
 export class JiraApiError extends Error {
   readonly statusCode: number;
   constructor(statusCode: number, message: string) {
