@@ -36,7 +36,8 @@ export interface WorkflowContext {
  * On loop cap: transition to "Needs human review", comment with unresolved items, stop.
  *
  * Loop caps:
- *   REFACTOR_LOOP_CAP - max peer-review feedback/fix cycles before escalation
+ *   REFACTOR_LOOP_CAP - max engineer address-feedback runs; the internal loop may
+ *     run one more senior peer review (see Step 4)
  *   CI_RETRY_CAP      - max CI fix attempts before escalation
  */
 export async function runStory(ctx: WorkflowContext): Promise<void> {
@@ -160,6 +161,12 @@ async function runStoryInner(
   let reviewPassed = false;
   let unresolvedItems: string[] = [];
 
+  // With REFACTOR_LOOP_CAP = N, the loop index runs 0..N (N+1 iterations). Each
+  // iteration begins with senior-engineer peer review, so there are up to N+1
+  // peer-review calls. Address-feedback runs only after a failed review when
+  // iteration < N; when iteration === N the guard below breaks before address-feedback,
+  // so at most N engineer runs. The extra peer-review pass observes the outcome of
+  // the Nth fix attempt without scheduling another fix.
   for (let iteration = 0; iteration < REFACTOR_LOOP_CAP + 1; iteration++) {
     // Peer review
     state.upsertStory(issueKey, "peer-code-review");

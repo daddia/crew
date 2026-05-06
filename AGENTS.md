@@ -188,7 +188,7 @@ For agent steps whose `AgentResult` contains a `sessionId` artefact, call `state
 
 Escalation on failure or loop cap: call `commentOnIssue` + `transitionIssue("Needs human review")` and return. Never let the workflow throw to the caller.
 
-The `REFACTOR_LOOP_CAP` env var (default: `2`) bounds the address-feedback loop. The cap applies to both the internal peer-review loop and the external-comment path.
+The `REFACTOR_LOOP_CAP` env var (default: `2`) limits how many `address-feedback` passes run in the internal peer-review loop. With cap `N`, the `for` loop in `workflow.ts` allows up to `N+1` senior-engineer (`peer-code-review`) calls—iterations `0` through `N`—but at most `N` engineer (`address-feedback`) calls: on the last iteration, peer review still runs, then the loop exits before another feedback pass. The same cap applies to the external-comment path (`addressFeedback`).
 
 ## Webhook handler conventions
 

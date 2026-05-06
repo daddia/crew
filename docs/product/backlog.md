@@ -1165,8 +1165,8 @@ workflow; explicit lockfile COPY; env var documentation; test mock cleanup;
 
 ---
 
-- [ ] **[CREW-64-007] Add loop-bound asymmetry comment to `workflow.ts`**
-  - **Status:** Not started | **Priority:** P2 | **Estimate:** 1
+- [x] **[CREW-64-007] Add loop-bound asymmetry comment to `workflow.ts`**
+  - **Status:** done | **Priority:** P2 | **Estimate:** 1
   - **Epic:** CREW-64 | **Labels:** review:#23, type:docs
   - **Depends on:** —
   - **Deliverable:** `crews/delivery-build/src/workflow.ts` peer-review loop
