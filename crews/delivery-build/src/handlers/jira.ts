@@ -1,6 +1,5 @@
 import type { Context } from "hono";
 import { checkReplayWindow, verifySignature } from "@daddia/crew/webhooks";
-import { getIdempotency } from "../idempotency.js";
 import { log } from "../observability.js";
 import type { StateStore } from "../state.js";
 import { runStory } from "../workflow.js";
@@ -38,7 +37,7 @@ export async function jiraHandler(
 
   // 3. Idempotency — skip if we've seen this event.
   const eventId = String(body.id);
-  if (getIdempotency().checkAndRecord("jira", eventId)) {
+  if (state.checkAndRecord("jira", eventId)) {
     log.info("jira.handler.duplicate", { eventId });
     return c.json({ ok: true, duplicate: true });
   }

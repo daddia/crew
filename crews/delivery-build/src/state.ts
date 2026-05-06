@@ -68,6 +68,11 @@ export interface StateStore {
   ): void;
   getStepHistory(issueKey: string): StepRow[];
   countRefactorIterations(issueKey: string): number;
+  /**
+   * Returns `true` if (provider, eventId) has been seen before; records it if not.
+   * Uses the same database connection as the state store — no second SQLite handle.
+   */
+  checkAndRecord(provider: string, eventId: string): boolean;
   close(): void;
 }
 
@@ -119,6 +124,14 @@ export function createStateStore(dbPath: string): StateStore {
      WHERE issue_key = ? AND step = 'address-feedback'`,
   );
 
+  const countEventStmt = db.prepare(
+    `SELECT COUNT(*) as cnt FROM webhook_events WHERE provider = ? AND event_id = ?`,
+  );
+
+  const insertEventStmt = db.prepare(
+    `INSERT OR IGNORE INTO webhook_events (provider, event_id, received_at) VALUES (?, ?, ?)`,
+  );
+
   return {
     upsertStory(issueKey, step) {
       upsertStoryStmt.run(issueKey, step, Date.now());
@@ -147,6 +160,13 @@ export function createStateStore(dbPath: string): StateStore {
     countRefactorIterations(issueKey) {
       const row = countRefactorStmt.get(issueKey) as { cnt: number };
       return row.cnt;
+    },
+
+    checkAndRecord(provider, eventId) {
+      const existing = countEventStmt.get(provider, eventId) as { cnt: number };
+      if (existing.cnt > 0) return true;
+      insertEventStmt.run(provider, eventId, Date.now());
+      return false;
     },
 
     close() {

@@ -1,6 +1,5 @@
 import type { Context } from "hono";
 import { verifySignature } from "@daddia/crew/webhooks";
-import { getIdempotency } from "../idempotency.js";
 import { log } from "../observability.js";
 import type { StateStore } from "../state.js";
 import { addressFeedback } from "../workflow.js";
@@ -37,7 +36,7 @@ export async function gitlabHandler(
     (c.req.header("x-gitlab-event-uuid") as string | undefined) ??
     String(body.object_attributes.id);
 
-  if (getIdempotency().checkAndRecord("gitlab", eventId)) {
+  if (state.checkAndRecord("gitlab", eventId)) {
     log.info("gitlab.handler.duplicate", { eventId });
     return c.json({ ok: true, duplicate: true });
   }

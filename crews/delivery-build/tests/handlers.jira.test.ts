@@ -5,17 +5,6 @@ import { Hono } from "hono";
 vi.mock("../src/workflow.js", () => ({
   runStory: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock("@daddia/crew/webhooks", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("@daddia/crew/webhooks")>();
-  return {
-    ...actual,
-    createIdempotencyStore: vi.fn().mockReturnValue({
-      checkAndRecord: vi.fn().mockReturnValue(false),
-      close: vi.fn(),
-    }),
-  };
-});
 
 import { jiraHandler } from "../src/handlers/jira.js";
 import { runStory } from "../src/workflow.js";
@@ -33,6 +22,7 @@ function makeState(): StateStore {
     finishStep: vi.fn(),
     getStepHistory: vi.fn().mockReturnValue([]),
     countRefactorIterations: vi.fn().mockReturnValue(0),
+    checkAndRecord: vi.fn().mockReturnValue(false),
     close: vi.fn(),
   };
 }
