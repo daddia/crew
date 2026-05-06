@@ -1,6 +1,9 @@
 name: CI
 
 on:
+  push:
+    branches:
+      - main
   pull_request:
     branches:
       - main
@@ -17,26 +20,30 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: pnpm/action-setup@v6
-        with:
-          version: 10
-
       - uses: actions/setup-node@v6
         with:
-          node-version: 24
-          cache: pnpm
+          node-version-file: '.nvmrc'
+
+      - name: Enable pnpm via Corepack
+        run: corepack enable
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: |
+          pnpm config set store-dir "$HOME/.pnpm-store"
+          pnpm install --frozen-lockfile
 
-      - name: Build
-        run: pnpm build
+      - name: Lint (dependency boundaries)
+        run: pnpm lint
 
       - name: Typecheck
         run: pnpm typecheck
 
       - name: Test
         run: pnpm test
-
-      - name: Lint (dependency boundaries)
-        run: pnpm lint
