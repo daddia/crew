@@ -8,74 +8,122 @@ import { log } from "./observability.js";
 import { startPoller } from "./poller.js";
 import { createStateStore } from "./state.js";
 import { recoverInterruptedSteps } from "./workflow.js";
-import { loadConfig } from "./config.js";
+import { loadConfig, CONFIG_SCHEMA_VERSION } from "./config.js";
+import type { Config } from "./config.js";
+import { SchemaValidationError, ConfigNotFoundError, redact } from "@daddia/crew/config";
 import type { WorkflowCtxBase } from "./workflow.js";
 
-const config = loadConfig();
+/**
+ * Full application boot sequence. Exported so integration tests can drive it
+ * with a fixture env without spawning a real process. In production this is
+ * called immediately at the bottom of this module with `process.env`.
+ */
+export async function boot(env: NodeJS.ProcessEnv = process.env): Promise<void> {
+  let config: Config;
 
-const jira = createJiraClient(config.identity.jira, {
-  atlassianApiToken: config.secrets.atlassianApiToken,
-});
-const gitlab = createGitlabClient(config.identity.gitlab, {
-  gitlabAccessToken: config.secrets.gitlabAccessToken,
-});
+  try {
+    config = loadConfig(env);
+  } catch (err) {
+    if (err instanceof SchemaValidationError) {
+      log.error("config.invalid", {
+        code: err.code,
+        issues: err.issues,
+        pid: process.pid,
+      });
+      process.exit(1);
+      return;
+    }
+    if (err instanceof ConfigNotFoundError) {
+      log.error("config.invalid", {
+        code: err.code,
+        issues: [{ path: "", message: err.message }],
+        pid: process.pid,
+      });
+      process.exit(1);
+      return;
+    }
+    throw err;
+  }
 
-const ctxBase: WorkflowCtxBase = {
-  behaviour: {
-    refactorLoopCap: config.behaviour.refactorLoopCap,
-    ciRetryCap: config.behaviour.ciRetryCap,
-    ciPollIntervalMs: config.behaviour.ciPollIntervalMs,
-    anthropicModel: config.behaviour.anthropicModel,
-  },
-  jira,
-  gitlab,
-  projectDir: config.infrastructure.projectDir,
-};
+  const gitSha =
+    env.RAILWAY_GIT_COMMIT_SHA ?? env.GIT_SHA ?? "unknown";
 
-const state = createStateStore(config.infrastructure.dbPath);
-
-await recoverInterruptedSteps(state, ctxBase);
-
-const app = new Hono();
-
-app.post("/webhooks/jira", (c) =>
-  jiraHandler(c, state, String(config.secrets.jiraWebhookSecret), ctxBase),
-);
-app.post("/webhooks/gitlab", (c) =>
-  gitlabHandler(c, state, String(config.secrets.gitlabWebhookSecret), ctxBase),
-);
-
-app.get("/healthz", (c) => c.json({ ok: true }));
-
-const server = serve(
-  { fetch: app.fetch, port: config.infrastructure.port },
-  () => {
-    log.info("server.start", {
-      port: config.infrastructure.port,
-      db: config.infrastructure.dbPath,
-    });
-  },
-);
-
-const pollerDeps = {
-  identity: config.identity,
-  behaviour: config.behaviour,
-  jira,
-  gitlab,
-  projectDir: config.infrastructure.projectDir,
-};
-
-const pollInterval = startPoller(pollerDeps, state);
-
-// Graceful shutdown
-function shutdown(): void {
-  log.info("server.shutdown");
-  clearInterval(pollInterval);
-  server.close(() => {
-    state.close();
-    process.exit(0);
+  log.info("config.loaded", {
+    crewId: config.identity.crewId,
+    schemaVersion: CONFIG_SCHEMA_VERSION,
+    gitSha,
+    ...redact(config),
   });
+
+  const jira = createJiraClient(config.identity.jira, {
+    atlassianApiToken: config.secrets.atlassianApiToken,
+  });
+  const gitlab = createGitlabClient(config.identity.gitlab, {
+    gitlabAccessToken: config.secrets.gitlabAccessToken,
+  });
+
+  const ctxBase: WorkflowCtxBase = {
+    behaviour: {
+      refactorLoopCap: config.behaviour.refactorLoopCap,
+      ciRetryCap: config.behaviour.ciRetryCap,
+      ciPollIntervalMs: config.behaviour.ciPollIntervalMs,
+      anthropicModel: config.behaviour.anthropicModel,
+    },
+    jira,
+    gitlab,
+    projectDir: config.infrastructure.projectDir,
+  };
+
+  const state = createStateStore(config.infrastructure.dbPath);
+
+  await recoverInterruptedSteps(state, ctxBase);
+
+  const app = new Hono();
+
+  app.post("/webhooks/jira", (c) =>
+    jiraHandler(c, state, String(config.secrets.jiraWebhookSecret), ctxBase),
+  );
+  app.post("/webhooks/gitlab", (c) =>
+    gitlabHandler(c, state, String(config.secrets.gitlabWebhookSecret), ctxBase),
+  );
+
+  app.get("/healthz", (c) => c.json({ ok: true }));
+
+  const server = serve(
+    { fetch: app.fetch, port: config.infrastructure.port },
+    () => {
+      log.info("server.start", {
+        port: config.infrastructure.port,
+        db: config.infrastructure.dbPath,
+      });
+    },
+  );
+
+  const pollerDeps = {
+    identity: config.identity,
+    behaviour: config.behaviour,
+    jira,
+    gitlab,
+    projectDir: config.infrastructure.projectDir,
+  };
+
+  const pollInterval = startPoller(pollerDeps, state);
+
+  function shutdown(): void {
+    log.info("server.shutdown");
+    clearInterval(pollInterval);
+    server.close(() => {
+      state.close();
+      process.exit(0);
+    });
+  }
+
+  process.on("SIGTERM", shutdown);
+  process.on("SIGINT", shutdown);
 }
 
-process.on("SIGTERM", shutdown);
-process.on("SIGINT", shutdown);
+// Execute boot only when this file is the direct entry point. When imported
+// as a module (e.g. by integration tests), the caller drives boot() itself.
+if (import.meta.url === `file://${process.argv[1]}`) {
+  boot();
+}
