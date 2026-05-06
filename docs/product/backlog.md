@@ -76,9 +76,9 @@ remote cache (CREW-55-006).
 
 | Epic | Title | Priority | Deps | Points | Status |
 | --- | --- | --- | --- | --- | --- |
-| CREW-60 | Jira polling trigger | P0 | — | 5 | Not started |
+| CREW-60 | Jira polling trigger | P0 | — | 5 | done |
 | CREW-61 | Workflow sequence alignment | P0 | CREW-60 | 9 | done |
-| CREW-62 | Clarification HITL step | P1 | CREW-61 | 4 | Not started |
+| CREW-62 | Clarification HITL step | P1 | CREW-61 | 4 | done |
 | CREW-63 | Correctness and reliability carry-forward | P1 | — | 18 | In progress |
 | CREW-64 | CI/deploy and code quality | P2 | — | 10 | Not started |
 | **Total** | | | | **46** | |
@@ -104,12 +104,12 @@ triggering to avoid double-processing; new env vars `JIRA_PROJECT_KEY`,
 
 **Dependencies.** None.
 
-**Status.** Not started.
+**Status.** done
 
 ---
 
-- [ ] **[CREW-60-001] Implement scheduled Jira poller**
-  - **Status:** Not started | **Priority:** P0 | **Estimate:** 3
+- [x] **[CREW-60-001] Implement scheduled Jira poller**
+  - **Status:** done | **Priority:** P0 | **Estimate:** 3
   - **Epic:** CREW-60 | **Labels:** type:feature
   - **Depends on:** —
   - **Deliverable:** `crews/delivery-build/src/integrations/jira.ts` gains a
@@ -165,8 +165,8 @@ triggering to avoid double-processing; new env vars `JIRA_PROJECT_KEY`,
 
 ---
 
-- [ ] **[CREW-60-002] Deduplication guard in poller**
-  - **Status:** Not started | **Priority:** P0 | **Estimate:** 2
+- [x] **[CREW-60-002] Deduplication guard in poller**
+  - **Status:** done | **Priority:** P0 | **Estimate:** 2
   - **Epic:** CREW-60 | **Labels:** type:reliability
   - **Depends on:** CREW-60-001
   - **Deliverable:** Inside the poller tick, before calling `runStory()`, the
@@ -492,12 +492,12 @@ stories on each tick; `CLARIFICATION_TIMEOUT_HOURS` documented in `.env.example`
 **Dependencies.** CREW-61 (workflow structure must be settled before wiring the
 clarification step into it).
 
-**Status.** Not started.
+**Status.** Done. All stories complete.
 
 ---
 
-- [ ] **[CREW-62-001] Engineer assesses ticket and posts clarifying questions**
-  - **Status:** Not started | **Priority:** P1 | **Estimate:** 2
+- [x] **[CREW-62-001] Engineer assesses ticket and posts clarifying questions**
+  - **Status:** Done | **Priority:** P1 | **Estimate:** 2
   - **Epic:** CREW-62 | **Labels:** type:feature
   - **Depends on:** CREW-61-002
   - **Deliverable:** As the first action in `runStory()` (before the `In
@@ -514,16 +514,16 @@ clarification step into it).
     `questionsRequired` is `false`, the workflow continues to the `In Progress`
     transition with no comment posted.
   - **Acceptance (EARS):**
-    - WHEN `runStory()` starts, THE SYSTEM SHALL call `engineer.run()` with
+    - [x] WHEN `runStory()` starts, THE SYSTEM SHALL call `engineer.run()` with
       `task: 'assess-clarification'` before transitioning the ticket to
       `In Progress`.
-    - WHEN the engineer returns `artefacts.questionsRequired: true`, THE SYSTEM
+    - [x] WHEN the engineer returns `artefacts.questionsRequired: true`, THE SYSTEM
       SHALL post the questions as a Jira comment and transition to
       `Clarification Needed`.
-    - WHEN the engineer returns `artefacts.questionsRequired: false`,
+    - [x] WHEN the engineer returns `artefacts.questionsRequired: false`,
       THE SYSTEM SHALL proceed to the `In Progress` transition without posting
       a comment.
-    - WHEN clarification is needed, THE SYSTEM SHALL record a
+    - [x] WHEN clarification is needed, THE SYSTEM SHALL record a
       `clarification-pending` step in the state store and return from
       `runStory()` without calling `engineer.run()` for implementation.
   - **Acceptance (Gherkin):**
@@ -550,8 +550,8 @@ clarification step into it).
 
 ---
 
-- [ ] **[CREW-62-002] Poller resumes clarification-pending stories**
-  - **Status:** Not started | **Priority:** P1 | **Estimate:** 2
+- [x] **[CREW-62-002] Poller resumes clarification-pending stories**
+  - **Status:** Done | **Priority:** P1 | **Estimate:** 2
   - **Epic:** CREW-62 | **Labels:** type:feature
   - **Depends on:** CREW-62-001, CREW-60-001
   - **Deliverable:** `integrations/jira.ts` gains a `getComments(issueKey)`
@@ -567,15 +567,15 @@ clarification step into it).
     escalates to `Needs Human Review` with a timeout explanation.
     `CLARIFICATION_TIMEOUT_HOURS` added to `.env.example`.
   - **Acceptance (EARS):**
-    - WHEN the poller runs and finds a story in `clarification-pending` step,
+    - [x] WHEN the poller runs and finds a story in `clarification-pending` step,
       THE SYSTEM SHALL call `getComments(issueKey)` to check for a human
       response posted after the clarification question.
-    - WHEN a human response comment is found, THE SYSTEM SHALL resume the
+    - [x] WHEN a human response comment is found, THE SYSTEM SHALL resume the
       workflow by calling `runStory()` for that issueKey.
-    - WHEN no human response is found and `CLARIFICATION_TIMEOUT_HOURS` have
+    - [x] WHEN no human response is found and `CLARIFICATION_TIMEOUT_HOURS` have
       elapsed since `started_at`, THE SYSTEM SHALL escalate the story to
       `Needs Human Review` with a timeout explanation comment.
-    - WHEN `CLARIFICATION_TIMEOUT_HOURS` is not set, THE SYSTEM SHALL default
+    - [x] WHEN `CLARIFICATION_TIMEOUT_HOURS` is not set, THE SYSTEM SHALL default
       to `24`.
   - **Acceptance (Gherkin):**
 
