@@ -80,8 +80,8 @@ async function runStoryInner(
   // ── Step 2: Assess clarification ──────────────────────────────────────────
   // Before moving the ticket to In Progress, ask the engineer whether the
   // ticket is clear enough to implement. If not, post questions and park the
-  // story in Clarification Needed until a human responds (CREW-62-002 resumes
-  // the workflow from this point once an answer arrives).
+  // story in Clarification Needed until a human responds; the poller resumes
+  // the workflow from this point once an answer arrives.
   state.upsertStory(issueKey, "assess-clarification");
 
   const assessResult = await engineer.run({

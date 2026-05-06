@@ -30,11 +30,11 @@ export interface Agent {
 /** Definition used by the SDK to construct an Agent at runtime. */
 export interface AgentDefinition {
   name: PersonaName;
-  /** Absolute path to the persona's prompt.md. */
+  /** Absolute path to the persona prompt file. */
   promptPath: string;
-  /** Absolute paths to all SKILL.md files the agent has access to. */
+  /** Absolute paths to skill entry files under `.claude/skills/`. */
   skillPaths: string[];
-  /** Absolute paths to subagent .md files (empty for MVP's tech-lead and senior-engineer). */
+  /** Absolute paths to subagent definitions (empty for MVP's tech-lead and senior-engineer). */
   subagentPaths: string[];
   /** Tool names this agent is permitted to call. Enforced as a hard filter. */
   allowedTools: string[];
@@ -42,7 +42,7 @@ export interface AgentDefinition {
   mcpServerNames: string[];
   /**
    * Scope for agent memory files.
-   * 'project' loads .claude/agent-memory/<name>/ and injects MEMORY.md into context.
+   * 'project' loads `.claude/agent-memory/<name>/` and injects the memory file into context.
    */
   memory?: "user" | "project" | "local";
 }

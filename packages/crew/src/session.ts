@@ -75,7 +75,7 @@ export async function resolveSession(
   const validSubagentPaths = results.filter((p): p is string => p !== null);
 
   // Set cwd to the agent's own directory so the SDK subprocess resolves
-  // .claude/agents/, .claude/settings.json, and CLAUDE.md from the right place.
+  // project-scoped agent configuration from the expected tree under that cwd.
   // Note: SDKSessionOptions.cwd was silently ignored in SDK <0.2.77 (issue
   // anthropics/claude-code#39731). Verify with a smoke test after upgrading.
   const cwd = dirname(definition.promptPath);

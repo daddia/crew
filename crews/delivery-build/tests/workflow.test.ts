@@ -422,7 +422,7 @@ describe("runStory", () => {
     expect(mockTransition).toHaveBeenCalledWith("ENG-1", "In QA");
   });
 
-  // ── Clarification assessment (CREW-62-001) ────────────────────────────────
+  // ── Clarification assessment ─────────────────────────────────────────────
 
   it("calls engineer with task assess-clarification before transitioning to In Progress", async () => {
     mockEngineer.mockResolvedValue(successResult());

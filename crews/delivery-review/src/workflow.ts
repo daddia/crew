@@ -24,7 +24,7 @@ export interface WorkflowContext {
  *   → status update: `in review` → `done`
  *   → done
  *
- * Design notes:
+ * Operational notes:
  *   - PM review is serial and blocking; merge cannot occur without explicit PM sign-off
  *   - Four-eyes merge policy not enforced at this crew boundary (tech-lead reviews AND merges);
  *     promote to separate approver/merger roles if policy requires separation of duties

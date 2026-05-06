@@ -49,7 +49,7 @@ async function buildSeedContent(projectDir: string): Promise<string> {
     lines.push(...agentsLines.slice(0, cutoff));
     lines.push("");
   } catch {
-    // AGENTS.md not readable; skip section
+    // Repository guidelines file not readable; skip section
   }
 
   return lines.join("\n");
@@ -57,7 +57,7 @@ async function buildSeedContent(projectDir: string): Promise<string> {
 
 /**
  * Seed the engineer's project memory file if one does not already exist.
- * Uses delivery-crew-specific content (package.json, AGENTS.md).
+ * Uses delivery-crew-specific content from package metadata and repository guidelines.
  */
 export async function seedEngineerMemory(projectDir: string): Promise<void> {
   const content = await buildSeedContent(projectDir);

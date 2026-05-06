@@ -2,14 +2,14 @@ import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 
 /**
- * Read a persona's prompt.md and return its text content.
+ * Read a persona prompt file and return its text content.
  */
 export async function readPromptFile(promptPath: string): Promise<string> {
   return readFile(promptPath, "utf8");
 }
 
 /**
- * Discover all SKILL.md files under a `.claude/skills/` directory tree.
+ * Discover all skill entry files under a `.claude/skills/` directory tree.
  * Returns absolute paths sorted alphabetically.
  */
 export async function readSkillsDir(skillsDir: string): Promise<string[]> {
@@ -37,7 +37,7 @@ async function collectSkillFiles(dir: string, acc: string[]): Promise<void> {
 }
 
 /**
- * Discover all subagent .md files under a `.claude/agents/` directory.
+ * Discover all subagent definition files under a `.claude/agents/` directory.
  * Returns absolute paths sorted alphabetically.
  */
 export async function readSubagentsDir(agentsDir: string): Promise<string[]> {

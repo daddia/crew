@@ -2,8 +2,8 @@ import { access, mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
 /**
- * Canonical path for a persona's project memory file.
- * Convention: <projectDir>/.claude/agent-memory/<personaName>/MEMORY.md
+ * Canonical path for a persona's project memory file under
+ * `<projectDir>/.claude/agent-memory/<personaName>/`.
  */
 export function memoryPath(projectDir: string, personaName: string): string {
   return join(projectDir, ".claude", "agent-memory", personaName, "MEMORY.md");

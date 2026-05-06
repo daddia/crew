@@ -196,7 +196,7 @@ describe("pollTick", () => {
     expect(inFlight.has("CREW-NEW")).toBe(false);
   });
 
-  // ── Clarification resume (CREW-62-002) ────────────────────────────────────
+  // ── Clarification resume ─────────────────────────────────────────────────
 
   function makePendingStep(startedAt: number): StepRow {
     return {
