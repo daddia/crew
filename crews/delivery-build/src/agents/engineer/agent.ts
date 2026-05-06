@@ -23,13 +23,18 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
  * The skills instruct the model to emit a full AgentResult envelope:
  *   { success, summary, artefacts: { ... }, costUsd }
  * When that envelope is present this function returns the inner `artefacts`
- * object so callers receive the flat artefact fields directly. When no
- * envelope is detected the top-level object is returned unchanged.
+ * object plus the envelope's boolean `success` flag (or undefined when the
+ * field is absent or non-boolean). When no envelope is detected the
+ * top-level object is returned as the artefacts and `envelopeSuccess` is
+ * undefined.
  *
  * Throws a descriptive Error on parse or structural failure so the caller
  * can produce a `success: false` result with an excerpt of the raw result.
  */
-export function parseEngineerArtefacts(raw: string): Record<string, unknown> {
+export function parseEngineerArtefacts(raw: string): {
+  artefacts: Record<string, unknown>;
+  envelopeSuccess: boolean | undefined;
+} {
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
@@ -50,10 +55,14 @@ export function parseEngineerArtefacts(raw: string): Record<string, unknown> {
     obj["artefacts"] !== null &&
     !Array.isArray(obj["artefacts"])
   ) {
-    return obj["artefacts"] as Record<string, unknown>;
+    return {
+      artefacts: obj["artefacts"] as Record<string, unknown>,
+      envelopeSuccess:
+        typeof obj["success"] === "boolean" ? obj["success"] : undefined,
+    };
   }
 
-  return obj;
+  return { artefacts: obj, envelopeSuccess: undefined };
 }
 
 const ALLOWED_TOOLS = [
@@ -149,8 +158,11 @@ async function run(input: AgentInput): Promise<AgentResult> {
 
     if (resultMsg.subtype === "success") {
       let parsedArtefacts: Record<string, unknown>;
+      let envelopeSuccess: boolean | undefined;
       try {
-        parsedArtefacts = parseEngineerArtefacts(resultMsg.result);
+        ({ artefacts: parsedArtefacts, envelopeSuccess } = parseEngineerArtefacts(
+          resultMsg.result,
+        ));
       } catch (e) {
         const errMsg = e instanceof Error ? e.message : String(e);
         const excerpt = resultMsg.result.slice(0, 500);
@@ -162,8 +174,11 @@ async function run(input: AgentInput): Promise<AgentResult> {
         };
       }
 
+      // The skill envelope lets the model self-report a blocker via
+      // success: false. Honour that so the workflow can escalate cleanly
+      // instead of falling through to a "missing branchName" failure.
       return {
-        success: true,
+        success: envelopeSuccess !== false,
         summary: resultMsg.result,
         artefacts: { sessionId, ...parsedArtefacts },
         costUsd: resultMsg.total_cost_usd,

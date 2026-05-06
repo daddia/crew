@@ -334,6 +334,29 @@ describe("engineer.run()", () => {
     expect(result.artefacts).toMatchObject({ sessionId: "sess-test-123" });
   });
 
+  it("downgrades to success: false when the model self-reports a blocker via envelope", async () => {
+    const blockerJson = JSON.stringify({
+      success: false,
+      summary: "Blocked: AC-3 references a missing JWT signing key.",
+      artefacts: { blocker: "AC-3 path missing from config" },
+      costUsd: 0,
+    });
+    const session = makeSession([makeResultMessage({ result: blockerJson })]);
+    mockResolveSession.mockResolvedValue({
+      session,
+      sessionId: "sess-test-123",
+      isResumed: false,
+    });
+
+    const result = await engineer.run(baseInput);
+
+    expect(result.success).toBe(false);
+    expect(result.artefacts).toMatchObject({
+      blocker: "AC-3 path missing from config",
+      sessionId: "sess-test-123",
+    });
+  });
+
   it("returns success: false with parse error and raw excerpt when result is not JSON", async () => {
     const rawResult =
       "Here is my analysis of the code. I found several issues.";
@@ -353,7 +376,7 @@ describe("engineer.run()", () => {
 });
 
 describe("parseEngineerArtefacts()", () => {
-  it("unwraps the AgentResult envelope and returns inner artefacts", () => {
+  it("unwraps the AgentResult envelope and returns inner artefacts plus envelope success", () => {
     const raw = JSON.stringify({
       success: true,
       summary: "Implemented on feature/CREW-1-foo.",
@@ -364,12 +387,27 @@ describe("parseEngineerArtefacts()", () => {
       costUsd: 0,
     });
 
-    const result = parseEngineerArtefacts(raw);
+    const { artefacts, envelopeSuccess } = parseEngineerArtefacts(raw);
 
-    expect(result["branchName"]).toBe("feature/CREW-1-foo");
-    expect(result["title"]).toBe("Add foo");
-    expect(result["success"]).toBeUndefined();
-    expect(result["summary"]).toBeUndefined();
+    expect(artefacts["branchName"]).toBe("feature/CREW-1-foo");
+    expect(artefacts["title"]).toBe("Add foo");
+    expect(artefacts["success"]).toBeUndefined();
+    expect(artefacts["summary"]).toBeUndefined();
+    expect(envelopeSuccess).toBe(true);
+  });
+
+  it("surfaces envelope success: false when the model self-reports a blocker", () => {
+    const raw = JSON.stringify({
+      success: false,
+      summary: "Blocked: AC-3 references a missing JWT signing key.",
+      artefacts: { blocker: "AC-3 path missing from config" },
+      costUsd: 0,
+    });
+
+    const { artefacts, envelopeSuccess } = parseEngineerArtefacts(raw);
+
+    expect(artefacts["blocker"]).toBe("AC-3 path missing from config");
+    expect(envelopeSuccess).toBe(false);
   });
 
   it("unwraps the assess-clarification envelope and returns inner artefacts", () => {
@@ -380,10 +418,11 @@ describe("parseEngineerArtefacts()", () => {
       costUsd: 0,
     });
 
-    const result = parseEngineerArtefacts(raw);
+    const { artefacts, envelopeSuccess } = parseEngineerArtefacts(raw);
 
-    expect(result["questionsRequired"]).toBe(true);
-    expect(result["questions"]).toBe("1. Why?");
+    expect(artefacts["questionsRequired"]).toBe(true);
+    expect(artefacts["questions"]).toBe("1. Why?");
+    expect(envelopeSuccess).toBe(true);
   });
 
   it("parses a valid implement-story JSON object (flat, no envelope)", () => {
@@ -395,18 +434,31 @@ describe("parseEngineerArtefacts()", () => {
       commits: ["a1b2c3d feat(foo): add foo"],
     });
 
-    const result = parseEngineerArtefacts(raw);
+    const { artefacts, envelopeSuccess } = parseEngineerArtefacts(raw);
 
-    expect(result["branchName"]).toBe("feature/CREW-1-foo");
-    expect(result["title"]).toBe("Add foo");
+    expect(artefacts["branchName"]).toBe("feature/CREW-1-foo");
+    expect(artefacts["title"]).toBe("Add foo");
+    expect(envelopeSuccess).toBeUndefined();
   });
 
   it("parses a valid assess-clarification JSON object (flat, no envelope)", () => {
     const raw = JSON.stringify({ questionsRequired: false });
 
-    const result = parseEngineerArtefacts(raw);
+    const { artefacts, envelopeSuccess } = parseEngineerArtefacts(raw);
 
-    expect(result["questionsRequired"]).toBe(false);
+    expect(artefacts["questionsRequired"]).toBe(false);
+    expect(envelopeSuccess).toBeUndefined();
+  });
+
+  it("returns envelopeSuccess undefined when envelope omits success or uses a non-boolean", () => {
+    const raw = JSON.stringify({
+      summary: "no success field",
+      artefacts: { branchName: "feature/x" },
+    });
+
+    const { envelopeSuccess } = parseEngineerArtefacts(raw);
+
+    expect(envelopeSuccess).toBeUndefined();
   });
 
   it("throws on non-JSON input", () => {
