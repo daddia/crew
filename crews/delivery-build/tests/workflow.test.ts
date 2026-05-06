@@ -25,12 +25,14 @@ import { runStory } from "../src/workflow.js";
 import { engineer } from "../src/agents/engineer/agent.js";
 import { seniorEngineer } from "../src/agents/senior-engineer/agent.js";
 import { transitionIssue, commentOnIssue } from "../src/integrations/jira.js";
+import { createMr } from "../src/integrations/gitlab.js";
 import type { StateStore } from "../src/state.js";
 
 const mockEngineer = vi.mocked(engineer.run);
 const mockSeniorEngineer = vi.mocked(seniorEngineer.run);
 const mockTransition = vi.mocked(transitionIssue);
 const mockComment = vi.mocked(commentOnIssue);
+const mockCreateMr = vi.mocked(createMr);
 
 function makeState(refactorCount = 0): StateStore {
   return {
@@ -59,23 +61,36 @@ describe("runStory", () => {
     vi.clearAllMocks();
   });
 
-  it("runs the happy-path sequence in order and hands off to review", async () => {
+  it("runs the happy-path sequence: implement then peer-review then MR", async () => {
     mockEngineer.mockResolvedValue(successResult());
     mockSeniorEngineer.mockResolvedValue(successResult());
 
     const state = makeState();
     await runStory({ issueKey: "ENG-1", state });
 
-    const callOrder = [
-      mockEngineer.mock.invocationCallOrder[0],
-      mockSeniorEngineer.mock.invocationCallOrder[0],
-    ] as number[];
+    const engineerOrder = mockEngineer.mock.invocationCallOrder[0] as number;
+    const reviewOrder = mockSeniorEngineer.mock.invocationCallOrder[0] as number;
+    const createMrOrder = mockCreateMr.mock.invocationCallOrder[0] as number;
 
-    expect(callOrder[0]).toBeLessThan(callOrder[1] as number);
+    expect(engineerOrder).toBeLessThan(reviewOrder);
+    expect(reviewOrder).toBeLessThan(createMrOrder);
 
     // Handoff: transition to "In Review", not "Done".
     expect(mockTransition).toHaveBeenCalledWith("ENG-1", "In Review");
     expect(mockTransition).not.toHaveBeenCalledWith("ENG-1", "Done");
+  });
+
+  it("calls createMr() once after seniorEngineer returns success", async () => {
+    mockEngineer.mockResolvedValue(successResult());
+    mockSeniorEngineer.mockResolvedValue(successResult());
+
+    const state = makeState();
+    await runStory({ issueKey: "ENG-1", state });
+
+    expect(mockCreateMr).toHaveBeenCalledTimes(1);
+    expect(mockSeniorEngineer.mock.invocationCallOrder[0]).toBeLessThan(
+      mockCreateMr.mock.invocationCallOrder[0] as number,
+    );
   });
 
   it("escalates to human review when engineer fails to implement", async () => {
@@ -85,14 +100,15 @@ describe("runStory", () => {
     await runStory({ issueKey: "ENG-1", state });
 
     expect(mockSeniorEngineer).not.toHaveBeenCalled();
+    expect(mockCreateMr).not.toHaveBeenCalled();
     expect(mockComment).toHaveBeenCalledWith("ENG-1", expect.stringContaining("Escalated"));
     expect(mockTransition).toHaveBeenCalledWith("ENG-1", "Needs human review");
   });
 
-  it("runs the address-feedback loop up to REFACTOR_LOOP_CAP times then escalates", async () => {
+  it("does not open MR when loop cap is exceeded", async () => {
     const reviewFailResult = successResult({
       success: false,
-      artefacts: { comments: ["fix the thing"] },
+      artefacts: { branchName: "feature/ENG-1-test", comments: ["fix the thing"] },
     });
     mockEngineer.mockResolvedValue(successResult());
     mockSeniorEngineer.mockResolvedValue(reviewFailResult);
@@ -103,10 +119,11 @@ describe("runStory", () => {
     // With cap 2: initial review + 2 address+review cycles = 3 total calls.
     const cap = parseInt(process.env["REFACTOR_LOOP_CAP"] ?? "2", 10);
     expect(mockSeniorEngineer.mock.calls.length).toBe(cap + 1);
+    expect(mockCreateMr).not.toHaveBeenCalled();
     expect(mockTransition).toHaveBeenCalledWith("ENG-1", "Needs human review");
   });
 
-  it("proceeds to handoff when peer review passes on second iteration", async () => {
+  it("opens MR and hands off when peer review passes on second iteration", async () => {
     let reviewCall = 0;
     mockEngineer.mockResolvedValue(successResult());
     mockSeniorEngineer.mockImplementation(async (_input: AgentInput) => {
@@ -120,6 +137,39 @@ describe("runStory", () => {
     // Engineer is called once for implement and once for address-feedback.
     expect(mockEngineer).toHaveBeenCalledTimes(2);
     expect(mockSeniorEngineer).toHaveBeenCalledTimes(2);
+    expect(mockCreateMr).toHaveBeenCalledTimes(1);
     expect(mockTransition).toHaveBeenCalledWith("ENG-1", "In Review");
+  });
+
+  it("passes branchName (not mrUrl) to senior engineer during peer review", async () => {
+    mockEngineer.mockResolvedValue(successResult());
+    mockSeniorEngineer.mockResolvedValue(successResult());
+
+    const state = makeState();
+    await runStory({ issueKey: "ENG-1", state });
+
+    expect(mockSeniorEngineer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        context: expect.objectContaining({ task: "peer-code-review", branchName: "feature/ENG-1-test" }),
+      }),
+    );
+  });
+
+  it("passes branchName to engineer during address-feedback", async () => {
+    let reviewCall = 0;
+    mockEngineer.mockResolvedValue(successResult());
+    mockSeniorEngineer.mockImplementation(async (_input: AgentInput) => {
+      reviewCall++;
+      return successResult({ success: reviewCall > 1, artefacts: { branchName: "feature/ENG-1-test", comments: ["fix x"] } });
+    });
+
+    const state = makeState();
+    await runStory({ issueKey: "ENG-1", state });
+
+    const addressFeedbackCall = mockEngineer.mock.calls.find(
+      (call) => (call[0] as AgentInput).context["task"] === "address-feedback",
+    );
+    expect(addressFeedbackCall).toBeDefined();
+    expect((addressFeedbackCall![0] as AgentInput).context["branchName"]).toBe("feature/ENG-1-test");
   });
 });

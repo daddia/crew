@@ -1,7 +1,7 @@
 import { type AgentInput } from "@daddia/crew";
 import { engineer } from "./agents/engineer/agent.js";
 import { seniorEngineer } from "./agents/senior-engineer/agent.js";
-import { createMr, getMrDiff } from "./integrations/gitlab.js";
+import { createMr } from "./integrations/gitlab.js";
 import { commentOnIssue, transitionIssue } from "./integrations/jira.js";
 import { seedEngineerMemory } from "./memory.js";
 import { log } from "./observability.js";
@@ -19,10 +19,10 @@ export interface WorkflowContext {
  *
  * Sequence:
  *   → engineer implements story on branch
- *   → engineer raises merge request
  *   → senior-engineer peer-code-review
  *   → bounded address-feedback loop (cap: REFACTOR_LOOP_CAP)
- *       → cap exceeded → emit `blocked` event, notify tech-lead → halt
+ *       → cap exceeded → escalate to human review → halt (MR NOT opened)
+ *   → engineer raises merge request (only after peer review approves)
  *   → status update: `in progress` → `in review`
  *   → log handoff; delivery-review crew polls for "In Review" tickets (event bus is a TODO)
  *   → done
@@ -65,7 +65,7 @@ async function runStoryInner(
   });
 
   // Carry the engineer's session ID forward so the address-feedback loop
-  // can resume the same session and preserve MR context across turns.
+  // can resume the same session and preserve branch context across turns.
   let engineerSessionId = implResult.artefacts["sessionId"] as string | undefined;
 
   state.finishStep(issueKey, "implement", {
@@ -78,25 +78,13 @@ async function runStoryInner(
     return;
   }
 
-  // ── Step 2: Open MR ───────────────────────────────────────────────────────
   const branchName = implResult.artefacts["branchName"];
   if (typeof branchName !== "string" || !branchName) {
     await escalateToHumanReview(issueKey, "Engineer did not produce a branch name", []);
     return;
   }
 
-  state.upsertStory(issueKey, "open-mr");
-  state.startStep(issueKey, "open-mr");
-
-  const mrUrl = await createMr({
-    issueKey,
-    branchName,
-    title: `[${issueKey}] ${implResult.artefacts["title"] as string ?? "Automated delivery"}`,
-  });
-
-  state.finishStep(issueKey, "open-mr", { verdict: mrUrl });
-
-  // ── Step 3: Peer review + address-feedback loop ───────────────────────────
+  // ── Step 2: Peer review + address-feedback loop (MR not yet opened) ───────
   let reviewPassed = false;
   let unresolvedItems: string[] = [];
 
@@ -105,10 +93,9 @@ async function runStoryInner(
     state.upsertStory(issueKey, "peer-code-review");
     state.startStep(issueKey, "peer-code-review");
 
-    const diff = await getMrDiff(mrUrl);
     const reviewResult = await seniorEngineer.run({
       ...input,
-      context: { task: "peer-code-review", mrUrl, diff },
+      context: { task: "peer-code-review", branchName },
     });
 
     state.finishStep(issueKey, "peer-code-review", {
@@ -135,7 +122,7 @@ async function runStoryInner(
       ...input,
       context: {
         task: "address-feedback",
-        mrUrl,
+        branchName,
         comments: unresolvedItems,
         previousSessionId: engineerSessionId,
       },
@@ -153,6 +140,18 @@ async function runStoryInner(
     await escalateToHumanReview(issueKey, "Refactor loop cap reached", unresolvedItems);
     return;
   }
+
+  // ── Step 3: Open MR (peer review approved) ────────────────────────────────
+  state.upsertStory(issueKey, "open-mr");
+  state.startStep(issueKey, "open-mr");
+
+  const mrUrl = await createMr({
+    issueKey,
+    branchName,
+    title: `[${issueKey}] ${implResult.artefacts["title"] as string ?? "Automated delivery"}`,
+  });
+
+  state.finishStep(issueKey, "open-mr", { verdict: mrUrl });
 
   // ── Done: transition to "In Review" — delivery-review crew picks up from here
   state.upsertStory(issueKey, "in-review");

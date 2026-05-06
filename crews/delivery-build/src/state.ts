@@ -3,9 +3,9 @@ import { DatabaseSync } from "node:sqlite";
 export type Step =
   | "triage"
   | "implement"
-  | "open-mr"
   | "peer-code-review"
   | "address-feedback"
+  | "open-mr"
   | "in-review"
   | "needs-human-review";
 
