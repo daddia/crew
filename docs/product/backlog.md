@@ -620,8 +620,8 @@ guard; per-issueKey in-flight lock; `getMrDiff()` size cap.
 
 ---
 
-- [ ] **[CREW-63-001] Startup env var validation**
-  - **Status:** Not started | **Priority:** P1 | **Estimate:** 1
+- [x] **[CREW-63-001] Startup env var validation**
+  - **Status:** Done | **Priority:** P1 | **Estimate:** 1
   - **Epic:** CREW-63 | **Labels:** review:#7, type:reliability
   - **Depends on:** —
   - **Deliverable:** `crews/delivery-build/src/index.ts` checks all required env
@@ -655,8 +655,8 @@ guard; per-issueKey in-flight lock; `getMrDiff()` size cap.
 
 ---
 
-- [ ] **[CREW-63-002] Move Jira auth header construction inside `jiraFetch()`**
-  - **Status:** Not started | **Priority:** P1 | **Estimate:** 1
+- [x] **[CREW-63-002] Move Jira auth header construction inside `jiraFetch()`**
+  - **Status:** Done | **Priority:** P1 | **Estimate:** 1
   - **Epic:** CREW-63 | **Labels:** review:#17, type:reliability
   - **Depends on:** CREW-63-001
   - **Deliverable:** `crews/delivery-build/src/integrations/jira.ts` constant
@@ -685,8 +685,8 @@ guard; per-issueKey in-flight lock; `getMrDiff()` size cap.
 
 ---
 
-- [ ] **[CREW-63-003] Crash recovery: resume interrupted steps on startup**
-  - **Status:** Not started | **Priority:** P1 | **Estimate:** 2
+- [x] **[CREW-63-003] Crash recovery: resume interrupted steps on startup**
+  - **Status:** Done | **Priority:** P1 | **Estimate:** 2
   - **Epic:** CREW-63 | **Labels:** review:#8, type:reliability
   - **Depends on:** CREW-61-005
   - **Deliverable:** `crews/delivery-build/src/index.ts` on startup calls a new
@@ -763,8 +763,8 @@ guard; per-issueKey in-flight lock; `getMrDiff()` size cap.
 
 ---
 
-- [ ] **[CREW-63-005] Consolidate dual SQLite connections**
-  - **Status:** Not started | **Priority:** P1 | **Estimate:** 2
+- [x] **[CREW-63-005] Consolidate dual SQLite connections**
+  - **Status:** Done | **Priority:** P1 | **Estimate:** 2
   - **Epic:** CREW-63 | **Labels:** review:#5, type:reliability
   - **Depends on:** —
   - **Deliverable:** `crews/delivery-build/src/idempotency.ts`
@@ -796,8 +796,8 @@ guard; per-issueKey in-flight lock; `getMrDiff()` size cap.
 
 ---
 
-- [ ] **[CREW-63-006] Fix `finishStep()` to filter on `step` column**
-  - **Status:** Not started | **Priority:** P1 | **Estimate:** 1
+- [x] **[CREW-63-006] Fix `finishStep()` to filter on `step` column**
+  - **Status:** Done | **Priority:** P1 | **Estimate:** 1
   - **Epic:** CREW-63 | **Labels:** review:#6, type:correctness
   - **Depends on:** —
   - **Deliverable:** `crews/delivery-build/src/state.ts` `finishStepStmt` SQL
@@ -878,7 +878,7 @@ guard; per-issueKey in-flight lock; `getMrDiff()` size cap.
 ---
 
 - [ ] **[CREW-63-008] Per-issueKey in-flight lock**
-  - **Status:** Not started | **Priority:** P1 | **Estimate:** 3
+  - **Status:** In progress | **Priority:** P1 | **Estimate:** 3
   - **Epic:** CREW-63 | **Labels:** review:#20, type:reliability
   - **Depends on:** —
   - **Deliverable:** `crews/delivery-build/src/workflow.ts` exports an
@@ -891,13 +891,14 @@ guard; per-issueKey in-flight lock; `getMrDiff()` size cap.
     (as per CREW-60-002). Unit tests cover the lock-set, lock-release, and
     duplicate-trigger paths.
   - **Acceptance (EARS):**
-    - WHEN a webhook event arrives for an `issueKey` that already has an
+    - [ ] WHEN a webhook event arrives for an `issueKey` that already has an
       in-flight workflow, THE SYSTEM SHALL return HTTP 429 with body
-      `{ error: "workflow-in-flight", issueKey }`.
+      `{ error: "workflow-in-flight", issueKey }`. -- not implemented: webhook
+      handlers do not check `inFlight` and do not return 429
     - WHEN a webhook event arrives for an `issueKey` with no in-flight
       workflow, THE SYSTEM SHALL process the event normally.
     - THE SYSTEM SHALL release the in-flight lock for an `issueKey` when its
-      workflow completes or fails.
+      workflow completes or fails. -- met by poller's `inFlight` Set
   - **Acceptance (Gherkin):**
 
     ```gherkin
