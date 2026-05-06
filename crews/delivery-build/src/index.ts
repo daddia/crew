@@ -1,3 +1,4 @@
+import { pathToFileURL } from "node:url";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { jiraHandler } from "./handlers/jira.js";
@@ -80,10 +81,10 @@ export async function boot(env: NodeJS.ProcessEnv = process.env): Promise<void> 
   const app = new Hono();
 
   app.post("/webhooks/jira", (c) =>
-    jiraHandler(c, state, String(config.secrets.jiraWebhookSecret), ctxBase),
+    jiraHandler(c, state, config.secrets.jiraWebhookSecret, ctxBase),
   );
   app.post("/webhooks/gitlab", (c) =>
-    gitlabHandler(c, state, String(config.secrets.gitlabWebhookSecret), ctxBase),
+    gitlabHandler(c, state, config.secrets.gitlabWebhookSecret, ctxBase),
   );
 
   app.get("/healthz", (c) => c.json({ ok: true }));
@@ -123,6 +124,8 @@ export async function boot(env: NodeJS.ProcessEnv = process.env): Promise<void> 
 
 // Execute boot only when this file is the direct entry point. When imported
 // as a module (e.g. by integration tests), the caller drives boot() itself.
-if (import.meta.url === `file://${process.argv[1]}`) {
+// pathToFileURL normalises the argv path so the comparison is portable across
+// platforms and handles symlinks / spaces in directory names correctly.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   boot();
 }

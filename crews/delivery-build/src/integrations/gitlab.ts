@@ -45,7 +45,7 @@ export function createGitlabClient(
   secrets: { gitlabAccessToken: string },
 ): GitlabClient {
   const { apiUrl, projectId } = identity;
-  const token = String(secrets.gitlabAccessToken);
+  const token = secrets.gitlabAccessToken;
 
   async function gitlabFetch(path: string, init?: RequestInit): Promise<Response> {
     const url = `${apiUrl}${path}`;

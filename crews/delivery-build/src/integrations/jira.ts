@@ -47,7 +47,7 @@ export function createJiraClient(
   const { baseUrl, email } = identity;
   const authHeader =
     "Basic " +
-    Buffer.from(`${email}:${String(secrets.atlassianApiToken)}`).toString("base64");
+    Buffer.from(`${email}:${secrets.atlassianApiToken}`).toString("base64");
 
   async function jiraFetch(path: string, init?: RequestInit): Promise<Response> {
     const url = `${baseUrl}/rest/api/3${path}`;

@@ -45,11 +45,9 @@ vi.mock("../src/integrations/gitlab.js", () => ({
   }),
 }));
 
-vi.mock("../src/poller.js", () => {
-  const id = setInterval(() => {}, 0);
-  clearInterval(id);
-  return { startPoller: vi.fn().mockReturnValue(id) };
-});
+vi.mock("../src/poller.js", () => ({
+  startPoller: vi.fn(),
+}));
 
 vi.mock("../src/workflow.js", () => ({
   recoverInterruptedSteps: vi.fn().mockResolvedValue(undefined),
@@ -170,7 +168,6 @@ describe("boot – misconfig path", () => {
 
   afterEach(() => {
     exitSpy.mockRestore();
-    vi.mocked(loadConfig).mockRestore?.();
   });
 
   it("emits config.invalid when a required env var is missing", async () => {

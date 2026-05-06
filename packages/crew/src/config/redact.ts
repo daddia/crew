@@ -45,6 +45,10 @@ const secretPathsRegistry = new WeakMap<object, ReadonlySet<string>>();
  *
  * Handles ZodObject (via .shape), ZodOptional/ZodDefault/other wrappers
  * (via _def.innerType), and plain leaf nodes.
+ *
+ * Note: ZodArray (`z.array(Secret(...))`) is not traversed because no current
+ * schema marks array elements as secrets. If a future schema does so, extend
+ * this function to recurse into `_def.type` (ZodArray's element schema).
  */
 function findSecretPaths(schema: ZodTypeAny, prefix: string): string[] {
   if (secretSchemaSet.has(schema)) {

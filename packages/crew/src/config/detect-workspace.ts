@@ -20,7 +20,7 @@ export function detectWorkspace(startDir: string): string {
     if (parent === dir) {
       throw new Error(
         `No workspace found. Searched from '${startDir}' to filesystem root for .crew/config. ` +
-        `Run from within a workspace directory or pass --workspace.`,
+        `Run from within a workspace directory or pass an explicit startDir to detectWorkspace().`,
       );
     }
     dir = parent;
