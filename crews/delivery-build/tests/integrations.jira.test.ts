@@ -8,7 +8,7 @@ process.env["ATLASSIAN_API_TOKEN"] = "token";
 const fetchMock = vi.fn();
 vi.stubGlobal("fetch", fetchMock);
 
-import { transitionIssue, commentOnIssue, getIssue, JiraApiError } from "../src/integrations/jira.js";
+import { transitionIssue, commentOnIssue, getIssue, searchIssues, JiraApiError } from "../src/integrations/jira.js";
 
 function mockTransitionsResponse(
   transitions: Array<{ id: string; name: string; to: { name: string } }>,
@@ -130,6 +130,69 @@ describe("getIssue", () => {
     fetchMock.mockResolvedValueOnce(new Response("Not Found", { status: 404 }));
 
     await expect(getIssue("ENG-999")).rejects.toThrow(JiraApiError);
+  });
+});
+
+describe("searchIssues", () => {
+  beforeEach(() => fetchMock.mockReset());
+
+  it("returns an array of issueKey objects from the search response", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          issues: [
+            { key: "CREW-1" },
+            { key: "CREW-2" },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    const results = await searchIssues('project = "CREW" AND status = "To Do"');
+
+    expect(results).toEqual([
+      { issueKey: "CREW-1" },
+      { issueKey: "CREW-2" },
+    ]);
+  });
+
+  it("passes the JQL as a query parameter and targets the search endpoint", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ issues: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const jql = 'project = "CREW" AND status = "To Do"';
+    await searchIssues(jql);
+
+    const [rawUrl] = fetchMock.mock.calls[0] as [string];
+    // The path is relative; prepend a dummy origin so URL can parse it.
+    const url = new URL(rawUrl, "https://test.atlassian.net");
+    expect(url.pathname).toContain("/issue/search");
+    expect(url.searchParams.get("jql")).toBe(jql);
+  });
+
+  it("returns an empty array when no issues match", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ issues: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const results = await searchIssues('project = "CREW" AND status = "To Do"');
+    expect(results).toEqual([]);
+  });
+
+  it("throws JiraApiError when the API returns a non-2xx status", async () => {
+    fetchMock.mockResolvedValueOnce(new Response("Internal Server Error", { status: 500 }));
+
+    await expect(
+      searchIssues('project = "CREW" AND status = "To Do"'),
+    ).rejects.toThrow(JiraApiError);
   });
 });
 
