@@ -291,15 +291,15 @@ state of the repo, not what exists today.
       And no mention of "@daddia/contracts", "@daddia/sdk", or "@daddia/webhooks" remains
     ```
 
-### Follow-on stories (not started)
+### Follow-on stories
 
-Until **CREW-56-008**, agents may continue to declare `@daddia/crew` via
-`workspace:*`. Stories **006–009** are ordered: manual publish → Changesets and
-release pipeline → migrate agents to semver from the registry → verify container
-build and deploy locally.
+Stories **006–008** are complete. **CREW-56-009** (container verification) is in
+progress: the `Dockerfile` and Railway deployment runbook exist in
+`crews/delivery-build/` and the registry-based build is wired correctly, but the
+smoke-test verification step has not been run against a clean environment.
 
-- [ ] **[CREW-56-006] Manually publish `@daddia/crew` to npm as a private package**
-  - **Status:** Not started | **Priority:** P1 | **Estimate:** 3
+- [x] **[CREW-56-006] Manually publish `@daddia/crew` to npm as a private package**
+  - **Status:** Done | **Priority:** P1 | **Estimate:** 3
   - **Epic:** CREW-56 | **Labels:** phase:now, type:release
   - **Depends on:** CREW-56-005
   - **Deliverable:** `@daddia/crew` is published to the npm registry **once, by
@@ -310,6 +310,10 @@ build and deploy locally.
     `"./webhooks"`). Registry authentication for publish and read is documented
     (`NPM_TOKEN`, `.npmrc` scope). Automated releases are **not** in scope for this
     story; they are CREW-56-007.
+  - **Implementation note:** `@daddia/crew@0.1.0` is published on npm as
+    `access: "public"` (confirmed 2026-05-05). The `"."` and `"./webhooks"` export
+    map is present. Publish and read credentials are documented via `NODE_AUTH_TOKEN`
+    in the release pipeline (CREW-56-007).
   - **Design:** design is captured in `docs/work/crew-package/backlog.md` §3 (this document)
   - **Acceptance (EARS):**
     - THE SYSTEM SHALL provide `packages/crew/package.json` with `publishConfig`
@@ -329,8 +333,8 @@ build and deploy locally.
       And imports from "@daddia/crew" and "@daddia/crew/webhooks" resolve
     ```
 
-- [ ] **[CREW-56-007] Add Changesets and a release pipeline for `@daddia/crew`**
-  - **Status:** Not started | **Priority:** P1 | **Estimate:** 3
+- [x] **[CREW-56-007] Add Changesets and a release pipeline for `@daddia/crew`**
+  - **Status:** Done | **Priority:** P1 | **Estimate:** 3
   - **Epic:** CREW-56 | **Labels:** phase:now, type:ci
   - **Depends on:** CREW-56-006
   - **Deliverable:** [Changesets](https://github.com/changesets/changesets) is
@@ -365,8 +369,8 @@ build and deploy locally.
       Then a new version matching the changeset bump is available
     ```
 
-- [ ] **[CREW-56-008] Migrate agents to the published package (not `workspace:*`)**
-  - **Status:** Not started | **Priority:** P1 | **Estimate:** 2
+- [x] **[CREW-56-008] Migrate agents to the published package (not `workspace:*`)**
+  - **Status:** Done | **Priority:** P1 | **Estimate:** 2
   - **Epic:** CREW-56 | **Labels:** phase:now, type:refactor
   - **Depends on:** CREW-56-007
   - **Deliverable:** `crews/delivery` and `crews/code-reviewer` declare
@@ -376,6 +380,10 @@ build and deploy locally.
     `.npmrc` for the scope or documented token setup). `pnpm install`, `pnpm
     typecheck`, and `pnpm test` pass for both crews from the repo root. No
     crew `package.json` uses `workspace:*` for `@daddia/crew`.
+  - **Implementation note:** `crews/delivery` and `crews/code-reviewer` have been
+    replaced by `crews/delivery-build` and `crews/delivery-review` respectively.
+    Both successor crews declare `"@daddia/crew": "^0.1.0"` (registry semver).
+    `pnpm install`, `pnpm typecheck`, and `pnpm test` all pass from the repo root.
   - **Design:** design is captured in `docs/work/crew-package/backlog.md` §3 (this document)
   - **Acceptance (EARS):**
     - THE SYSTEM SHALL NOT list `workspace:*` (or any workspace protocol) for

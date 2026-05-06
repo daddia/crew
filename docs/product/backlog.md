@@ -2,414 +2,652 @@
 type: Backlog
 scope: product
 product: crew-runtime
-version: '1.0'
+version: '2.0'
 owner: daddia
-status: Refined
-last_updated: 2026-05-05
-source_review: docs/reviews/20260504-solution-review.md
+status: Active
+last_updated: 2026-05-06
 related:
-  - docs/reviews/20260504-solution-review.md
+  - docs/crew-flows/delivery-build.md
   - AGENTS.md
 ---
 
-# Backlog -- Crew Runtime (review remediation)
+# Backlog -- Delivery-Build Slice
 
-Story-level backlog derived from the [`20260504-solution-review.md`](../reviews/20260504-solution-review.md) codebase review. Every story maps to one or more numbered issues in that review document; the review issue numbers appear in the `Labels` field as `review:#n`.
+Objective: ship `delivery-build` as a working end-to-end slice. The crew picks
+up a Jira story via polling, clarifies ambiguities with the PM, implements it on
+a branch, drives it through peer review and CI, and hands off to `In QA` for the
+delivery-qa crew to pick up.
 
-- **Review source:** `docs/reviews/20260504-solution-review.md`
+- **Crew-flow reference:** `docs/crew-flows/delivery-build.md`
 - **AGENTS.md:** `AGENTS.md`
-- **Dependency rules:** `pnpm lint` (dependency-cruiser), `pnpm typecheck`, `pnpm test` — enforced on every PR
+- **Out of scope:** `delivery-review` and `delivery-qa` crews (fast-follow);
+  QA remediation re-entry path; OTel tracing; Turbo remote cache
+
+---
 
 ## 1. Summary
 
-**Objective.** Address the 25 issues identified in the 2026-05-04 solution review and bring the Crew runtime to a production-ready baseline. The core blocker is that no agent `run()` method is implemented and `resolveSession()` returns a random UUID — the system is otherwise well-architected scaffolding waiting for the SDK wire-up.
+**Objective.** Make `delivery-build` end-to-end testable against a real Jira
+board and GitLab project. The critical path is: polling trigger → workflow
+realignment (new sequence, CI gate, In QA handoff) → clarification HITL. A
+parallel correctness/infra stream (CREW-63, CREW-64) fixes the issues identified
+in the 2026-05-04 solution review that must be resolved before the system runs
+safely unattended.
 
-**Delivery approach.** P0 stories (SDK wire-up, container fix) are the critical prerequisite — nothing downstream can be validated until agents execute. P1 stories (CI, startup validation, crash recovery, state integrity) form the hardening layer that makes the system safe to leave running. P2 stories (code quality) remove confusion and maintenance noise. P3 stories (observability, rate limiting) harden the running system.
+**Prerequisites (complete).** The following work shipped before this backlog was
+written and does not require stories:
 
-**Prerequisites (complete).** Webhook security, SQLite schema, workflow orchestration, state machine, test coverage on orchestration layer — all production-quality and do not need to change.
+- `packages/crew` consolidation (`@daddia/crew` + `@daddia/crew/webhooks`) —
+  CREW-56-001–005
+- `engineer` and `senior-engineer` personas wired to the Claude Agent SDK with
+  `memory: 'project'`, `buildAuditHook()`, subagent paths, and project memory
+  seeding — CREW-50-002, 003, 006, 007
+- `delivery-build` integrations: Jira thin client, GitLab thin client
+- `delivery-build` state store: SQLite schema with `stories`, `steps`, and
+  `webhook_events` tables
+- `delivery-build` webhook handler: `POST /webhooks/jira` and
+  `POST /webhooks/gitlab` (secondary trigger — remains in place)
+- `AGENTS.md` package names, tooling cleanup — CREW-54-001, 003, 004
 
-**Out of scope.** New features, persona additions, new workflow phases — this backlog contains only remediation of the 25 review issues.
+**Delivery approach.** CREW-60 and CREW-61 are the critical path and must land
+before CREW-62 is useful. CREW-63 and CREW-64 are independent and can proceed in
+parallel with the trigger and workflow epics.
+
+**Deferred.** `tech-lead` persona (delivery-review crew), `code-quality` persona
+(delivery-qa crew), QA remediation re-entry, OTel tracing (CREW-55-001), Turbo
+remote cache (CREW-55-006).
+
+---
 
 ## 2. Conventions
 
 | Convention | Value |
 | --- | --- |
-| Epic ID format | `CREW-{nn}` (continuing from product backlog) |
+| Epic ID format | `CREW-{nn}` (continuing from 60) |
 | Story ID format | `CREW-{nn}-{nnn}` |
 | Status values | Not started, In progress, In review, Done, Blocked |
-| Priority levels | P0 (blocking), P1 (reliability), P2 (quality), P3 (hardening) |
+| Priority levels | P0 (blocking), P1 (reliability), P2 (quality) |
 | Estimation | Fibonacci story points (1, 2, 3, 5, 8) |
-| Review traceability | `review:#n` label maps to the issue number in `20260504-solution-review.md` |
 | Acceptance format | EARS + Gherkin |
+
+---
 
 ## 3. Epic breakdown
 
 | Epic | Title | Priority | Deps | Points | Status |
 | --- | --- | --- | --- | --- | --- |
-| CREW-50 | SDK session wire-up | P0 | — | 18 | In progress |
-| CREW-51 | Container, CI, and deploy hygiene | P0/P1 | — | 5 | Not started |
-| CREW-52 | Startup reliability and crash recovery | P1 | CREW-50 | 8 | Not started |
-| CREW-53 | State and data integrity | P1 | — | 6 | Not started |
-| CREW-54 | Code quality and hygiene | P2 | — | 8 | Not started |
-| CREW-55 | Observability and hardening | P3 | CREW-50, CREW-52 | 15 | Not started |
-| **Total** | | | | **60** | |
+| CREW-60 | Jira polling trigger | P0 | — | 5 | Not started |
+| CREW-61 | Workflow sequence alignment | P0 | CREW-60 | 9 | Not started |
+| CREW-62 | Clarification HITL step | P1 | CREW-61 | 4 | Not started |
+| CREW-63 | Correctness and reliability carry-forward | P1 | — | 18 | In progress |
+| CREW-64 | CI/deploy and code quality | P2 | — | 10 | Not started |
+| **Total** | | | | **46** | |
 
-Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CREW-55 have full story detail as well — no later-phase placeholders since all scope is known from the review.
+---
 
 ## 4. Epic detail
 
 ---
 
-### CREW-50 -- SDK session wire-up
+### CREW-60 -- Jira polling trigger
 
-**Scope.** Wire `resolveSession()` and all four persona `run()` implementations to the `@anthropic-ai/claude-code` SDK. Until this epic closes the system is inert: every agent invocation throws immediately. `subagentPaths` consumption is also resolved here since it only has meaning once sessions are live. Project memory is activated here so the crew builds up cross-run knowledge from the first story.
+**Scope.** Replace the webhook as the primary trigger with a scheduled Jira
+poller. Every `POLL_INTERVAL_MS` milliseconds the crew queries Jira for `To Do`
+stories assigned to the configured engineer and calls `runStory()` for each
+eligible result. The webhook handler remains in place as a secondary entry point.
 
-**Key deliverables.** `packages/crew/src/session.ts` `resolveSession()` calling `unstable_v2_createSession()` for new sessions and `unstable_v2_resumeSession()` for existing ones; the Claude Code SDK owns the full conversation transcript in its own JSONL files — Crew stores only the `sessionId` as a resume key; `isResumed` path maintained so the engineer's address-feedback loop preserves session context across turns; `AgentResult` populated from SDK response; `engineer`, `senior-engineer`, `tech-lead`, and `code-quality` persona `run()` implementations each building `AgentDefinition` with `memory: 'project'` set, calling `resolveSession()`, and returning a structured `AgentResult`; `subagentPaths` read and injected into the session as subagent system prompts; initial project memory seeded on first run (CREW-50-007).
+**Key deliverables.** `crews/delivery-build/src/index.ts` starts a
+`setInterval`-based poller on boot; `integrations/jira.ts` gains a
+`searchIssues(jql)` function; the poller checks the state store before
+triggering to avoid double-processing; new env vars `JIRA_PROJECT_KEY`,
+`JIRA_ASSIGNEE_ACCOUNT_ID`, and `POLL_INTERVAL_MS` added to `.env.example`.
 
 **Dependencies.** None.
+
+**Status.** Not started.
+
+---
+
+- [ ] **[CREW-60-001] Implement scheduled Jira poller**
+  - **Status:** Not started | **Priority:** P0 | **Estimate:** 3
+  - **Epic:** CREW-60 | **Labels:** type:feature
+  - **Depends on:** —
+  - **Deliverable:** `crews/delivery-build/src/integrations/jira.ts` gains a
+    `searchIssues(jql: string)` function that calls
+    `/rest/api/3/issue/search?jql=<encoded>` and returns an array of
+    `{ issueKey: string }` objects. `crews/delivery-build/src/index.ts` starts
+    a `setInterval` loop on boot with interval `POLL_INTERVAL_MS` (default
+    300 000 ms). Each tick calls `searchIssues` with the JQL
+    `project = "${JIRA_PROJECT_KEY}" AND status = "To Do" AND assignee =
+    "${JIRA_ASSIGNEE_ACCOUNT_ID}"`, iterates the results, and calls
+    `runStory({ issueKey, state })` asynchronously for each eligible story. The
+    poller logs a `warn`-level message and continues on Jira API errors without
+    crashing. The interval is cleared in the existing SIGTERM/SIGINT shutdown
+    handlers.
+  - **Acceptance (EARS):**
+    - WHEN the delivery agent starts, THE SYSTEM SHALL begin polling Jira every
+      `POLL_INTERVAL_MS` milliseconds for `To Do` stories assigned to
+      `JIRA_ASSIGNEE_ACCOUNT_ID` in `JIRA_PROJECT_KEY`.
+    - WHEN a Jira poll returns eligible stories, THE SYSTEM SHALL call
+      `runStory()` asynchronously for each result.
+    - WHEN `POLL_INTERVAL_MS` is not set, THE SYSTEM SHALL default to `300000`.
+    - WHEN the Jira search request fails, THE SYSTEM SHALL log a `warn`-level
+      message and retry on the next scheduled tick without crashing the server.
+    - WHEN the delivery agent receives SIGTERM or SIGINT, THE SYSTEM SHALL clear
+      the poll interval before closing.
+  - **Acceptance (Gherkin):**
+
+    ```gherkin
+    Scenario: Poller discovers a new To Do story and triggers workflow
+      Given JIRA_PROJECT_KEY is "CREW" and JIRA_ASSIGNEE_ACCOUNT_ID is "user-123"
+      And Jira contains one To Do story "CREW-60-001" assigned to "user-123"
+      When the poll interval fires
+      Then a JQL search is executed for project = "CREW" AND status = "To Do" AND assignee = "user-123"
+      And runStory() is called with issueKey "CREW-60-001"
+
+    Scenario: Poller defaults to 5-minute interval
+      Given POLL_INTERVAL_MS is not set
+      When the delivery agent starts
+      Then the poll interval is 300000 milliseconds
+
+    Scenario: Jira poll failure is logged and retried
+      Given the Jira API returns a 500 error on a poll tick
+      When the poll fires
+      Then a warn-level log is emitted with the error
+      And the server continues running
+      And the next poll tick is scheduled normally
+
+    Scenario: Poller stops on SIGTERM
+      Given the delivery agent is running with an active poll interval
+      When SIGTERM is received
+      Then the poll interval is cleared before the server closes
+    ```
+
+---
+
+- [ ] **[CREW-60-002] Deduplication guard in poller**
+  - **Status:** Not started | **Priority:** P0 | **Estimate:** 2
+  - **Epic:** CREW-60 | **Labels:** type:reliability
+  - **Depends on:** CREW-60-001
+  - **Deliverable:** Inside the poller tick, before calling `runStory()`, the
+    code calls `state.getStory(issueKey)`. If the story exists and its
+    `currentStep` is not a terminal value (`in-qa`, `needs-human-review`), the
+    issueKey is skipped and a `debug`-level log is emitted. The in-flight lock
+    map from CREW-63-008 is also checked: if the issueKey is already locked, the
+    story is skipped. Terminal stories from the Jira query are silently ignored
+    (they were transitioned but Jira has not yet removed them from the board).
+    Unit test covers in-progress skip, terminal-step re-skip, and new-story
+    trigger paths.
+  - **Acceptance (EARS):**
+    - WHEN the poller discovers an issueKey that already has a non-terminal step
+      record in the state store, THE SYSTEM SHALL skip that issueKey without
+      calling `runStory()`.
+    - WHEN the poller discovers an issueKey with a terminal step record
+      (`in-qa` or `needs-human-review`), THE SYSTEM SHALL skip that issueKey.
+    - WHEN the poller discovers an issueKey with an active in-flight lock,
+      THE SYSTEM SHALL skip that issueKey.
+    - WHEN the poller discovers an issueKey not present in the state store and
+      not in-flight, THE SYSTEM SHALL call `runStory()` for that issueKey.
+  - **Acceptance (Gherkin):**
+
+    ```gherkin
+    Scenario: In-progress story is skipped by poller
+      Given a state record exists for issueKey "CREW-60-001" with currentStep "implement"
+      When the poller discovers "CREW-60-001" in the Jira results
+      Then runStory() is NOT called for "CREW-60-001"
+
+    Scenario: New story triggers runStory
+      Given no state record exists for issueKey "CREW-60-002"
+      And no in-flight lock exists for "CREW-60-002"
+      When the poller discovers "CREW-60-002" in the Jira results
+      Then runStory() is called with issueKey "CREW-60-002"
+
+    Scenario: Terminal story is not re-triggered
+      Given a state record for "CREW-60-003" with currentStep "in-qa"
+      When the poller discovers "CREW-60-003" in the Jira results
+      Then runStory() is NOT called for "CREW-60-003"
+
+    Scenario: In-flight story is not triggered a second time
+      Given an in-flight lock exists for issueKey "CREW-60-004"
+      When the poller discovers "CREW-60-004" in the Jira results
+      Then runStory() is NOT called for "CREW-60-004"
+    ```
+
+---
+
+### CREW-61 -- Workflow sequence alignment
+
+**Scope.** Realign `workflow.ts` to match `docs/crew-flows/delivery-build.md`.
+The current sequence opens the MR before peer review; the correct sequence is
+implement → peer review → address feedback → open MR → CI check → In QA. A
+context-seeding step reads the full Jira ticket before the engineer starts. The
+handoff target changes from `In Review` to `In QA`. The `steps.session_id`
+column is populated so crash recovery (CREW-63-003) can resume interrupted runs.
+
+**Key deliverables.** `workflow.ts` with reordered steps; new
+`getPipelineStatus(mrUrl)` in `integrations/gitlab.ts`; `Step` type gains
+`context-seed`, `ci-fix`, and `in-qa` values; `In Review` transition removed
+from the normal path; `CI_RETRY_CAP` and `CI_POLL_INTERVAL_MS` env vars
+documented; `sessionId` wired into `state.startStep()` for agent steps.
+
+**Dependencies.** CREW-60 (polling trigger must exist before workflow changes
+are testable end-to-end; the workflow itself can be developed in parallel).
+
+**Status.** Not started.
+
+---
+
+- [ ] **[CREW-61-001] Reorder workflow: MR opens after peer-review loop**
+  - **Status:** Not started | **Priority:** P0 | **Estimate:** 2
+  - **Epic:** CREW-61 | **Labels:** type:correctness
+  - **Depends on:** —
+  - **Deliverable:** `crews/delivery-build/src/workflow.ts` reordered so the
+    sequence is: `implement` → `peer-code-review` / `address-feedback` loop →
+    `open-mr`. The `createMr()` call moves from before the loop to after it.
+    The `Step` type in `state.ts` is reordered to reflect the new logical order.
+    The existing `workflow.test.ts` suite updated to match. No new behaviour is
+    added beyond the reorder; the escalation path when the loop cap is exceeded
+    continues to halt without opening an MR.
+  - **Acceptance (EARS):**
+    - WHEN `runStory()` executes, THE SYSTEM SHALL call `engineer.run()` for
+      implementation and the `seniorEngineer.run()` peer-review loop before
+      calling `createMr()`.
+    - WHEN the peer-review loop completes with approval, THE SYSTEM SHALL then
+      call `createMr()` to open the merge request.
+    - WHEN the peer-review loop reaches `REFACTOR_LOOP_CAP` without approval,
+      THE SYSTEM SHALL escalate without calling `createMr()`.
+    - THE SYSTEM SHALL NOT call `createMr()` before the peer-review loop has
+      completed.
+  - **Acceptance (Gherkin):**
+
+    ```gherkin
+    Scenario: MR is opened after peer review approves
+      Given a story where the engineer implements and seniorEngineer approves on first review
+      When runStory() runs
+      Then seniorEngineer.run() is called before createMr()
+      And createMr() is called once after seniorEngineer returns success
+
+    Scenario: MR is not opened when loop cap is exceeded
+      Given REFACTOR_LOOP_CAP is 2
+      And seniorEngineer always returns success: false
+      When runStory() runs
+      Then createMr() is never called
+      And the story transitions to "needs-human-review"
+
+    Scenario: Workflow order is implement then peer-review then MR
+      Given a normal story run with no failures
+      When runStory() completes
+      Then the step sequence recorded in state is: implement, peer-code-review, open-mr
+      And createMr() is called after the last seniorEngineer.run() invocation
+    ```
+
+---
+
+- [ ] **[CREW-61-002] Add context-seeding step before implementation**
+  - **Status:** Not started | **Priority:** P0 | **Estimate:** 2
+  - **Epic:** CREW-61 | **Labels:** type:feature
+  - **Depends on:** —
+  - **Deliverable:** `crews/delivery-build/src/integrations/jira.ts` gains a
+    `getIssue(issueKey)` function that calls `/rest/api/3/issue/{issueKey}` and
+    returns a structured `{ summary, description, acceptanceCriteria }` object.
+    `workflow.ts` calls `getIssue(issueKey)` at the start of `runStory()` (after
+    the clarification step, CREW-62) and passes the result as `context.ticket`
+    in every `AgentInput` sent to `engineer.run()` (both `implement` and
+    `address-feedback` tasks). If `getIssue()` fails, a `warn`-level log is
+    emitted and the workflow continues with `context.ticket` set to `null`. The
+    `Step` type gains a `context-seed` step which is recorded in state before the
+    `getIssue()` call.
+  - **Acceptance (EARS):**
+    - WHEN `runStory()` begins, THE SYSTEM SHALL call `getIssue(issueKey)` and
+      pass the result as `context.ticket` to `engineer.run()` for the
+      `implement` task.
+    - WHEN `getIssue()` fails, THE SYSTEM SHALL log a `warn`-level message and
+      proceed with `context.ticket: null` rather than halting the workflow.
+    - THE SYSTEM SHALL pass `context.ticket` to every `engineer.run()` call in
+      the workflow (both `implement` and `address-feedback` tasks).
+  - **Acceptance (Gherkin):**
+
+    ```gherkin
+    Scenario: Ticket content is passed to engineer on implementation
+      Given a Jira issue "CREW-61-002" with description "Build the feature"
+      When runStory() starts
+      Then getIssue("CREW-61-002") is called before engineer.run() for implement
+      And the engineer's AgentInput.context.ticket contains the issue summary and description
+
+    Scenario: Ticket content is also passed on address-feedback
+      Given a peer review cycle that results in feedback
+      When engineer.run() is called for the address-feedback task
+      Then AgentInput.context.ticket is populated with the issue data
+
+    Scenario: Jira fetch failure does not halt workflow
+      Given getIssue() throws a network error
+      When runStory() starts
+      Then a warn-level log is emitted
+      And engineer.run() is still called with context.ticket as null
+    ```
+
+---
+
+- [ ] **[CREW-61-003] CI pipeline check and fix loop after MR open**
+  - **Status:** Not started | **Priority:** P0 | **Estimate:** 3
+  - **Epic:** CREW-61 | **Labels:** type:feature
+  - **Depends on:** CREW-61-001
+  - **Deliverable:** `crews/delivery-build/src/integrations/gitlab.ts` gains a
+    `getPipelineStatus(mrUrl)` function that calls
+    `GET /projects/{id}/merge_requests/{iid}/pipelines` and returns the latest
+    pipeline's `status` string (`created`, `pending`, `running`, `success`,
+    `failed`, `canceled`). `workflow.ts` enters a CI monitoring loop after
+    `createMr()`: it polls `getPipelineStatus()` every `CI_POLL_INTERVAL_MS`
+    (default 30 000 ms) until the status is `success` or `failed`. On `failed`,
+    it calls `engineer.run()` with `task: 'fix-ci'` and `context.ciFailure`
+    containing the pipeline status details. The loop is bounded by `CI_RETRY_CAP`
+    (default 3); on cap exceeded the workflow escalates. On `success` the loop
+    exits and the workflow proceeds to the In QA handoff. `CI_RETRY_CAP` and
+    `CI_POLL_INTERVAL_MS` are added to `.env.example`.
+  - **Acceptance (EARS):**
+    - WHEN an MR is opened, THE SYSTEM SHALL poll `getPipelineStatus(mrUrl)` to
+      check the CI pipeline status.
+    - WHEN the pipeline status is `success`, THE SYSTEM SHALL exit the CI loop
+      and proceed to the In QA handoff.
+    - WHEN the pipeline status is `failed`, THE SYSTEM SHALL call
+      `engineer.run()` with `task: 'fix-ci'` and pipeline failure details in
+      `context.ciFailure`.
+    - WHEN the number of CI fix attempts reaches `CI_RETRY_CAP`, THE SYSTEM
+      SHALL escalate to human review without attempting another fix.
+    - WHEN the pipeline status is `pending` or `running`, THE SYSTEM SHALL wait
+      `CI_POLL_INTERVAL_MS` before polling again.
+    - WHEN `CI_RETRY_CAP` is not set, THE SYSTEM SHALL default to `3`.
+    - WHEN `CI_POLL_INTERVAL_MS` is not set, THE SYSTEM SHALL default to
+      `30000`.
+  - **Acceptance (Gherkin):**
+
+    ```gherkin
+    Scenario: CI passes on first check
+      Given an MR whose latest pipeline has status "success"
+      When getPipelineStatus() is called
+      Then the CI loop exits with success
+      And the workflow proceeds to the In QA transition
+
+    Scenario: CI fails and engineer fixes within cap
+      Given CI_RETRY_CAP is 3
+      And the pipeline status is "failed" on first check then "success" after one fix
+      When the CI monitoring loop runs
+      Then engineer.run() is called once with task "fix-ci"
+      And the loop exits when the pipeline is green
+
+    Scenario: CI fix cap exceeded escalates workflow
+      Given CI_RETRY_CAP is 2
+      And the pipeline status is always "failed"
+      When the CI loop runs
+      Then engineer.run() is called exactly 2 times with task "fix-ci"
+      And the workflow escalates to human review without a further attempt
+
+    Scenario: Pending pipeline triggers a wait before next poll
+      Given the pipeline status is "running"
+      When getPipelineStatus() is called
+      Then the loop waits CI_POLL_INTERVAL_MS before polling again
+    ```
+
+---
+
+- [ ] **[CREW-61-004] Change handoff to "In QA" and document new env vars**
+  - **Status:** Not started | **Priority:** P0 | **Estimate:** 1
+  - **Epic:** CREW-61 | **Labels:** type:feature
+  - **Depends on:** CREW-61-003
+  - **Deliverable:** `workflow.ts` calls `transitionIssue(issueKey, "In QA")`
+    (replacing the former `"In Review"` call) after the CI pipeline passes. A
+    structured `info`-level log is emitted: `workflow.handoff-to-qa` with
+    `{ issueKey, mrUrl }`. The `Step` type replaces `in-review` with `in-qa`.
+    `crews/delivery-build/.env.example` and `README.md` updated to document
+    `CI_RETRY_CAP`, `CI_POLL_INTERVAL_MS`, `JIRA_PROJECT_KEY`,
+    `JIRA_ASSIGNEE_ACCOUNT_ID`, `POLL_INTERVAL_MS`, `PROJECT_DIR`, and
+    `ANTHROPIC_MODEL` with descriptions and defaults.
+  - **Acceptance (EARS):**
+    - WHEN the CI pipeline passes, THE SYSTEM SHALL call
+      `transitionIssue(issueKey, "In QA")`.
+    - WHEN the `In QA` transition succeeds, THE SYSTEM SHALL emit a
+      `workflow.handoff-to-qa` info log with `issueKey` and `mrUrl`.
+    - THE SYSTEM SHALL NOT call `transitionIssue(issueKey, "In QA")` during
+      a normal delivery-build workflow run.
+    - WHEN `.env.example` is read, THE SYSTEM SHALL document every env var
+      consumed by `crews/delivery-build`, including the new vars from CREW-60
+      and CREW-61.
+  - **Acceptance (Gherkin):**
+
+    ```gherkin
+    Scenario: Successful workflow transitions to In QA
+      Given a CI-green MR for issueKey "JIRA-123"
+      When the CI monitoring loop exits with success
+      Then transitionIssue("JIRA-123", "In QA") is called
+      And a workflow.handoff-to-qa info log is emitted with issueKey and mrUrl
+
+    Scenario: In Review transition is absent from normal flow
+      Given a story that completes the full workflow without escalation
+      When runStory() finishes
+      Then transitionIssue() is never called with the argument "In QA"
+
+    Scenario: .env.example documents all new env vars
+      Given crews/delivery-build/.env.example is read
+      When it is searched for CI_RETRY_CAP, CI_POLL_INTERVAL_MS, POLL_INTERVAL_MS,
+           JIRA_PROJECT_KEY, JIRA_ASSIGNEE_ACCOUNT_ID, PROJECT_DIR, and ANTHROPIC_MODEL
+      Then all seven are present with inline description comments
+    ```
+
+---
+
+- [ ] **[CREW-61-005] Wire sessionId into `state.startStep()` for agent steps**
+  - **Status:** Not started | **Priority:** P1 | **Estimate:** 1
+  - **Epic:** CREW-61 | **Labels:** type:correctness, review:#1
+  - **Depends on:** —
+  - **Deliverable:** `workflow.ts` passes the `sessionId` from
+    `AgentResult.artefacts["sessionId"]` as the third argument to
+    `state.startStep()` for the `implement` and `address-feedback` steps. For
+    non-agent steps (`open-mr`, `peer-code-review` as a step record, `in-qa`)
+    the `sessionId` argument is omitted. The `steps.session_id` column is
+    therefore populated for agent-executing steps, enabling crash recovery
+    (CREW-63-003) to resume interrupted runs. Unit tests assert the `sessionId`
+    argument is passed for agent steps and omitted for non-agent steps.
+  - **Acceptance (EARS):**
+    - WHEN `state.startStep()` is called for the `implement` step, THE SYSTEM
+      SHALL pass the engineer's `sessionId` from
+      `AgentResult.artefacts["sessionId"]`.
+    - WHEN `state.startStep()` is called for the `address-feedback` step,
+      THE SYSTEM SHALL pass the current engineer's `sessionId`.
+    - WHEN `state.startStep()` is called for a non-agent step, THE SYSTEM SHALL
+      omit the `sessionId` argument.
+  - **Acceptance (Gherkin):**
+
+    ```gherkin
+    Scenario: sessionId is stored for the implement step
+      Given engineer.run() returns an AgentResult with artefacts.sessionId "sess_abc"
+      When state.startStep() is called for the "implement" step
+      Then the sessionId argument "sess_abc" is passed to startStep
+
+    Scenario: sessionId is stored for the address-feedback step
+      Given engineer.run() for address-feedback returns artefacts.sessionId "sess_def"
+      When state.startStep() is called for the "address-feedback" step
+      Then the sessionId argument "sess_def" is passed to startStep
+
+    Scenario: Non-agent steps do not store sessionId
+      Given the workflow records the "open-mr" step
+      When state.startStep() is called for "open-mr"
+      Then no sessionId argument is passed
+    ```
+
+---
+
+### CREW-62 -- Clarification HITL step
+
+**Scope.** Before transitioning a story to `In Progress`, the engineer assesses
+whether the ticket has enough information to proceed. If not, it posts structured
+questions to Jira, transitions to `Clarification Needed`, and halts. The poller
+recognises stories awaiting clarification and resumes them once a PM response
+is found, or escalates after `CLARIFICATION_TIMEOUT_HOURS`.
+
+**Key deliverables.** `workflow.ts` calls `engineer.run()` with
+`task: 'assess-clarification'` as the first step; `integrations/jira.ts` gains
+`getComments(issueKey)`; poller extended to check `clarification-pending`
+stories on each tick; `CLARIFICATION_TIMEOUT_HOURS` documented in `.env.example`.
+
+**Dependencies.** CREW-61 (workflow structure must be settled before wiring the
+clarification step into it).
+
+**Status.** Not started.
+
+---
+
+- [ ] **[CREW-62-001] Engineer assesses ticket and posts clarifying questions**
+  - **Status:** Not started | **Priority:** P1 | **Estimate:** 2
+  - **Epic:** CREW-62 | **Labels:** type:feature
+  - **Depends on:** CREW-61-002
+  - **Deliverable:** As the first action in `runStory()` (before the `In
+    Progress` transition), `workflow.ts` calls `engineer.run()` with
+    `task: 'assess-clarification'` and `context.ticket` populated from
+    `getIssue()`. The engineer returns an `AgentResult` where
+    `artefacts.questionsRequired` is `true` and `artefacts.questions` is a
+    non-empty string if clarification is needed, or `false` if the ticket is
+    clear. When `questionsRequired` is `true`, the workflow calls
+    `commentOnIssue(issueKey, questions)`, calls
+    `transitionIssue(issueKey, "Clarification Needed")`, records a
+    `clarification-pending` step in the state store (via `state.startStep` +
+    `state.finishStep`), and returns without proceeding to implementation. When
+    `questionsRequired` is `false`, the workflow continues to the `In Progress`
+    transition with no comment posted.
+  - **Acceptance (EARS):**
+    - WHEN `runStory()` starts, THE SYSTEM SHALL call `engineer.run()` with
+      `task: 'assess-clarification'` before transitioning the ticket to
+      `In Progress`.
+    - WHEN the engineer returns `artefacts.questionsRequired: true`, THE SYSTEM
+      SHALL post the questions as a Jira comment and transition to
+      `Clarification Needed`.
+    - WHEN the engineer returns `artefacts.questionsRequired: false`,
+      THE SYSTEM SHALL proceed to the `In Progress` transition without posting
+      a comment.
+    - WHEN clarification is needed, THE SYSTEM SHALL record a
+      `clarification-pending` step in the state store and return from
+      `runStory()` without calling `engineer.run()` for implementation.
+  - **Acceptance (Gherkin):**
+
+    ```gherkin
+    Scenario: Engineer determines no clarification is needed
+      Given a well-specified Jira ticket
+      And engineer.run() returns artefacts.questionsRequired: false
+      When runStory() starts
+      Then commentOnIssue() is not called
+      And transitionIssue() is called with "In Progress"
+      And the workflow continues to implementation
+
+    Scenario: Engineer posts clarifying questions
+      Given an ambiguous Jira ticket
+      And engineer.run() returns artefacts.questionsRequired: true
+      And artefacts.questions is "What is the expected error behaviour?"
+      When runStory() starts
+      Then commentOnIssue() is called with the questions text
+      And transitionIssue() is called with "Clarification Needed"
+      And a clarification-pending step is recorded in state
+      And runStory() returns without calling engineer.run() for implementation
+    ```
+
+---
+
+- [ ] **[CREW-62-002] Poller resumes clarification-pending stories**
+  - **Status:** Not started | **Priority:** P1 | **Estimate:** 2
+  - **Epic:** CREW-62 | **Labels:** type:feature
+  - **Depends on:** CREW-62-001, CREW-60-001
+  - **Deliverable:** `integrations/jira.ts` gains a `getComments(issueKey)`
+    function that calls `/rest/api/3/issue/{issueKey}/comment` and returns
+    `Array<{ author: string; body: string; created: string }>`. The poller tick
+    in `index.ts` checks `state` for stories in `clarification-pending` step.
+    For each, it calls `getComments(issueKey)`, finds comments posted after the
+    `clarification-pending` step's `started_at` timestamp, and checks whether
+    any comment author is not the system bot (i.e., is a human response). If a
+    human response is found, it calls `runStory()` to resume from the
+    `In Progress` transition. If `CLARIFICATION_TIMEOUT_HOURS` (default 24)
+    have elapsed since `started_at` with no human response, the workflow
+    escalates to `Needs Human Review` with a timeout explanation.
+    `CLARIFICATION_TIMEOUT_HOURS` added to `.env.example`.
+  - **Acceptance (EARS):**
+    - WHEN the poller runs and finds a story in `clarification-pending` step,
+      THE SYSTEM SHALL call `getComments(issueKey)` to check for a human
+      response posted after the clarification question.
+    - WHEN a human response comment is found, THE SYSTEM SHALL resume the
+      workflow by calling `runStory()` for that issueKey.
+    - WHEN no human response is found and `CLARIFICATION_TIMEOUT_HOURS` have
+      elapsed since `started_at`, THE SYSTEM SHALL escalate the story to
+      `Needs Human Review` with a timeout explanation comment.
+    - WHEN `CLARIFICATION_TIMEOUT_HOURS` is not set, THE SYSTEM SHALL default
+      to `24`.
+  - **Acceptance (Gherkin):**
+
+    ```gherkin
+    Scenario: PM responds within timeout window
+      Given a story "CREW-62-001" in clarification-pending step
+      And a Jira comment from a human was posted after the clarification question
+      When the poller fires
+      Then runStory() is called to resume implementation for "CREW-62-001"
+
+    Scenario: Timeout reached with no PM response
+      Given a story "CREW-62-002" in clarification-pending step
+      And CLARIFICATION_TIMEOUT_HOURS is 24
+      And the clarification-pending step was recorded 25 hours ago
+      And no human comment exists after the question
+      When the poller fires
+      Then escalateToHumanReview() is called for "CREW-62-002"
+      And the escalation Jira comment mentions the clarification timeout
+
+    Scenario: Default timeout is 24 hours
+      Given CLARIFICATION_TIMEOUT_HOURS is not set
+      When the clarification timeout threshold is evaluated
+      Then the threshold is 86400000 milliseconds
+    ```
+
+---
+
+### CREW-63 -- Correctness and reliability carry-forward
+
+**Scope.** Nine correctness and reliability fixes from the 2026-05-04 solution
+review that must be resolved before the system runs safely unattended. These are
+independent of the new flow epics and can proceed in parallel.
+
+**Key deliverables.** Startup env validation; auth header moved inside
+`jiraFetch()`; crash recovery scan on startup; pinned MCP versions; single
+SQLite connection; correct `finishStep()` WHERE clause; `createMr()` idempotency
+guard; per-issueKey in-flight lock; `getMrDiff()` size cap.
+
+**Dependencies.** None (all stories are independently mergeable).
 
 **Status.** In progress.
 
-**Branch.** `fix/CREW-50-sdk-session`
-
 ---
 
-- [ ] **[CREW-50-001] Wire `resolveSession()` to the Claude Code SDK**
-  - **Status:** In progress | **Priority:** P0 | **Estimate:** 5
-  - **Epic:** CREW-50 | **Labels:** review:#1, review:#2, type:infrastructure
-  - **Depends on:** —
-  - **Deliverable:** `packages/crew/src/session.ts` `resolveSession()` calls `unstable_v2_createSession()` when no prior `sessionId` exists for the given `issueKey`, and `unstable_v2_resumeSession(sessionId)` when one does; the Claude Code SDK owns the full conversation transcript in its own JSONL files under `~/.claude/projects/` — Crew stores only the `sessionId` in the `phases` table as a resume key and does not duplicate the transcript; `isResumed: true` is returned on the resume path so the address-feedback loop can detect it; `resolveSession()` no longer returns `crypto.randomUUID()` without a real SDK call; unit tests covering create-path, resume-path, and SDK error propagation.
-  - **Acceptance (EARS):**
-    - WHEN `resolveSession()` is called with no prior `sessionId` for the given `issueKey`, THE SYSTEM SHALL call `unstable_v2_createSession()` and return `{ sessionId, isResumed: false }`.
-    - WHEN `resolveSession()` is called and a `sessionId` already exists for the given `issueKey`, THE SYSTEM SHALL call `unstable_v2_resumeSession(sessionId)` and return `{ sessionId, isResumed: true }`.
-    - WHEN the SDK returns an error during session creation or resumption, THE SYSTEM SHALL propagate the error to the caller and SHALL NOT return a random UUID as a fallback.
-    - THE SYSTEM SHALL NOT call `crypto.randomUUID()` as the sole source of a `sessionId` return value.
-    - THE SYSTEM SHALL store only the `sessionId` in Crew's `phases` table; it SHALL NOT store the conversation transcript. -- not wired: `state.startStep()` is never called with a `sessionId` argument in `workflow.ts`; the column exists but is always NULL
-  - **Acceptance (Gherkin):**
-
-    ```gherkin
-    Scenario: New session is created via unstable_v2_createSession
-      Given no sessionId exists for issueKey "CREW-50-001"
-      When resolveSession() is called for issueKey "CREW-50-001"
-      Then unstable_v2_createSession() is invoked
-      And the returned sessionId matches the SDK-assigned session identifier
-      And isResumed is false
-
-    Scenario: Existing session is resumed via unstable_v2_resumeSession
-      Given a sessionId "sess_abc" is stored for issueKey "CREW-50-001"
-      When resolveSession() is called for issueKey "CREW-50-001"
-      Then unstable_v2_resumeSession("sess_abc") is invoked
-      And isResumed is true
-
-    Scenario: SDK error propagates to caller
-      Given the SDK throws a network error during session creation
-      When resolveSession() is called
-      Then the error is re-thrown to the caller
-      And no random UUID is returned
-    ```
-
----
-
-- [x] **[CREW-50-002] Implement `engineer` persona `run()`**
-  - **Status:** Done | **Priority:** P0 | **Estimate:** 3
-  - **Epic:** CREW-50 | **Labels:** review:#1, type:feature
-  - **Depends on:** CREW-50-001
-  - **Deliverable:** `crews/delivery/src/agents/engineer/agent.ts` `run()` builds `AgentDefinition` from `promptPath`, `skillPaths`, `subagentPaths`, `allowedTools`, `mcpServerNames`, and `memory: 'project'`; calls `resolveSession()` from `@daddia/crew`; executes the session using the SDK; returns a populated `AgentResult` with `success`, `summary`, `artefacts`, and `costUsd`; `buildAuditHook()` attached for every run; the function no longer throws `"not implemented"`. Setting `memory: 'project'` causes the SDK to create and maintain a persistent project memory directory, inject Read/Write/Edit tools into the session, and load `MEMORY.md` into context automatically.
-  - **Acceptance (EARS):**
-    - WHEN `engineer.run(input)` is called, THE SYSTEM SHALL build an `AgentDefinition` using the engineer's `prompt.md`, discovered skill paths, allowed tools list, MCP server names, and `memory: 'project'`.
-    - WHEN `engineer.run(input)` is called, THE SYSTEM SHALL call `resolveSession()` and pass the resulting `sessionId` to the SDK execution call.
-    - WHEN the SDK completes execution, THE SYSTEM SHALL return an `AgentResult` where `success` is `true`, `summary` is non-empty, and `costUsd` reflects the SDK-reported token cost.
-    - WHEN the SDK returns an error, THE SYSTEM SHALL return an `AgentResult` where `success` is `false` and `summary` contains the error message.
-    - THE SYSTEM SHALL attach `buildAuditHook()` to every `engineer.run()` invocation.
-    - THE SYSTEM SHALL NOT throw `Error("not implemented")` or any placeholder error during `engineer.run()`.
-  - **Acceptance (Gherkin):**
-
-    ```gherkin
-    Scenario: Engineer run completes successfully
-      Given a valid AgentInput with issueKey "CREW-50-001"
-      And the SDK session executes without error
-      When engineer.run(input) is called
-      Then an AgentResult is returned with success true
-      And summary is a non-empty string
-      And costUsd is a non-negative number
-
-    Scenario: Engineer run surfaces SDK failure
-      Given a valid AgentInput
-      And the SDK session throws a rate-limit error
-      When engineer.run(input) is called
-      Then an AgentResult is returned with success false
-      And summary contains the error description
-
-    Scenario: Audit hook is attached on every run
-      Given a valid AgentInput
-      When engineer.run(input) is called
-      Then buildAuditHook() was called once before SDK execution
-    ```
-
----
-
-- [x] **[CREW-50-003] Implement `senior-engineer` persona `run()`**
-  - **Status:** Done | **Priority:** P0 | **Estimate:** 2
-  - **Epic:** CREW-50 | **Labels:** review:#1, type:feature
-  - **Depends on:** CREW-50-001
-  - **Deliverable:** `crews/delivery/src/agents/senior-engineer/agent.ts` `run()` follows the same pattern as CREW-50-002; builds `AgentDefinition` from persona-specific paths, tools, and `memory: 'project'`; calls `resolveSession()`; returns populated `AgentResult`; `buildAuditHook()` attached; no longer throws.
-  - **Acceptance (EARS):**
-    - WHEN `seniorEngineer.run(input)` is called, THE SYSTEM SHALL build an `AgentDefinition` using the senior-engineer's `prompt.md`, skill paths, allowed tools, MCP server names, and `memory: 'project'`.
-    - WHEN the SDK completes execution, THE SYSTEM SHALL return an `AgentResult` with `success`, `summary`, `artefacts`, and `costUsd` populated.
-    - THE SYSTEM SHALL NOT throw `Error("not implemented")` during `seniorEngineer.run()`.
-    - THE SYSTEM SHALL attach `buildAuditHook()` to every invocation.
-  - **Acceptance (Gherkin):**
-
-    ```gherkin
-    Scenario: Senior engineer run returns populated AgentResult
-      Given a valid AgentInput for a peer-review task
-      And the SDK executes successfully
-      When seniorEngineer.run(input) is called
-      Then an AgentResult is returned with success true and non-empty summary
-
-    Scenario: No placeholder error is thrown
-      Given a valid AgentInput
-      When seniorEngineer.run(input) is called
-      Then no "not implemented" error is thrown
-    ```
-
----
-
-- [ ] **[CREW-50-004] Implement `tech-lead` persona `run()`**
-  - **Status:** Not started | **Priority:** P0 | **Estimate:** 2
-  - **Epic:** CREW-50 | **Labels:** review:#1, type:feature
-  - **Depends on:** CREW-50-001
-  - **Deliverable:** `crews/delivery/src/agents/tech-lead/agent.ts` `run()` builds `AgentDefinition` with `memory: 'project'`; calls `resolveSession()`; returns populated `AgentResult`; `buildAuditHook()` attached; no longer throws.
-  - **Acceptance (EARS):**
-    - WHEN `techLead.run(input)` is called, THE SYSTEM SHALL build an `AgentDefinition` using the tech-lead's `prompt.md`, skill paths, allowed tools, MCP server names, and `memory: 'project'`.
-    - WHEN the SDK completes execution, THE SYSTEM SHALL return an `AgentResult` with all fields populated.
-    - THE SYSTEM SHALL NOT throw `Error("not implemented")` during `techLead.run()`.
-    - THE SYSTEM SHALL attach `buildAuditHook()` to every invocation.
-  - **Acceptance (Gherkin):**
-
-    ```gherkin
-    Scenario: Tech lead run returns populated AgentResult
-      Given a valid AgentInput for a final-code-review task
-      And the SDK executes successfully
-      When techLead.run(input) is called
-      Then an AgentResult is returned with success true and non-empty summary
-
-    Scenario: No placeholder error is thrown
-      Given a valid AgentInput
-      When techLead.run(input) is called
-      Then no "not implemented" error is thrown
-    ```
-
----
-
-- [ ] **[CREW-50-005] Implement `code-quality` persona `run()`**
-  - **Status:** Not started | **Priority:** P0 | **Estimate:** 2
-  - **Epic:** CREW-50 | **Labels:** review:#1, type:feature
-  - **Depends on:** CREW-50-001
-  - **Deliverable:** `crews/code-reviewer/src/agents/code-quality/agent.ts` `run()` builds `AgentDefinition` with `memory: 'project'`; calls `resolveSession()`; returns populated `AgentResult`; `buildAuditHook()` attached; no longer throws.
-  - **Acceptance (EARS):**
-    - WHEN `codeQuality.run(input)` is called, THE SYSTEM SHALL build an `AgentDefinition` using the code-quality `prompt.md`, skill paths, allowed tools, MCP server names, and `memory: 'project'`.
-    - WHEN the SDK completes execution, THE SYSTEM SHALL return an `AgentResult` with all fields populated.
-    - THE SYSTEM SHALL NOT throw `Error("not implemented")` during `codeQuality.run()`.
-    - THE SYSTEM SHALL attach `buildAuditHook()` to every invocation.
-  - **Acceptance (Gherkin):**
-
-    ```gherkin
-    Scenario: Code quality run returns populated AgentResult
-      Given a valid AgentInput for a code-review task
-      And the SDK executes successfully
-      When codeQuality.run(input) is called
-      Then an AgentResult is returned with success true and non-empty summary
-
-    Scenario: No placeholder error is thrown
-      Given a valid AgentInput
-      When codeQuality.run(input) is called
-      Then no "not implemented" error is thrown
-    ```
-
----
-
-- [x] **[CREW-50-006] Thread `subagentPaths` into SDK session**
-  - **Status:** Done | **Priority:** P1 | **Estimate:** 2
-  - **Epic:** CREW-50 | **Labels:** review:#12, type:feature
-  - **Depends on:** CREW-50-001
-  - **Deliverable:** `packages/crew/src/loaders.ts` `readSubagentsDir()` output is read and passed to the SDK session as subagent system prompts (or the equivalent SDK concept for `.claude/agents/` files); each persona `run()` implementation passes `subagentPaths` from its `AgentDefinition` through to the session invocation; integration test confirming subagent files are loaded and injected when present; when `subagentPaths` is empty the session still starts without error.
-  - **Acceptance (EARS):**
-    - WHEN `subagentPaths` in an `AgentDefinition` is non-empty, THE SYSTEM SHALL read each file and inject its contents into the SDK session as a subagent definition before invoking the session. -- implemented via `settingSources: ['project']` (SDK discovers `.claude/agents/` automatically) rather than explicit file injection; deviation is acceptable
-    - WHEN `subagentPaths` is empty, THE SYSTEM SHALL start the SDK session without error and without attempting to read any subagent files.
-    - WHEN a path in `subagentPaths` does not exist on disk, THE SYSTEM SHALL log a `warn`-level message and continue session creation without that subagent.
-  - **Acceptance (Gherkin):**
-
-    ```gherkin
-    Scenario: Subagent files are injected into the session
-      Given an AgentDefinition with subagentPaths containing one valid .md file
-      When resolveSession() is called
-      Then the contents of the .md file are injected into the SDK session as a subagent definition
-
-    Scenario: Empty subagentPaths does not break session creation
-      Given an AgentDefinition with an empty subagentPaths array
-      When resolveSession() is called
-      Then the SDK session starts without error
-
-    Scenario: Missing subagent file is skipped with a warning
-      Given an AgentDefinition with a subagentPath pointing to a non-existent file
-      When resolveSession() is called
-      Then a warn-level log is emitted for the missing path
-      And the session starts with the remaining subagents (if any)
-    ```
-
----
-
-- [x] **[CREW-50-007] Seed initial project memory on first run**
-  - **Status:** Done | **Priority:** P1 | **Estimate:** 2
-  - **Epic:** CREW-50 | **Labels:** type:feature
-  - **Depends on:** CREW-50-002
-  - **Deliverable:** On the first run for a project (when `MEMORY.md` does not yet exist in the SDK's project memory directory), the engineer persona writes an initial memory file covering observable project context: language and runtime, package manager, test framework, coding conventions visible from the codebase, and any patterns in `AGENTS.md`. This bootstraps the memory system so it is useful from run one rather than accumulating gradually. The seed write is skipped on subsequent runs where `MEMORY.md` already exists.
-  - **Acceptance (EARS):**
-    - WHEN the delivery agent runs its first story for a project and no `MEMORY.md` exists in the project memory directory, THE SYSTEM SHALL write an initial memory file recording observable project context before the first `engineer.run()` call.
-    - WHEN `MEMORY.md` already exists in the project memory directory, THE SYSTEM SHALL skip the seed write and proceed normally.
-    - WHEN the seed write fails, THE SYSTEM SHALL log a `warn`-level message and continue without blocking the workflow.
-  - **Acceptance (Gherkin):**
-
-    ```gherkin
-    Scenario: Memory is seeded on first run
-      Given no MEMORY.md exists in the project memory directory
-      When the delivery agent processes its first story
-      Then an initial MEMORY.md is written before engineer.run() is called
-      And the file contains at least one entry describing the project's language or tooling
-
-    Scenario: Seed is skipped when memory already exists
-      Given MEMORY.md already exists in the project memory directory
-      When the delivery agent processes a story
-      Then no seed write is attempted
-      And the workflow proceeds normally
-
-    Scenario: Seed failure does not block the workflow
-      Given the memory directory is not writable
-      When the delivery agent attempts to seed memory
-      Then a warn-level log is emitted
-      And engineer.run() is called regardless
-    ```
-
----
-
-- [ ] **[CREW-50-008] Document `PROJECT_DIR` and `ANTHROPIC_MODEL` env vars**
-  - **Status:** Not started | **Priority:** P2 | **Estimate:** 1
-  - **Epic:** CREW-50 | **Labels:** type:quality
-  - **Depends on:** —
-  - **Deliverable:** `crews/delivery-build/.env.example` and `README.md` updated to include `PROJECT_DIR` (used by `workflow.ts` for memory seeding) and `ANTHROPIC_MODEL` (used by both persona `agent.ts` files as the optional model override); both vars documented with description and sensible default values.
-  - **Acceptance (EARS):**
-    - WHEN a developer reads `crews/delivery-build/.env.example`, THE SYSTEM SHALL list `PROJECT_DIR` and `ANTHROPIC_MODEL` with inline comments describing their purpose and defaults.
-    - WHEN a developer reads `crews/delivery-build/README.md`, THE SYSTEM SHALL document `PROJECT_DIR` and `ANTHROPIC_MODEL` in the environment variables table.
-
----
-
-### CREW-51 -- Container, CI, and deploy hygiene
-
-**Scope.** Three targeted fixes that make builds reproducible and protected: fix the pnpm version mismatch in the code-reviewer Dockerfile, add a GitHub Actions CI pipeline, and make the Dockerfile `COPY` for the lockfile explicit.
-
-**Key deliverables.** `crews/code-reviewer/Dockerfile` using `corepack enable` instead of `pnpm@9`; `.github/workflows/ci.yml` running lint, typecheck, and test on push and pull request; both Dockerfiles using a plain `COPY pnpm-lock.yaml ./` without the optional glob suffix.
-
-**Dependencies.** None.
-
-**Status.** Not started.
-
----
-
-- [N/A] **[CREW-51-001] Fix code-reviewer Dockerfile**
-
----
-
-- [ ] **[CREW-51-002] Add GitHub Actions CI pipeline**
-  - **Status:** Not started | **Priority:** P1 | **Estimate:** 3
-  - **Epic:** CREW-51 | **Labels:** review:#4, type:infrastructure
-  - **Depends on:** —
-  - **Deliverable:** `.github/workflows/ci.yml` that triggers on `push` and `pull_request` to `main`; runs `pnpm install --frozen-lockfile`, `pnpm lint` (dependency-cruiser boundary checks), `pnpm typecheck`, and `pnpm test`; fails the workflow if any command exits non-zero; Node.js version pinned to match `.nvmrc` or `engines` in `package.json`; pnpm version activated via `corepack enable`; workflow caches `~/.pnpm-store` keyed on `pnpm-lock.yaml` hash.
-  - **Acceptance (EARS):**
-    - WHEN a commit is pushed to `main` or a pull request targets `main`, THE SYSTEM SHALL trigger the CI workflow.
-    - WHEN `pnpm lint` exits non-zero, THE SYSTEM SHALL fail the CI workflow and report the lint errors.
-    - WHEN `pnpm typecheck` exits non-zero, THE SYSTEM SHALL fail the CI workflow and report the type errors.
-    - WHEN `pnpm test` exits non-zero, THE SYSTEM SHALL fail the CI workflow and report the failing tests.
-    - WHEN all three commands exit zero, THE SYSTEM SHALL mark the CI workflow as passed.
-    - THE SYSTEM SHALL cache the pnpm store between runs to reduce install time.
-  - **Acceptance (Gherkin):**
-
-    ```gherkin
-    Scenario: Clean codebase passes CI
-      Given a commit with no lint, type, or test errors
-      When the CI workflow runs
-      Then all three steps (lint, typecheck, test) exit zero
-      And the workflow is marked as passed
-
-    Scenario: Dependency boundary violation fails CI
-      Given a commit where packages/crew imports from crews/delivery
-      When pnpm lint runs in CI
-      Then dependency-cruiser reports a boundary violation
-      And the CI workflow fails
-
-    Scenario: Type error fails CI
-      Given a commit introducing a TypeScript type mismatch
-      When pnpm typecheck runs in CI
-      Then the workflow fails and the type error is reported
-
-    Scenario: pnpm store is cached between runs
-      Given a prior CI run has populated the cache
-      When a subsequent CI run restores the cache
-      Then pnpm install skips redownloading already-cached packages
-    ```
-
----
-
-- [ ] **[CREW-51-003] Fix Dockerfile lockfile `COPY` from glob to explicit**
-  - **Status:** Not started | **Priority:** P3 | **Estimate:** 1
-  - **Epic:** CREW-51 | **Labels:** review:#22, type:infrastructure
-  - **Depends on:** —
-  - **Deliverable:** Both `crews/delivery/Dockerfile` and `crews/code-reviewer/Dockerfile` changed from `COPY pnpm-lock.yaml* ./` to `COPY pnpm-lock.yaml ./`; the intent is explicit and `--frozen-lockfile` will error loudly rather than silently install without a lockfile.
-  - **Acceptance (EARS):**
-    - WHEN the Dockerfile is evaluated, THE SYSTEM SHALL use `COPY pnpm-lock.yaml ./` without an optional glob suffix in both agent Dockerfiles.
-    - WHEN `pnpm-lock.yaml` is absent during a Docker build, THE SYSTEM SHALL fail the build at the `COPY` step rather than silently proceeding.
-  - **Acceptance (Gherkin):**
-
-    ```gherkin
-    Scenario: Lockfile is copied explicitly
-      Given crews/delivery/Dockerfile and crews/code-reviewer/Dockerfile
-      When the COPY instruction for the lockfile is inspected
-      Then it reads "COPY pnpm-lock.yaml ./" without a wildcard suffix
-    ```
-
----
-
-### CREW-52 -- Startup reliability and crash recovery
-
-**Scope.** Four changes that make the runtime safe to deploy and restart without silent failure. Startup env validation catches misconfiguration before any request is handled. Moving the auth header construction inside `jiraFetch()` ensures validation runs before credentials are encoded. Crash-recovery detects and re-queues interrupted phases on restart. Pinning MCP server versions prevents silent prod breakage on upstream updates.
-
-**Key deliverables.** `crews/delivery/src/index.ts` eager env validation block; Jira auth header moved into `jiraFetch()`; startup scan over `phases` rows with `started_at IS NOT NULL AND finished_at IS NULL`; both `mcp.json` files with pinned version strings.
-
-**Dependencies.** CREW-50-001 (the SDK must be wired before crash-recovery is worth testing end-to-end, but the scan itself can be written independently).
-
-**Status.** Not started.
-
----
-
-- [ ] **[CREW-52-001] Add startup env var validation to `index.ts`**
+- [ ] **[CREW-63-001] Startup env var validation**
   - **Status:** Not started | **Priority:** P1 | **Estimate:** 1
-  - **Epic:** CREW-52 | **Labels:** review:#7, type:reliability
+  - **Epic:** CREW-63 | **Labels:** review:#7, type:reliability
   - **Depends on:** —
-  - **Deliverable:** `crews/delivery/src/index.ts` checks `ANTHROPIC_API_KEY`, `ATLASSIAN_BASE_URL`, `ATLASSIAN_EMAIL`, `ATLASSIAN_API_TOKEN`, `GITLAB_PERSONAL_ACCESS_TOKEN`, `JIRA_WEBHOOK_SECRET`, and `GITLAB_WEBHOOK_SECRET` before the Hono server starts; if any are absent, logs the missing keys at `error` level and calls `process.exit(1)`.
+  - **Deliverable:** `crews/delivery-build/src/index.ts` checks all required env
+    vars before the Hono server starts: `ANTHROPIC_API_KEY`,
+    `ATLASSIAN_BASE_URL`, `ATLASSIAN_EMAIL`, `ATLASSIAN_API_TOKEN`,
+    `GITLAB_PERSONAL_ACCESS_TOKEN`, `GITLAB_API_URL`, `GITLAB_PROJECT_ID`,
+    `JIRA_WEBHOOK_SECRET`, `GITLAB_WEBHOOK_SECRET`, `JIRA_PROJECT_KEY`,
+    `JIRA_ASSIGNEE_ACCOUNT_ID`. If any are absent, logs the missing keys at
+    `error` level and calls `process.exit(1)` before the server binds.
   - **Acceptance (EARS):**
-    - WHEN the server starts and one or more required env vars are absent, THE SYSTEM SHALL log the names of all missing vars at `error` level and exit with code 1 before accepting any requests.
-    - WHEN all required env vars are present, THE SYSTEM SHALL start the server normally without logging an error.
+    - WHEN the server starts and one or more required env vars are absent,
+      THE SYSTEM SHALL log the names of all missing vars at `error` level and
+      exit with code 1 before accepting any requests.
+    - WHEN all required env vars are present, THE SYSTEM SHALL start normally
+      without an error-level env validation log.
   - **Acceptance (Gherkin):**
 
     ```gherkin
     Scenario: Missing env var causes immediate exit
       Given ANTHROPIC_API_KEY is not set
       When the delivery agent starts
-      Then a structured error log is emitted listing "ANTHROPIC_API_KEY" as missing
+      Then a structured error log lists "ANTHROPIC_API_KEY" as missing
       And the process exits with code 1 before the server binds
 
     Scenario: All env vars present -- server starts normally
-      Given all seven required env vars are set to non-empty values
+      Given all required env vars are set to non-empty values
       When the delivery agent starts
       Then no error-level env validation log is emitted
       And the server binds and accepts requests
@@ -417,186 +655,221 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
 
 ---
 
-- [ ] **[CREW-52-002] Move Jira auth header construction inside `jiraFetch()`**
-  - **Status:** Not started | **Priority:** P2 | **Estimate:** 1
-  - **Epic:** CREW-52 | **Labels:** review:#17, type:reliability
-  - **Depends on:** CREW-52-001
-  - **Deliverable:** `crews/delivery/src/integrations/jira.ts` constant `authHeader` moved from module-load scope into `jiraFetch()` body; the Base64 encoding of `:` on empty credentials is no longer silently baked in at import time; startup validation (CREW-52-001) runs before any `jiraFetch()` call is made.
+- [ ] **[CREW-63-002] Move Jira auth header construction inside `jiraFetch()`**
+  - **Status:** Not started | **Priority:** P1 | **Estimate:** 1
+  - **Epic:** CREW-63 | **Labels:** review:#17, type:reliability
+  - **Depends on:** CREW-63-001
+  - **Deliverable:** `crews/delivery-build/src/integrations/jira.ts` constant
+    `authHeader` moved from module-level scope into the `jiraFetch()` function
+    body. The Base64 encoding of credentials is no longer evaluated at import
+    time before env validation runs.
   - **Acceptance (EARS):**
-    - WHEN `crews/delivery/src/integrations/jira.ts` is imported, THE SYSTEM SHALL NOT evaluate `Buffer.from(...).toString("base64")` using the env vars at module-load time.
-    - WHEN `jiraFetch()` is called, THE SYSTEM SHALL construct the `Authorization` header from the current values of `ATLASSIAN_EMAIL` and `ATLASSIAN_API_TOKEN` at call time.
+    - WHEN `integrations/jira.ts` is imported, THE SYSTEM SHALL NOT evaluate
+      `Buffer.from(...).toString("base64")` using env vars at module-load time.
+    - WHEN `jiraFetch()` is called, THE SYSTEM SHALL construct the
+      `Authorization` header from the current values of `ATLASSIAN_EMAIL` and
+      `ATLASSIAN_API_TOKEN` at call time.
   - **Acceptance (Gherkin):**
 
     ```gherkin
-    Scenario: Auth header is constructed at call time not import time
+    Scenario: Auth header is not evaluated at module load time
       Given jira.ts is imported before env vars are validated
-      When jira.ts module is evaluated
-      Then no Buffer.from encode of credentials occurs at module scope
+      When the jira.ts module is evaluated
+      Then no Buffer.from credential encoding occurs at module scope
 
-    Scenario: jiraFetch uses current env var values
-      Given ATLASSIAN_EMAIL and ATLASSIAN_API_TOKEN are set to valid values
-      When jiraFetch() constructs the Authorization header
-      Then the header encodes the current values of those env vars
+    Scenario: jiraFetch constructs the header at call time
+      Given ATLASSIAN_EMAIL and ATLASSIAN_API_TOKEN are set
+      When jiraFetch() is called
+      Then the Authorization header encodes the current values of those env vars
     ```
 
 ---
 
-- [ ] **[CREW-52-003] Implement startup crash-recovery scan**
-  - **Status:** Not started | **Priority:** P1 | **Estimate:** 5
-  - **Epic:** CREW-52 | **Labels:** review:#8, type:reliability
-  - **Depends on:** CREW-50-001
-  - **Deliverable:** `crews/delivery/src/index.ts` (or a dedicated `recovery.ts`) runs a scan on startup over `phases` rows where `started_at IS NOT NULL AND finished_at IS NULL`; for each interrupted row the `session_id` is read from the database and passed to `unstable_v2_resumeSession(sessionId)` so the agent resumes the exact conversation context rather than starting a fresh session; the recovered workflow is re-dispatched from the interrupted phase; the recovery scan result is logged at `info` level with the `issueKey`, `phase`, and `sessionId` of each recovered row; if no interrupted phases are found the scan exits silently. The Claude Code SDK's conversation transcript on disk provides the agent's full prior context on resume — Crew's database provides only the `sessionId` needed to address it.
+- [ ] **[CREW-63-003] Crash recovery: resume interrupted steps on startup**
+  - **Status:** Not started | **Priority:** P1 | **Estimate:** 2
+  - **Epic:** CREW-63 | **Labels:** review:#8, type:reliability
+  - **Depends on:** CREW-61-005
+  - **Deliverable:** `crews/delivery-build/src/index.ts` on startup calls a new
+    `recoverInterruptedSteps(state)` function that queries the `steps` table for
+    rows where `finished_at IS NULL` and `session_id IS NOT NULL`. For each such
+    row, it calls `unstable_v2_resumeSession(sessionId)` from
+    `@anthropic-ai/claude-agent-sdk` to reconnect to the interrupted SDK
+    session, then calls `runStory({ issueKey, state })` to resume the workflow.
+    On resumption failure, it logs a `warn`-level message and calls
+    `escalateToHumanReview()`. The recovery scan runs before the HTTP server
+    starts accepting requests and before the poller interval is set up.
   - **Acceptance (EARS):**
-    - WHEN the server starts and the `phases` table contains one or more rows with `started_at IS NOT NULL AND finished_at IS NULL`, THE SYSTEM SHALL treat each such row as an interrupted phase and call `unstable_v2_resumeSession(sessionId)` using the stored `session_id`.
-    - WHEN the server starts and no interrupted phases exist, THE SYSTEM SHALL complete the scan without logging at `warn` or `error` level.
-    - WHEN the recovery scan resumes a phase, THE SYSTEM SHALL log at `info` level the `issueKey`, `phase`, `started_at`, and `sessionId` of the recovered row.
-    - WHEN `unstable_v2_resumeSession()` fails for a recovered row, THE SYSTEM SHALL log a `warn`-level message and escalate that story to human review rather than silently dropping it.
+    - WHEN the server starts and the `steps` table contains rows with
+      `finished_at IS NULL AND session_id IS NOT NULL`, THE SYSTEM SHALL
+      attempt to resume each interrupted step via `unstable_v2_resumeSession`.
+    - WHEN the server starts and no interrupted steps exist, THE SYSTEM SHALL
+      complete the scan without a `warn` or `error` log.
+    - WHEN the recovery scan successfully reconnects a session, THE SYSTEM SHALL
+      log at `info` level the `issueKey`, `step`, and `sessionId`.
+    - WHEN `unstable_v2_resumeSession` fails for a recovered row, THE SYSTEM
+      SHALL log a `warn`-level message and escalate that story to human review.
   - **Acceptance (Gherkin):**
 
     ```gherkin
-    Scenario: Interrupted phase is resumed via session ID on startup
-      Given a phases row for issueKey "CREW-50-001" with started_at set, finished_at null, and session_id "sess_abc"
+    Scenario: Interrupted step is resumed on startup
+      Given a steps row for "CREW-63-001" with step "implement", finished_at null, session_id "sess_abc"
       When the delivery agent restarts
-      Then the recovery scan detects the interrupted row
-      And unstable_v2_resumeSession("sess_abc") is called
-      And an info log is emitted with issueKey "CREW-50-001", the phase name, and "sess_abc"
+      Then unstable_v2_resumeSession("sess_abc") is called
+      And an info log is emitted with issueKey "CREW-63-001" and session_id "sess_abc"
 
-    Scenario: No interrupted phases -- scan exits silently
-      Given the phases table has no rows with finished_at null
+    Scenario: No interrupted steps -- scan exits silently
+      Given the steps table has no rows with finished_at null
       When the delivery agent starts
       Then the recovery scan completes without any warn or error log
 
-    Scenario: Multiple interrupted phases are all resumed
-      Given three phases rows with started_at set and finished_at null
-      When the delivery agent restarts
-      Then unstable_v2_resumeSession() is called once per interrupted row
-      And three info log lines are emitted
-
     Scenario: Session resumption failure escalates to human review
-      Given an interrupted phase row with session_id "sess_gone"
+      Given a steps row with session_id "sess_gone"
       And unstable_v2_resumeSession("sess_gone") throws an error
       When the recovery scan runs
-      Then a warn-level log is emitted for the failed resumption
-      And the story is transitioned to "Needs human review"
+      Then a warn-level log is emitted
+      And the story is transitioned to "Needs Human Review"
     ```
 
 ---
 
-- [ ] **[CREW-52-004] Pin MCP server versions in `mcp.json`**
+- [ ] **[CREW-63-004] Pin MCP server versions in `mcp.json`**
   - **Status:** Not started | **Priority:** P1 | **Estimate:** 1
-  - **Epic:** CREW-52 | **Labels:** review:#9, type:reliability
+  - **Epic:** CREW-63 | **Labels:** review:#9, type:reliability
   - **Depends on:** —
-  - **Deliverable:** `crews/delivery/mcp.json` and `crews/code-reviewer/mcp.json` updated so `@anthropic-ai/mcp-server-gitlab` and `@anthropic-ai/mcp-server-atlassian` are pinned to specific version strings (e.g. `@anthropic-ai/mcp-server-gitlab@1.2.3`); `npx -y` no longer downloads the latest version on every agent invocation.
+  - **Deliverable:** `crews/delivery-build/mcp.json` updated so
+    `@anthropic-ai/mcp-server-atlassian` and `@anthropic-ai/mcp-server-gitlab`
+    are referenced with explicit version strings (e.g.
+    `@anthropic-ai/mcp-server-gitlab@1.2.3`). `npx -y` no longer downloads the
+    latest version on every agent invocation.
   - **Acceptance (EARS):**
-    - WHEN the MCP server config is read, THE SYSTEM SHALL reference the MCP server packages with explicit version strings rather than unversioned package names.
-    - WHEN a new version of `mcp-server-gitlab` or `mcp-server-atlassian` is published, THE SYSTEM SHALL NOT automatically upgrade unless the version string in `mcp.json` is explicitly updated.
+    - WHEN `mcp.json` is read, THE SYSTEM SHALL reference each MCP server
+      package with an explicit version string.
+    - WHEN a new version of either package is published, THE SYSTEM SHALL NOT
+      automatically upgrade unless the version string in `mcp.json` is
+      explicitly updated.
   - **Acceptance (Gherkin):**
 
     ```gherkin
     Scenario: MCP server args include pinned version
-      Given crews/delivery/mcp.json and crews/code-reviewer/mcp.json
-      When the args array for the mcp-server-gitlab entry is inspected
+      Given crews/delivery-build/mcp.json
+      When the args array for mcp-server-gitlab is inspected
       Then the package name includes a version specifier (e.g. @1.2.3)
 
     Scenario: Unpinned package name is absent
-      Given both mcp.json files
-      When they are inspected for unversioned package references
-      Then no entry reads "-y", "@anthropic-ai/mcp-server-gitlab" without a version
+      Given mcp.json is read
+      When it is checked for unversioned package references
+      Then no entry reads "@anthropic-ai/mcp-server-gitlab" without a version
     ```
 
 ---
 
-### CREW-53 -- State and data integrity
-
-**Scope.** Three targeted fixes to the SQLite layer and the GitLab integration. Consolidate dual connections to the same DB file. Fix `finishPhase()` to filter on the `phase` column so replay scenarios update the right row. Add an idempotency guard to `createMr()` to prevent duplicate MR creation on workflow replay.
-
-**Key deliverables.** Single `DatabaseSync` connection passed from `createStateStore()` to the idempotency logic; `finishPhaseStmt` updated to `WHERE issue_key = ? AND phase = ? AND finished_at IS NULL`; `createMr()` calling `GET /merge_requests?source_branch=<branchName>` before `POST /merge_requests` and returning the existing MR URL if found.
-
-**Dependencies.** None.
-
-**Status.** Not started.
-
----
-
-- [ ] **[CREW-53-001] Consolidate dual SQLite connections**
+- [ ] **[CREW-63-005] Consolidate dual SQLite connections**
   - **Status:** Not started | **Priority:** P1 | **Estimate:** 2
-  - **Epic:** CREW-53 | **Labels:** review:#5, type:reliability
+  - **Epic:** CREW-63 | **Labels:** review:#5, type:reliability
   - **Depends on:** —
-  - **Deliverable:** `crews/delivery/src/idempotency.ts` `getIdempotency()` no longer opens a second `DatabaseSync` connection to `DB_PATH`; the existing `db` instance from `createStateStore()` is passed into `createIdempotencyStore()` (or `getIdempotency()` is merged into the state store); there is exactly one `DatabaseSync` connection to `DB_PATH` at runtime; the `webhook_events` table is created once, not twice; all existing tests pass.
+  - **Deliverable:** `crews/delivery-build/src/idempotency.ts`
+    `getIdempotency()` no longer opens a second `DatabaseSync` connection to
+    `DB_PATH`. Instead the `db` instance from `createStateStore()` is passed
+    into `createIdempotencyStore()` (or the idempotency logic is merged into the
+    state store). At runtime there is exactly one `DatabaseSync` connection to
+    `DB_PATH` and the `webhook_events` table is created once.
   - **Acceptance (EARS):**
-    - WHEN the delivery agent starts, THE SYSTEM SHALL open exactly one `DatabaseSync` connection to `DB_PATH`.
-    - WHEN the `webhook_events` table is initialised, THE SYSTEM SHALL create it once using the single shared connection.
-    - WHEN `createStateStore()` and the idempotency store are both initialised, THE SYSTEM SHALL share the same underlying `DatabaseSync` instance.
+    - WHEN the delivery agent starts, THE SYSTEM SHALL open exactly one
+      `DatabaseSync` connection to `DB_PATH`.
+    - WHEN both the state store and idempotency store are initialised,
+      THE SYSTEM SHALL share the same underlying `DatabaseSync` instance.
+    - WHEN the `webhook_events` table schema runs, THE SYSTEM SHALL execute the
+      `CREATE TABLE IF NOT EXISTS webhook_events` statement exactly once.
   - **Acceptance (Gherkin):**
 
     ```gherkin
     Scenario: Only one database connection is opened
       Given DB_PATH is set to a valid file path
-      When the delivery agent initialises the state store and idempotency store
+      When the delivery agent initialises both the state store and idempotency store
       Then only one DatabaseSync connection to DB_PATH is created
 
     Scenario: webhook_events table is created once
       Given the shared connection is used for both state and idempotency
-      When the schema is initialised
+      When the schema runs
       Then CREATE TABLE IF NOT EXISTS webhook_events executes exactly once
     ```
 
 ---
 
-- [ ] **[CREW-53-002] Fix `finishPhase()` to filter on phase column**
+- [ ] **[CREW-63-006] Fix `finishStep()` to filter on `step` column**
   - **Status:** Not started | **Priority:** P1 | **Estimate:** 1
-  - **Epic:** CREW-53 | **Labels:** review:#6, type:correctness
+  - **Epic:** CREW-63 | **Labels:** review:#6, type:correctness
   - **Depends on:** —
-  - **Deliverable:** `crews/delivery/src/state.ts` `finishPhaseStmt` SQL updated from `WHERE issue_key = ? AND finished_at IS NULL ORDER BY started_at DESC LIMIT 1` to `WHERE issue_key = ? AND phase = ? AND finished_at IS NULL`; `finishPhase()` passes `phase` as the second bind parameter; the `void phase` comment is removed; a unit test covering the two-phase replay scenario confirms the correct row is updated.
+  - **Deliverable:** `crews/delivery-build/src/state.ts` `finishStepStmt` SQL
+    updated from
+    `WHERE issue_key = ? AND finished_at IS NULL ORDER BY started_at DESC LIMIT 1`
+    to `WHERE issue_key = ? AND step = ? AND finished_at IS NULL`. `finishStep()`
+    passes `step` as the second bind parameter. The `void step` comment is
+    removed. A unit test covering the two-step replay scenario confirms the
+    correct row is updated.
   - **Acceptance (EARS):**
-    - WHEN `finishPhase(issueKey, phase, result)` is called, THE SYSTEM SHALL update the `phases` row matching both `issue_key = issueKey` AND `phase = phase` with `finished_at IS NULL`.
-    - WHEN two phases for the same `issueKey` are simultaneously in-flight, THE SYSTEM SHALL update the correct phase row as specified by the `phase` argument.
-    - THE SYSTEM SHALL NOT silently discard the `phase` argument.
+    - WHEN `finishStep(issueKey, step, result)` is called, THE SYSTEM SHALL
+      update the `steps` row matching both `issue_key = issueKey` AND
+      `step = step` with `finished_at IS NULL`.
+    - WHEN two steps for the same `issueKey` are both unfinished, THE SYSTEM
+      SHALL update the correct row as specified by the `step` argument.
+    - THE SYSTEM SHALL NOT silently discard the `step` argument.
   - **Acceptance (Gherkin):**
 
     ```gherkin
-    Scenario: finishPhase updates the correct row
-      Given phases rows for issueKey "CREW-50" with phase "implement" (unfinished) and phase "peer-review" (unfinished)
-      When finishPhase("CREW-50", "peer-review", { verdict: "approved" }) is called
-      Then the "peer-review" phases row has finished_at set
-      And the "implement" phases row still has finished_at null
+    Scenario: finishStep updates the correct row
+      Given steps rows for "CREW-63" with step "implement" (unfinished) and "peer-code-review" (unfinished)
+      When finishStep("CREW-63", "peer-code-review", { verdict: "approved" }) is called
+      Then the "peer-code-review" row has finished_at set
+      And the "implement" row still has finished_at null
 
-    Scenario: phase argument is not discarded
-      Given a finishPhase call with phase "implement"
+    Scenario: step argument is not discarded
+      Given a finishStep call with step "implement"
       When the UPDATE statement executes
-      Then the WHERE clause includes phase = "implement"
+      Then the WHERE clause includes step = "implement"
     ```
 
 ---
 
-- [ ] **[CREW-53-003] Add idempotency guard to `createMr()`**
+- [ ] **[CREW-63-007] Add idempotency guard to `createMr()`**
   - **Status:** Not started | **Priority:** P1 | **Estimate:** 3
-  - **Epic:** CREW-53 | **Labels:** review:#10, type:correctness
+  - **Epic:** CREW-63 | **Labels:** review:#10, type:correctness
   - **Depends on:** —
-  - **Deliverable:** `crews/delivery/src/integrations/gitlab.ts` `createMr()` calls `GET /merge_requests?source_branch=<branchName>&state=opened` before `POST /merge_requests`; if an open MR for that branch already exists, the function returns the existing MR's `web_url` without posting a new MR; if no existing MR is found, the function proceeds with `POST /merge_requests` as before; unit tests for the existing-MR path and the no-existing-MR path.
+  - **Deliverable:** `crews/delivery-build/src/integrations/gitlab.ts`
+    `createMr()` calls
+    `GET /projects/{id}/merge_requests?source_branch={branchName}&state=opened`
+    before `POST /merge_requests`. If an open MR already exists for the branch,
+    the function returns the existing MR's `web_url` without creating a
+    duplicate. Unit tests cover the existing-MR path and the no-existing-MR
+    path.
   - **Acceptance (EARS):**
-    - WHEN `createMr()` is called and an open merge request already exists for `branchName`, THE SYSTEM SHALL return the existing MR's `web_url` without issuing a `POST /merge_requests` request.
-    - WHEN `createMr()` is called and no open merge request exists for `branchName`, THE SYSTEM SHALL proceed with `POST /merge_requests` and return the new MR's `web_url`.
-    - WHEN the `GET /merge_requests` lookup fails, THE SYSTEM SHALL propagate the error to the caller rather than silently creating a duplicate MR.
+    - WHEN `createMr()` is called and an open MR already exists for
+      `branchName`, THE SYSTEM SHALL return the existing MR's `web_url` without
+      issuing a `POST /merge_requests` request.
+    - WHEN `createMr()` is called and no open MR exists for `branchName`,
+      THE SYSTEM SHALL proceed with `POST /merge_requests` and return the new
+      MR's `web_url`.
+    - WHEN the `GET /merge_requests` lookup fails, THE SYSTEM SHALL propagate
+      the error rather than silently creating a duplicate MR.
   - **Acceptance (Gherkin):**
 
     ```gherkin
     Scenario: Existing MR is returned without duplicate POST
-      Given an open MR exists for branch "feat/CREW-50-sdk"
-      When createMr() is called with branchName "feat/CREW-50-sdk"
-      Then GET /merge_requests?source_branch=feat/CREW-50-sdk is called
+      Given an open MR exists for branch "feat/CREW-63-007"
+      When createMr() is called with that branchName
+      Then GET /merge_requests?source_branch=feat/CREW-63-007 is called
       And no POST /merge_requests request is issued
       And the existing MR's web_url is returned
 
     Scenario: No existing MR -- new MR is created
-      Given no open MR exists for branch "feat/CREW-50-sdk"
-      When createMr() is called with branchName "feat/CREW-50-sdk"
-      Then GET /merge_requests?source_branch=feat/CREW-50-sdk returns an empty list
+      Given no open MR exists for branch "feat/CREW-63-007"
+      When createMr() is called
+      Then the GET lookup returns an empty list
       And POST /merge_requests is issued
       And the new MR's web_url is returned
 
     Scenario: GET lookup failure propagates as error
-      Given the GitLab API returns 500 for the GET /merge_requests lookup
+      Given the GitLab API returns 500 for the GET lookup
       When createMr() is called
       Then the error is propagated to the caller
       And no POST /merge_requests is issued
@@ -604,236 +877,70 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
 
 ---
 
-### CREW-54 -- Code quality and hygiene
-
-**Scope.** Five low-effort fixes that remove confusion, dead code, and maintenance surface area. These do not affect runtime behaviour but materially improve the contributor experience and reduce the chance of future bugs.
-
-**Key deliverables.** `AGENTS.md` with `@daddia/*` package names; test mocks without `db: {} as never`; unused tooling configs and esbuild entry deleted; `.claude/settings.json` `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` documented; `extractMrIid()` validates the project path.
-
-**Dependencies.** None.
-
-**Status.** Not started.
-
----
-
-- [x] **[CREW-54-001] Fix AGENTS.md package names**
-  - **Status:** Done | **Priority:** P2 | **Estimate:** 1
-  - **Epic:** CREW-54 | **Labels:** review:#11, type:docs
+- [ ] **[CREW-63-008] Per-issueKey in-flight lock**
+  - **Status:** Not started | **Priority:** P1 | **Estimate:** 3
+  - **Epic:** CREW-63 | **Labels:** review:#20, type:reliability
   - **Depends on:** —
-  - **Deliverable:** `AGENTS.md` updated throughout to replace `@org/*` placeholders with the actual package names: `@daddia/crew`, `@daddia/crew/webhooks`, `@daddia/crew-delivery`, `@daddia/crew-code-reviewer`; no instance of the `@org/` prefix remains in `AGENTS.md`. (Superseded in part by CREW-56 consolidation; current docs use the single shared library and subpath.)
+  - **Deliverable:** `crews/delivery-build/src/workflow.ts` exports an
+    in-memory `Map<string, boolean>` named `inFlightLocks`. `runStory()` sets
+    `inFlightLocks.set(issueKey, true)` before the workflow starts and deletes
+    the key in a `finally` block when it completes or throws. The webhook
+    handlers and poller check `inFlightLocks.has(issueKey)` before calling
+    `runStory()`; if locked, the webhook handler returns `HTTP 429` with body
+    `{ error: "workflow-in-flight", issueKey }` and the poller skips the story
+    (as per CREW-60-002). Unit tests cover the lock-set, lock-release, and
+    duplicate-trigger paths.
   - **Acceptance (EARS):**
-    - WHEN `AGENTS.md` is read, THE SYSTEM SHALL reference all packages under the `@daddia/` scope, not `@org/`.
-    - THE SYSTEM SHALL NOT contain any `@org/` package reference in `AGENTS.md`.
-  - **Acceptance (Gherkin):**
-
-    ```gherkin
-    Scenario: No @org/ references in AGENTS.md
-      Given AGENTS.md is read
-      When it is searched for the string "@org/"
-      Then no matches are found
-
-    Scenario: @daddia/ scope is used throughout
-      Given AGENTS.md is read
-      When shared library and agent package names are inspected
-      Then the shared library is documented as @daddia/crew and @daddia/crew/webhooks
-      And agent crews are documented as @daddia/crew-delivery and @daddia/crew-code-reviewer
-    ```
-
----
-
-- [ ] **[CREW-54-002] Remove spurious `db` property from test mock helpers**
-  - **Status:** Not started | **Priority:** P2 | **Estimate:** 1
-  - **Epic:** CREW-54 | **Labels:** review:#13, type:test
-  - **Depends on:** —
-  - **Deliverable:** `crews/delivery/tests/workflow.test.ts` and `crews/delivery/tests/handlers.jira.test.ts` `makeState()` helpers have `db: {} as never` removed; `pnpm typecheck` passes with no excess-property errors on the state mock literal; if the production `StateStore` interface is later extended to include `db`, it is added to the interface first.
-  - **Acceptance (EARS):**
-    - WHEN `makeState()` is called in the test helpers, THE SYSTEM SHALL return an object whose properties are a subset of the `StateStore` interface with no excess properties.
-    - WHEN `pnpm typecheck` runs, THE SYSTEM SHALL report zero TypeScript errors related to `db` in the test mock objects.
-  - **Acceptance (Gherkin):**
-
-    ```gherkin
-    Scenario: makeState() has no excess db property
-      Given workflow.test.ts and handlers.jira.test.ts
-      When makeState() objects are inspected
-      Then neither contains a "db" property
-
-    Scenario: pnpm typecheck passes after removal
-      Given db: {} as never is removed from both test files
-      When pnpm typecheck runs
-      Then no TypeScript errors related to the mock objects are reported
-    ```
-
----
-
-- [N/A] **[CREW-54-003] Delete unused tooling configs and esbuild entry**
-  - **Status:** N/A | **Priority:** P2 | **Estimate:** 2
-  - **Epic:** CREW-54 | **Labels:** review:#14, review:#15, type:hygiene
-  - **Depends on:** —
-
----
-
-- [N/A] **[CREW-54-004] Document or remove `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` setting**
-  - **Status:** Done | **Priority:** P2 | **Estimate:** 1
-  - **Epic:** CREW-54 | **Labels:** review:#16, type:docs
-  - **Depends on:** —
-
----
-
-- [ ] **[CREW-54-005] Fix `extractMrIid()` URL validation**
-  - **Status:** Not started | **Priority:** P2 | **Estimate:** 2
-  - **Epic:** CREW-54 | **Labels:** review:#18, type:correctness
-  - **Depends on:** —
-  - **Deliverable:** `crews/delivery/src/integrations/gitlab.ts` `extractMrIid()` validates that the extracted project path (from the URL) matches `GITLAB_PROJECT_ID` before returning the IID; if there is a mismatch, the function throws a typed error rather than silently returning a wrong IID; alternatively, the IID is typed and passed as a field on the MR object rather than re-extracted from the URL.
-  - **Acceptance (EARS):**
-    - WHEN `extractMrIid()` is called with a URL whose project path does not match `GITLAB_PROJECT_ID`, THE SYSTEM SHALL throw a typed error rather than returning an IID from the wrong project.
-    - WHEN `extractMrIid()` is called with a valid URL matching `GITLAB_PROJECT_ID`, THE SYSTEM SHALL return the correct numeric IID.
-  - **Acceptance (Gherkin):**
-
-    ```gherkin
-    Scenario: URL from correct project returns IID
-      Given GITLAB_PROJECT_ID is "daddia/crew"
-      And a webUrl of "https://gitlab.com/daddia/crew/-/merge_requests/42"
-      When extractMrIid(webUrl) is called
-      Then 42 is returned
-
-    Scenario: URL from wrong project throws
-      Given GITLAB_PROJECT_ID is "daddia/crew"
-      And a webUrl of "https://gitlab.com/other-org/other-repo/-/merge_requests/42"
-      When extractMrIid(webUrl) is called
-      Then a typed error is thrown indicating project path mismatch
-    ```
-
----
-
-### CREW-55 -- Observability and hardening
-
-**Scope.** Six enhancements that make the running system easier to debug and more resilient under load. None are blockers for initial operation but all are important before the system runs unattended against real workloads.
-
-**Key deliverables.** OpenTelemetry trace spans per phase and agent invocation; per-issueKey rate limiter middleware on webhook endpoints; per-agent `.env.example` files; workflow loop bound clarification comment; diff size and file-count cap in `getMrDiff()`; Turbo remote cache configured.
-
-**Dependencies.** CREW-50 (tracing and rate limiter are most useful once agents actually run). CREW-52-001 (env examples require the canonical env var list to be known).
-
-**Status.** Not started.
-
----
-
-- [ ] **[CREW-55-001] Add OpenTelemetry trace spans per phase and agent invocation**
-  - **Status:** Not started | **Priority:** P3 | **Estimate:** 5
-  - **Epic:** CREW-55 | **Labels:** review:#19, type:observability
-  - **Depends on:** CREW-50-001
-  - **Deliverable:** `crews/delivery/src/observability.ts` bootstraps an OTLP trace exporter (configurable via `OTEL_EXPORTER_OTLP_ENDPOINT`); `workflow.ts` wraps each phase execution in a trace span named `crew.phase.<phaseName>` with attributes `issueKey`, `phase`, and `sessionId`; each `agent.run()` call is wrapped in a child span named `crew.agent.<personaName>` with attributes `persona`, `issueKey`; `phaseRow.sessionId` is used as the correlation field linking the phase span to the agent span; spans are exported even when OTLP endpoint is absent (no-op exporter used as fallback).
-  - **Acceptance (EARS):**
-    - WHEN a workflow phase executes, THE SYSTEM SHALL emit an OpenTelemetry span named `crew.phase.<phaseName>` with `issueKey` and `phase` attributes.
-    - WHEN an agent `run()` executes within a phase, THE SYSTEM SHALL emit a child span named `crew.agent.<personaName>` with `persona` and `issueKey` attributes.
-    - WHEN `OTEL_EXPORTER_OTLP_ENDPOINT` is not set, THE SYSTEM SHALL use a no-op exporter and SHALL NOT throw an error.
-    - WHEN `OTEL_EXPORTER_OTLP_ENDPOINT` is set, THE SYSTEM SHALL export spans to that endpoint.
-  - **Acceptance (Gherkin):**
-
-    ```gherkin
-    Scenario: Phase span is emitted
-      Given a workflow executing the "implement" phase for issueKey "CREW-50-001"
-      When the phase completes
-      Then a span named "crew.phase.implement" is recorded
-      And the span has attribute issueKey "CREW-50-001"
-
-    Scenario: Agent child span is emitted
-      Given an agent.run() call inside the "implement" phase
-      When the run completes
-      Then a child span named "crew.agent.engineer" is recorded under the phase span
-
-    Scenario: Missing OTLP endpoint uses no-op exporter
-      Given OTEL_EXPORTER_OTLP_ENDPOINT is not set
-      When the delivery agent starts and a workflow executes
-      Then no error is thrown related to the missing OTLP endpoint
-    ```
-
----
-
-- [ ] **[CREW-55-002] Add per-issueKey rate limiting on webhook endpoints**
-  - **Status:** Not started | **Priority:** P3 | **Estimate:** 3
-  - **Epic:** CREW-55 | **Labels:** review:#20, type:reliability
-  - **Depends on:** —
-  - **Deliverable:** Hono middleware added to both `/webhooks/jira` and `/webhooks/gitlab` routes that limits concurrent workflow runs for the same `issueKey` to 1; subsequent webhook events for an already-in-flight `issueKey` return `HTTP 429` with a structured body `{ error: "workflow-in-flight", issueKey }`; the rate limiter uses an in-memory map keyed on `issueKey`; the limit is configurable via `WORKFLOW_CONCURRENCY_PER_ISSUE` env var (default `1`).
-  - **Acceptance (EARS):**
-    - WHEN a webhook event arrives for an `issueKey` that already has an in-flight workflow, THE SYSTEM SHALL return HTTP 429 with body `{ error: "workflow-in-flight", issueKey }`.
-    - WHEN a webhook event arrives for an `issueKey` with no in-flight workflow, THE SYSTEM SHALL process the event normally.
-    - THE SYSTEM SHALL release the in-flight lock for an `issueKey` when its workflow completes or fails.
-    - THE SYSTEM SHALL read the `WORKFLOW_CONCURRENCY_PER_ISSUE` env var as the per-key limit (default 1).
+    - WHEN a webhook event arrives for an `issueKey` that already has an
+      in-flight workflow, THE SYSTEM SHALL return HTTP 429 with body
+      `{ error: "workflow-in-flight", issueKey }`.
+    - WHEN a webhook event arrives for an `issueKey` with no in-flight
+      workflow, THE SYSTEM SHALL process the event normally.
+    - THE SYSTEM SHALL release the in-flight lock for an `issueKey` when its
+      workflow completes or fails.
   - **Acceptance (Gherkin):**
 
     ```gherkin
     Scenario: Duplicate webhook for in-flight story is rate limited
-      Given a workflow is in flight for issueKey "CREW-50-001"
+      Given a workflow is in flight for issueKey "CREW-63-008"
       When a second webhook event arrives for the same issueKey
-      Then HTTP 429 is returned with body { error: "workflow-in-flight", issueKey: "CREW-50-001" }
+      Then HTTP 429 is returned with body { error: "workflow-in-flight", issueKey: "CREW-63-008" }
 
     Scenario: Webhook for idle story is processed normally
-      Given no workflow is in flight for issueKey "CREW-50-002"
-      When a webhook event arrives for "CREW-50-002"
+      Given no workflow is in flight for issueKey "CREW-63-009"
+      When a webhook event arrives for "CREW-63-009"
       Then the event is processed and HTTP 200 is returned
 
     Scenario: Lock is released after workflow completion
-      Given a workflow for issueKey "CREW-50-001" completes
-      When a new webhook event arrives for "CREW-50-001"
+      Given a workflow for "CREW-63-008" completes
+      When a new webhook event arrives for "CREW-63-008"
       Then HTTP 200 is returned and the workflow starts
     ```
 
 ---
 
-- [ ] **[CREW-55-003] Add per-agent `.env.example` files**
-  - **Status:** Not started | **Priority:** P3 | **Estimate:** 1
-  - **Epic:** CREW-55 | **Labels:** review:#21, type:docs
-  - **Depends on:** CREW-52-001
-  - **Deliverable:** `crews/delivery/.env.example` documents every required env var (`ANTHROPIC_API_KEY`, `ATLASSIAN_BASE_URL`, `ATLASSIAN_EMAIL`, `ATLASSIAN_API_TOKEN`, `GITLAB_PERSONAL_ACCESS_TOKEN`, `JIRA_WEBHOOK_SECRET`, `GITLAB_WEBHOOK_SECRET`, `DB_PATH`) and optional env vars (`OTEL_EXPORTER_OTLP_ENDPOINT`, `WORKFLOW_CONCURRENCY_PER_ISSUE`, `REFACTOR_LOOP_CAP`) with a one-line description for each; `crews/code-reviewer/.env.example` documents its own required and optional vars; the root `.env.example` is updated to cross-reference the per-agent files.
-  - **Acceptance (EARS):**
-    - WHEN `crews/delivery/.env.example` is read, THE SYSTEM SHALL document every required env var identified in CREW-52-001, each with a non-empty description.
-    - WHEN `crews/code-reviewer/.env.example` is read, THE SYSTEM SHALL document every required and optional env var for that agent.
-  - **Acceptance (Gherkin):**
-
-    ```gherkin
-    Scenario: Delivery agent env example documents all required vars
-      Given crews/delivery/.env.example
-      When it is read
-      Then ANTHROPIC_API_KEY, ATLASSIAN_BASE_URL, ATLASSIAN_EMAIL, ATLASSIAN_API_TOKEN,
-           GITLAB_PERSONAL_ACCESS_TOKEN, JIRA_WEBHOOK_SECRET, GITLAB_WEBHOOK_SECRET, and DB_PATH
-           are all present with descriptions
-
-    Scenario: Code reviewer env example exists
-      Given crews/code-reviewer/.env.example
-      When it is read
-      Then it documents at least the ANTHROPIC_API_KEY and any agent-specific required vars
-    ```
-
----
-
-- [ ] **[CREW-55-004] Clarify workflow loop bound semantics**
-  - **Status:** Not started | **Priority:** P3 | **Estimate:** 1
-  - **Epic:** CREW-55 | **Labels:** review:#23, type:docs
+- [ ] **[CREW-63-009] Cap `getMrDiff()` by file count and byte size**
+  - **Status:** Not started | **Priority:** P1 | **Estimate:** 3
+  - **Epic:** CREW-63 | **Labels:** review:#25, type:reliability
   - **Depends on:** —
-  - **Deliverable:** `crews/delivery/src/workflow.ts` loop at line 55 has a code comment explaining the asymmetry: with `REFACTOR_LOOP_CAP=2` the loop runs `cap + 1` peer-review calls (iterations 0, 1, 2) but only `cap` address-feedback calls (the `if (iteration >= REFACTOR_LOOP_CAP) break` check prevents the third address-feedback call); `AGENTS.md` updated to reflect this semantic precisely.
+  - **Deliverable:** `crews/delivery-build/src/integrations/gitlab.ts`
+    `getMrDiff()` truncates the response to `DIFF_FILE_CAP` files (default 50)
+    and `DIFF_SIZE_CAP_BYTES` bytes (default 500 000). When the file cap is
+    exceeded, the first `DIFF_FILE_CAP` files are retained and a note
+    `"[N files omitted — diff truncated at DIFF_FILE_CAP]"` is appended. When
+    the byte cap is exceeded, the diff is truncated and a note appended. Both
+    caps are configurable via env vars and documented in `.env.example`.
   - **Acceptance (EARS):**
-    - WHEN `workflow.ts` is read, THE SYSTEM SHALL contain a comment at the loop bound explaining the cap + 1 senior-engineer call count versus the cap address-feedback call count.
-    - WHEN `AGENTS.md` documents the loop cap, THE SYSTEM SHALL accurately state the asymmetry between peer-review and address-feedback call counts.
-  - **Acceptance (Gherkin):**
-
-    ```gherkin
-    Scenario: Loop bound comment explains asymmetry
-      Given workflow.ts at the peer-review loop
-      When the code comment near the loop bound is read
-      Then it explains that REFACTOR_LOOP_CAP=N allows N+1 senior-engineer calls and N address-feedback calls
-    ```
-
----
-
-- [ ] **[CREW-55-005] Add diff size and file-count cap to `getMrDiff()`**
-  - **Status:** Not started | **Priority:** P3 | **Estimate:** 3
-  - **Epic:** CREW-55 | **Labels:** review:#25, type:reliability
-  - **Depends on:** CREW-50-001
-  - **Deliverable:** `crews/delivery/src/integrations/gitlab.ts` `getMrDiff()` adds a file-count cap (`DIFF_FILE_CAP`, default 50) and a total diff-size cap in bytes (`DIFF_SIZE_CAP_BYTES`, default 500 000); when the response exceeds the file cap, only the first `DIFF_FILE_CAP` files are included and a note is appended to the returned diff string; when the byte cap is exceeded, the diff is truncated and a note is appended; both caps are configurable via env vars.
-  - **Acceptance (EARS):**
-    - WHEN `getMrDiff()` returns more than `DIFF_FILE_CAP` files, THE SYSTEM SHALL truncate to the first `DIFF_FILE_CAP` files and append a note indicating how many files were omitted.
-    - WHEN the total diff size exceeds `DIFF_SIZE_CAP_BYTES`, THE SYSTEM SHALL truncate the diff and append a note indicating truncation.
-    - WHEN the diff is within both caps, THE SYSTEM SHALL return the full diff without modification.
+    - WHEN `getMrDiff()` returns more than `DIFF_FILE_CAP` files, THE SYSTEM
+      SHALL truncate to the first `DIFF_FILE_CAP` files and append a note
+      indicating how many files were omitted.
+    - WHEN the total diff size exceeds `DIFF_SIZE_CAP_BYTES`, THE SYSTEM SHALL
+      truncate the diff and append a note indicating truncation.
+    - WHEN the diff is within both caps, THE SYSTEM SHALL return the full diff
+      without modification.
+    - WHEN `DIFF_FILE_CAP` is not set, THE SYSTEM SHALL default to `50`.
+    - WHEN `DIFF_SIZE_CAP_BYTES` is not set, THE SYSTEM SHALL default to
+      `500000`.
   - **Acceptance (Gherkin):**
 
     ```gherkin
@@ -857,29 +964,231 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
 
 ---
 
-- [ ] **[CREW-55-006] Configure Turbo remote cache**
-  - **Status:** Not started | **Priority:** P3 | **Estimate:** 2
-  - **Epic:** CREW-55 | **Labels:** review:#24, type:infrastructure
-  - **Depends on:** CREW-51-002
-  - **Deliverable:** `turbo.json` updated with a `remoteCache` configuration (Vercel, Turborepo Cloud, or self-hosted); CI workflow from CREW-51-002 passes `TURBO_TOKEN` and `TURBO_TEAM` (or equivalent) as secrets; cache hit/miss is logged in CI output; remote cache is optional — if credentials are absent the build falls back to local cache without error.
+### CREW-64 -- CI/deploy and code quality
+
+**Scope.** Seven low-effort improvements that make the codebase safe to
+contribute to and deploy from. These do not affect the runtime delivery flow but
+are needed for sustainable development. All stories are independent.
+
+**Key deliverables.** `corepack enable` in Dockerfile; GitHub Actions CI
+workflow; explicit lockfile COPY; env var documentation; test mock cleanup;
+`extractMrIid()` validation; loop bound comment.
+
+**Dependencies.** None (all stories are independently mergeable).
+
+**Status.** Not started.
+
+---
+
+- [ ] **[CREW-64-001] Fix `delivery-review` Dockerfile to use `corepack enable`**
+  - **Status:** Not started | **Priority:** P2 | **Estimate:** 1
+  - **Epic:** CREW-64 | **Labels:** review:#3, type:infrastructure
+  - **Depends on:** —
+  - **Deliverable:** `crews/delivery-review/Dockerfile` (if it exists) and any
+    Dockerfile in the repo that uses `RUN npm install -g pnpm@9` updated to
+    `RUN corepack enable`, so the pnpm version declared in `packageManager` in
+    `package.json` is used. `pnpm install --frozen-lockfile` completes without a
+    lockfile format mismatch error.
   - **Acceptance (EARS):**
-    - WHEN `TURBO_TOKEN` and `TURBO_TEAM` env vars are set, THE SYSTEM SHALL use the configured remote cache for Turbo build artifacts.
-    - WHEN `TURBO_TOKEN` is absent, THE SYSTEM SHALL fall back to local cache without error.
-    - WHEN a CI run hits the remote cache for unchanged packages, THE SYSTEM SHALL skip rebuilding those packages.
+    - WHEN a Docker image is built for any crew, THE SYSTEM SHALL use
+      `corepack enable` rather than `npm install -g pnpm@N` to activate pnpm.
+    - WHEN `pnpm install --frozen-lockfile` runs inside the built image,
+      THE SYSTEM SHALL complete without a lockfile format version mismatch.
   - **Acceptance (Gherkin):**
 
     ```gherkin
-    Scenario: Remote cache is used when credentials are present
-      Given TURBO_TOKEN and TURBO_TEAM are set in CI
-      And packages/crew was built in a prior run
-      When a subsequent CI run builds with no changes to that package
-      Then Turbo reports a cache hit for packages/crew
-      And the build completes faster than a cold build
+    Scenario: Dockerfile uses corepack enable
+      Given any Dockerfile in the crews/ directory
+      When the RUN instruction for pnpm activation is inspected
+      Then it reads "RUN corepack enable" and not "npm install -g pnpm"
+    ```
 
-    Scenario: Missing credentials fall back to local cache
-      Given TURBO_TOKEN is not set
-      When pnpm build runs
-      Then the build completes without error using the local cache
+---
+
+- [ ] **[CREW-64-002] Add GitHub Actions CI pipeline**
+  - **Status:** Not started | **Priority:** P2 | **Estimate:** 3
+  - **Epic:** CREW-64 | **Labels:** review:#4, type:infrastructure
+  - **Depends on:** —
+  - **Deliverable:** `.github/workflows/ci.yml` that triggers on `push` and
+    `pull_request` to `main`; runs `pnpm install --frozen-lockfile`, `pnpm
+    lint`, `pnpm typecheck`, and `pnpm test`; fails the workflow if any command
+    exits non-zero; Node.js version pinned to match the repo's `.nvmrc` or
+    `engines` field; pnpm activated via `corepack enable`; `~/.pnpm-store`
+    cached keyed on `pnpm-lock.yaml` hash.
+  - **Acceptance (EARS):**
+    - WHEN a commit is pushed to `main` or a pull request targets `main`,
+      THE SYSTEM SHALL trigger the CI workflow.
+    - WHEN `pnpm lint`, `pnpm typecheck`, or `pnpm test` exits non-zero,
+      THE SYSTEM SHALL fail the CI workflow and report the errors.
+    - WHEN all three commands exit zero, THE SYSTEM SHALL mark the workflow as
+      passed.
+    - THE SYSTEM SHALL cache the pnpm store between runs keyed on
+      `pnpm-lock.yaml`.
+  - **Acceptance (Gherkin):**
+
+    ```gherkin
+    Scenario: Clean codebase passes CI
+      Given a commit with no lint, type, or test errors
+      When the CI workflow runs
+      Then all steps exit zero and the workflow is marked as passed
+
+    Scenario: Dependency boundary violation fails CI
+      Given a commit where packages/crew imports from crews/delivery-build
+      When pnpm lint runs
+      Then dependency-cruiser reports a boundary violation and CI fails
+
+    Scenario: pnpm store is cached between runs
+      Given a prior CI run has populated the pnpm store cache
+      When a subsequent run restores the cache
+      Then pnpm install skips redownloading already-cached packages
+    ```
+
+---
+
+- [ ] **[CREW-64-003] Fix Dockerfile lockfile `COPY` from glob to explicit**
+  - **Status:** Not started | **Priority:** P2 | **Estimate:** 1
+  - **Epic:** CREW-64 | **Labels:** review:#22, type:infrastructure
+  - **Depends on:** —
+  - **Deliverable:** Every `Dockerfile` in the repo changed from
+    `COPY pnpm-lock.yaml* ./` to `COPY pnpm-lock.yaml ./` (removing the
+    optional glob suffix). The intent is explicit and a missing lockfile will
+    error loudly at the `COPY` step rather than silently proceeding.
+  - **Acceptance (EARS):**
+    - WHEN any Dockerfile is evaluated, THE SYSTEM SHALL use
+      `COPY pnpm-lock.yaml ./` without an optional glob suffix.
+    - WHEN `pnpm-lock.yaml` is absent during a Docker build, THE SYSTEM SHALL
+      fail at the `COPY` step rather than silently proceeding.
+  - **Acceptance (Gherkin):**
+
+    ```gherkin
+    Scenario: Lockfile is copied explicitly
+      Given all Dockerfiles in the repo
+      When the COPY instruction for the lockfile is inspected
+      Then each reads "COPY pnpm-lock.yaml ./" without a wildcard suffix
+    ```
+
+---
+
+- [ ] **[CREW-64-004] Document `PROJECT_DIR` and `ANTHROPIC_MODEL` env vars**
+  - **Status:** Not started | **Priority:** P2 | **Estimate:** 1
+  - **Epic:** CREW-64 | **Labels:** type:docs
+  - **Depends on:** CREW-61-004
+  - **Deliverable:** `crews/delivery-build/.env.example` updated to include
+    `PROJECT_DIR` (used by `workflow.ts` for memory seeding; defaults to
+    `process.cwd()`) and `ANTHROPIC_MODEL` (optional override for the Claude
+    model used by both personas; defaults to `claude-opus-4-5`), each with an
+    inline description comment. `README.md` environment variable table also
+    updated with these two entries. (CREW-61-004 adds the polling and CI vars;
+    this story covers only the two gaps from the CREW-50 validation.)
+  - **Acceptance (EARS):**
+    - WHEN `crews/delivery-build/.env.example` is read, THE SYSTEM SHALL list
+      `PROJECT_DIR` and `ANTHROPIC_MODEL` with description comments.
+    - WHEN `crews/delivery-build/README.md` is read, THE SYSTEM SHALL document
+      `PROJECT_DIR` and `ANTHROPIC_MODEL` in the environment variable table.
+  - **Acceptance (Gherkin):**
+
+    ```gherkin
+    Scenario: .env.example includes PROJECT_DIR and ANTHROPIC_MODEL
+      Given crews/delivery-build/.env.example is read
+      When it is searched for PROJECT_DIR and ANTHROPIC_MODEL
+      Then both are present with non-empty description comments
+
+    Scenario: README table includes both vars
+      Given crews/delivery-build/README.md is read
+      When the environment variables table is inspected
+      Then PROJECT_DIR and ANTHROPIC_MODEL appear as rows with descriptions
+    ```
+
+---
+
+- [ ] **[CREW-64-005] Remove spurious `db` property from test mock helpers**
+  - **Status:** Not started | **Priority:** P2 | **Estimate:** 1
+  - **Epic:** CREW-64 | **Labels:** review:#13, type:test
+  - **Depends on:** —
+  - **Deliverable:** `crews/delivery-build/tests/workflow.test.ts` and
+    `crews/delivery-build/tests/handlers.jira.test.ts` `makeState()` helpers
+    have `db: {} as never` removed. `pnpm typecheck` passes with no
+    excess-property errors on the state mock literal.
+  - **Acceptance (EARS):**
+    - WHEN `makeState()` is called in test helpers, THE SYSTEM SHALL return an
+      object whose properties are a subset of the `StateStore` interface with no
+      excess properties.
+    - WHEN `pnpm typecheck` runs, THE SYSTEM SHALL report zero TypeScript errors
+      related to `db` in test mock objects.
+  - **Acceptance (Gherkin):**
+
+    ```gherkin
+    Scenario: makeState() has no excess db property
+      Given workflow.test.ts and handlers.jira.test.ts
+      When the makeState() objects are inspected
+      Then neither contains a "db" property
+
+    Scenario: pnpm typecheck passes after removal
+      Given db: {} as never is removed from both test files
+      When pnpm typecheck runs
+      Then no TypeScript errors related to the mock objects are reported
+    ```
+
+---
+
+- [ ] **[CREW-64-006] Fix `extractMrIid()` URL validation**
+  - **Status:** Not started | **Priority:** P2 | **Estimate:** 2
+  - **Epic:** CREW-64 | **Labels:** review:#18, type:correctness
+  - **Depends on:** —
+  - **Deliverable:** `crews/delivery-build/src/integrations/gitlab.ts`
+    `extractMrIid()` validates that the extracted project path (from the URL)
+    matches `GITLAB_PROJECT_ID` before returning the IID. If there is a
+    mismatch, the function throws a typed `GitLabUrlError` rather than silently
+    returning a wrong IID. Unit tests cover the valid path and the mismatch
+    path.
+  - **Acceptance (EARS):**
+    - WHEN `extractMrIid()` is called with a URL whose project path does not
+      match `GITLAB_PROJECT_ID`, THE SYSTEM SHALL throw a typed error rather
+      than returning an IID from the wrong project.
+    - WHEN `extractMrIid()` is called with a valid URL matching
+      `GITLAB_PROJECT_ID`, THE SYSTEM SHALL return the correct numeric IID.
+  - **Acceptance (Gherkin):**
+
+    ```gherkin
+    Scenario: URL from correct project returns IID
+      Given GITLAB_PROJECT_ID is "daddia/crew"
+      And a webUrl of "https://gitlab.com/daddia/crew/-/merge_requests/42"
+      When extractMrIid(webUrl) is called
+      Then 42 is returned
+
+    Scenario: URL from wrong project throws
+      Given GITLAB_PROJECT_ID is "daddia/crew"
+      And a webUrl of "https://gitlab.com/other/repo/-/merge_requests/42"
+      When extractMrIid(webUrl) is called
+      Then a typed GitLabUrlError is thrown indicating project path mismatch
+    ```
+
+---
+
+- [ ] **[CREW-64-007] Add loop-bound asymmetry comment to `workflow.ts`**
+  - **Status:** Not started | **Priority:** P2 | **Estimate:** 1
+  - **Epic:** CREW-64 | **Labels:** review:#23, type:docs
+  - **Depends on:** —
+  - **Deliverable:** `crews/delivery-build/src/workflow.ts` peer-review loop
+    has a comment explaining the asymmetry: with `REFACTOR_LOOP_CAP=N` the loop
+    runs `N+1` senior-engineer peer-review calls (iterations 0 through N) but
+    only `N` address-feedback calls (the `if (iteration >= REFACTOR_LOOP_CAP)
+    break` prevents the Nth address-feedback). `AGENTS.md` updated to reflect
+    this semantic precisely.
+  - **Acceptance (EARS):**
+    - WHEN `workflow.ts` is read, THE SYSTEM SHALL contain a comment at the
+      peer-review loop bound explaining the `N+1` senior-engineer call count
+      versus the `N` address-feedback call count.
+    - WHEN `AGENTS.md` documents the loop cap, THE SYSTEM SHALL accurately
+      state the asymmetry.
+  - **Acceptance (Gherkin):**
+
+    ```gherkin
+    Scenario: Loop bound comment explains asymmetry
+      Given workflow.ts at the peer-review loop
+      When the code comment near the loop bound is read
+      Then it explains that REFACTOR_LOOP_CAP=N allows N+1 senior-engineer calls
+      And that only N address-feedback calls are made
     ```
 
 ---
@@ -887,172 +1196,148 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
 ## 5. Dependency graph
 
 ```text
-CREW-50 (SDK wire-up)
-  +-- CREW-50-001 (resolveSession -- unstable_v2_createSession / resumeSession)
-        +-- CREW-50-002 (engineer run + memory: 'project')
-              +-- CREW-50-007 (seed initial project memory)
-        +-- CREW-50-003 (senior-engineer run + memory: 'project')
-        +-- CREW-50-004 (tech-lead run + memory: 'project')
-        +-- CREW-50-005 (code-quality run + memory: 'project')
-        +-- CREW-50-006 (subagentPaths)
-              +-- CREW-55-001 (OTel tracing -- most useful once runs are live)
-              +-- CREW-55-005 (getMrDiff cap -- most useful once reviews run)
+CREW-60 (Jira polling trigger)
+  +-- CREW-60-001 (searchIssues + setInterval poller)
+        +-- CREW-60-002 (dedup guard — state + in-flight lock check)
+              +-- CREW-62-002 (clarification resume via poller tick)
 
-CREW-51 (container, CI, deploy hygiene)
-  +-- CREW-51-001 (Dockerfile corepack)  [no deps]
-  +-- CREW-51-002 (CI pipeline)           [no deps]
-        +-- CREW-55-006 (Turbo remote cache)
-  +-- CREW-51-003 (Dockerfile lockfile)   [no deps]
+CREW-61 (Workflow sequence alignment)
+  +-- CREW-61-001 (reorder: MR after peer review)
+  +-- CREW-61-002 (context seeding: getIssue → context.ticket)
+        +-- CREW-62-001 (clarification assessment step)
+  +-- CREW-61-003 (CI pipeline check — after CREW-61-001)
+        +-- CREW-61-004 (In QA handoff — after CREW-61-003)
+  +-- CREW-61-005 (sessionId → startStep)
+        +-- CREW-63-003 (crash recovery — needs session_id in steps table)
 
-CREW-52 (startup reliability)
-  +-- CREW-52-001 (env validation)        [no deps]
-        +-- CREW-52-002 (auth header)     [after CREW-52-001]
-        +-- CREW-55-003 (env examples)    [after CREW-52-001]
-  +-- CREW-52-003 (crash recovery -- unstable_v2_resumeSession) [CREW-50-001 required]
-  +-- CREW-52-004 (MCP pin)              [no deps]
+CREW-62 (Clarification HITL)
+  +-- CREW-62-001 (after CREW-61-002)
+  +-- CREW-62-002 (after CREW-62-001 + CREW-60-001)
 
-CREW-53 (state integrity)
-  +-- CREW-53-001 (SQLite consolidation) [no deps]
-  +-- CREW-53-002 (finishPhase fix)      [no deps]
-  +-- CREW-53-003 (createMr idempotency) [no deps]
+CREW-63 (Correctness/reliability — all independent)
+  +-- CREW-63-001 (env validation)
+        +-- CREW-63-002 (auth header inside jiraFetch — best after 001)
+  +-- CREW-63-003 (crash recovery — needs CREW-61-005)
+  +-- CREW-63-004 (MCP pin)
+  +-- CREW-63-005 (SQLite consolidation)
+  +-- CREW-63-006 (finishStep fix)
+  +-- CREW-63-007 (createMr idempotency)
+  +-- CREW-63-008 (in-flight lock — consumed by CREW-60-002)
+  +-- CREW-63-009 (getMrDiff cap)
 
-CREW-54 (code quality)                   [no blocking deps on any other epic]
-
-CREW-55 (observability and hardening)
-  +-- CREW-55-002 (rate limiting -- in-memory Map) [no deps]
-  +-- CREW-55-004 (loop bound comment)   [no deps]
+CREW-64 (CI/deploy/quality — all independent)
 ```
 
 ## 6. Critical path
 
 ```text
-CREW-50-001 (resolveSession -- unstable_v2_createSession / resumeSession)
-  --> CREW-50-002/003/004/005 (four persona run() methods + memory: 'project')
-        --> CREW-50-007 (seed initial project memory -- after CREW-50-002)
-        --> system is operational (agents execute with persistent memory)
-              --> CREW-52-003 (crash recovery via unstable_v2_resumeSession -- required now)
-              --> CREW-55-001 (OTel tracing -- meaningful once runs are live)
-              --> CREW-55-005 (diff cap -- meaningful once reviews run)
+CREW-60-001 (poller)
+  → CREW-60-002 (dedup)
+  → CREW-61-001 (reorder workflow)
+  → CREW-61-002 (context seed)
+  → CREW-61-003 (CI check)
+  → CREW-61-004 (In QA handoff)
+  → system is end-to-end testable
 
-CREW-51-001 (Dockerfile)  -- unblocked; critical for container builds
-CREW-51-002 (CI)          -- unblocked; critical safety net
-CREW-52-001 (env valid.)  -- unblocked; blocks CREW-52-002
-CREW-53-002 (finishPhase) -- unblocked; correctness fix needed before load
-CREW-53-003 (createMr)    -- unblocked; correctness fix needed before load
+CREW-63-008 (in-flight lock)  } unblocked; needed before e2e run
+CREW-63-006 (finishStep fix)  }
+CREW-63-007 (createMr idempotency) }
 ```
 
-## 7. Parallelisation opportunities
+## 7. Minimum viable slice
 
-| Workstream | Can run in parallel with |
-| --- | --- |
-| CREW-50-001 | CREW-51-001, CREW-51-002, CREW-51-003, CREW-52-001, CREW-52-004, CREW-53-001, CREW-53-002, CREW-53-003, all of CREW-54 |
-| CREW-50-002..007 | Each other (after CREW-50-001); CREW-51, CREW-52, CREW-53, CREW-54 |
-| CREW-50-007 | After CREW-50-002 only; everything else in parallel |
-| CREW-51-001 | Everything |
-| CREW-51-002 | Everything |
-| CREW-53-001 | CREW-53-002, CREW-53-003 |
-| CREW-54-001..005 | Everything (docs and hygiene only) |
-| CREW-55-002..004, CREW-55-006 | Everything except CREW-55-001 and CREW-55-005 |
+The smallest coherent path that produces an end-to-end testable delivery-build
+run:
 
-**Sprint 1 start.** CREW-50-001 (resolveSession) is the highest-value item to start first. Simultaneously: CREW-51-001 (Dockerfile, 1pt), CREW-51-002 (CI, 3pt), CREW-52-001 (env validation, 1pt), CREW-52-004 (MCP pin, 1pt), CREW-53-002 (finishPhase, 1pt), CREW-53-003 (createMr idempotency, 3pt), and all of CREW-54 can proceed in parallel.
+1. **CREW-60-001** — poller discovers and triggers stories
+2. **CREW-60-002** — dedup guard prevents double-runs
+3. **CREW-61-001** — MR opens after peer review (correct order)
+4. **CREW-61-002** — engineer receives full ticket context
+5. **CREW-61-003** — CI is checked before handoff
+6. **CREW-61-004** — ticket lands in `In QA`
+7. **CREW-63-006** — `finishStep()` updates the right row (correctness)
+8. **CREW-63-007** — no duplicate MRs on retry (correctness)
+9. **CREW-63-008** — in-flight lock prevents concurrent runs
 
-## 8. Minimum viable slice
+With this slice in place a story can be picked up from Jira, implemented,
+reviewed, MR'd, CI-checked, and handed to QA without data corruption or
+duplicate side effects. Clarification (CREW-62), crash recovery (CREW-63-003),
+and CI/deploy hardening (CREW-64) follow.
 
-If scope pressure forces a cut, the smallest coherent slice that makes the system production-safe:
-
-- **CREW-50-001** -- resolveSession (required before any agent executes)
-- **CREW-50-002** -- engineer run() (the default implementation persona)
-- **CREW-51-001** -- Dockerfile corepack fix (required for container builds)
-- **CREW-51-002** -- CI pipeline (required before accepting contributions)
-- **CREW-52-001** -- env validation (prevents silent misconfiguration)
-- **CREW-53-002** -- finishPhase fix (correctness; cheap)
-- **CREW-53-003** -- createMr idempotency (prevents duplicate MRs on replay)
-
-Result: the engineer persona executes, containers build, CI is active, startup fails loudly on misconfiguration, and the most critical data integrity bugs are fixed. senior-engineer, tech-lead, code-quality run() implementations (CREW-50-003..005), crash recovery, subagentPaths, and all P2/P3 work follow in subsequent sprints.
-
-## 9. Assumptions
+## 8. Assumptions
 
 | ID | Assumption | Impact if wrong |
 | --- | --- | --- |
-| A1 | The `@anthropic-ai/claude-code` SDK exposes `unstable_v2_createSession()` and `unstable_v2_resumeSession()` as the programmatic session API; the `memory: 'project'` field on `AgentDefinition` activates the persistent memory directory and injects tools automatically | If these APIs change or are removed before stable release, CREW-50-001 and CREW-50-002..007 require rework; spike against the installed SDK version before committing to the session contract |
-| A2 | Pinning MCP server versions to currently-installed versions does not require immediate version discovery work | CREW-52-004 requires a short audit of current installed versions before writing the pinned strings |
-| A3 | The Railway container's SQLite file survives a restart (persistent volume mounted at `DB_PATH`) | Without persistence, crash recovery (CREW-52-003) is moot; the volume assumption is documented in CREW-38 |
-| A4 | OpenTelemetry Node.js SDK is available as a devDependency or can be added without violating dependency-cruiser rules | CREW-55-001 adds `@opentelemetry/sdk-node` and `@opentelemetry/exporter-trace-otlp-http`; dependency-cruiser config may need updating for agent-scoped instrumentation |
+| A1 | Jira board uses status names `"To Do"`, `"In Progress"`, `"Clarification Needed"`, `"In QA"`, `"Needs Human Review"` exactly as written | `transitionIssue()` silently no-ops if the transition name doesn't match; validate status names against the board before first run |
+| A2 | `JIRA_ASSIGNEE_ACCOUNT_ID` is a Jira account ID (not a display name) suitable for use in JQL `assignee = "..."` queries | Incorrect format causes the poller's JQL to return no results; verify via Jira API before configuring |
+| A3 | The `@anthropic-ai/claude-agent-sdk` `getPipelineStatus` approach (MCP GitLab tools) returns pipeline status quickly enough for the CI polling loop to be practical | If the SDK/MCP round-trip adds >30 s latency, `CI_POLL_INTERVAL_MS` may need tuning; spike during CREW-61-003 |
+| A4 | The Railway persistent volume at `DB_PATH` survives restarts, making crash recovery (CREW-63-003) meaningful | Without persistence the SQLite state is ephemeral and crash recovery is moot |
 
-## 10. Risks (delivery-scoped)
-
-Technical and architecture-scoped risks are tracked in `AGENTS.md` and the relevant integration modules. This register covers delivery risks only.
+## 9. Risks
 
 | ID | Risk | Likelihood | Impact | Mitigation |
 | --- | --- | --- | --- | --- |
-| R1 | `@anthropic-ai/claude-code` SDK programmatic API surface is undocumented or unstable | Medium | High | Spike CREW-50-001 first; if the API surface is unclear, raise with Anthropic SDK team before committing to the session resumption contract |
-| R2 | Crash recovery (CREW-52-003) introduces duplicate workflow runs if the phase completed but DB write failed | Medium | Medium | Check `started_at`/`finished_at` atomically; use SQLite's serialised WAL write for the phase state transition |
-| R3 | MCP server version pinning (CREW-52-004) pins to a buggy version and requires an emergency unpin before the workflow is reliable | Low | Medium | Pin to the most recently tested version; document the version in the PR; add a note to the release runbook for future bumps |
-| R4 | CREW-54-003 (tooling deletion) breaks a devDependency import in a currently-working config file not visible from static search | Low | Low | Run `pnpm build` and `pnpm typecheck` before merging; check `package.json` devDependencies for any reference to the deleted packages |
+| R1 | Jira status names on the actual board differ from the names used in `transitionIssue()` calls | Medium | High | Audit board config before first run; add a startup check that logs available transitions for the first polled issue |
+| R2 | CI pipeline takes >10 min per run, causing the CI poll loop to block the workflow for extended periods | Medium | Medium | Make `CI_POLL_INTERVAL_MS` configurable; consider a max-wait cap separate from `CI_RETRY_CAP` |
+| R3 | `getPipelineStatus()` via GitLab MCP returns stale pipeline data due to caching | Low | Medium | Verify MCP response freshness in a smoke test; fall back to direct REST call if needed |
+| R4 | `finishStep()` race condition: two concurrent workflow callbacks both update the same unfinished step row | Low | Medium | CREW-63-006 adds the `step` column filter; CREW-63-008 in-flight lock prevents concurrent runs for the same issueKey |
 
-## 11. Definition of Done
+## 10. Definition of Done
 
 A story in this backlog is done when:
 
 - [ ] All EARS acceptance statements hold and every Gherkin scenario passes.
-- [ ] `pnpm typecheck` passes with zero new `any` or excess-property errors.
+- [ ] `pnpm typecheck` passes with zero new errors.
 - [ ] `pnpm lint` passes with no new dependency-cruiser violations.
-- [ ] `pnpm test` passes with no new failures; new behaviour has >= 80% branch coverage.
-- [ ] PR description links to this backlog and the review issue number(s) in the `Labels` field.
-- [ ] Code review approved; all feedback addressed or tracked.
-- [ ] PR merged to `main`.
-- [ ] Changeset added with correct bump type for any changed published packages.
+- [ ] `pnpm test` passes with no new failures; new behaviour has >= 80% branch
+      coverage.
+- [ ] New env vars documented in `.env.example` and `README.md`.
 - [ ] `AGENTS.md` updated if the repo's public surface or conventions changed.
+- [ ] PR merged to `main`.
 
-## 12. Handoff
+## 11. Handoff
 
-When CREW-50 through CREW-53 close:
+When CREW-60 and CREW-61 close, delivery-build can be run end-to-end against a
+real Jira board. When CREW-62 closes, the crew no longer stalls on ambiguous
+tickets. When CREW-63 closes, the system is safe to run unattended. When CREW-64
+closes, every PR is gated by CI and the codebase is clean.
 
-- All four persona `run()` methods are implemented and the system executes agents end-to-end.
-- The container builds correctly with pnpm 10.
-- CI protects every PR with lint, typecheck, and test gates.
-- The server exits loudly on startup if required env vars are absent.
-- Interrupted workflow phases are recovered on restart.
-- MCP server versions are stable across deployments.
-- The SQLite layer has a single connection and correct phase finalisation logic.
-- Duplicate MR creation on workflow replay is prevented.
+After the delivery-build slice is validated end-to-end:
 
-CREW-54 (code quality) and CREW-55 (observability and hardening) can follow in parallel once the system is operational. The Next-phase epics from the product backlog (`product/crew/backlog.md`) open once the Now-phase loop runs end-to-end on at least three merged stories.
+- `delivery-review` fast-follows with `tech-lead` persona (final code review,
+  MR merge, Jira close)
+- `delivery-qa` crew follows with `qa-engineer` persona
+- Remediation re-entry path (delivery-build v2) opens once delivery-qa exists
 
 ---
 
-## 13. Future backlog
-
-Items below are not required for Crew to be operational. They are captured here for sequencing when the current backlog closes.
+## 12. Future backlog
 
 ### F-01 -- Shared team memory across personas
 
-**Context.** Each persona currently has its own `memory: 'project'` directory. Project-level knowledge that should be shared across all three personas — recurring review findings, architectural constraints the tech lead consistently enforces, patterns the senior engineer flags — lives in separate directories and does not cross over.
+Each persona currently writes to its own `memory: 'project'` directory. After
+three or more stories complete end-to-end, add a shared read path so the
+engineer can see patterns the senior engineer has flagged without direct
+inter-persona communication.
 
-**Scope.** Configure all three delivery crew personas to read from a shared project memory directory in addition to their own. The Claude Code SDK supports a `memory: 'project'` scope that maps to a directory under the project root (`.claude/agent-memory/`). Extending this to a shared read path means the engineer can see what the tech lead has noted about quality standards, and the senior engineer can see what architectural patterns the tech lead has flagged, without any direct inter-persona communication.
-
-**Dependencies.** CREW-50-007 (individual memory seeding must be stable first).
-
-**Priority.** Post-operational. Opens after three stories complete end-to-end.
-
----
-
-### F-02 -- Product doc: carry forward v1 gaps
-
-**Context.** The current `docs/product/product.md` was written fresh for v2. Six elements from the v1 product strategy were identified as worth carrying forward: a rabbit hole on persona coordination through artifacts and state (not message passing); a no-go on direct inter-persona communication; a required maturity paragraph in target users; the adoption hypothesis framing in outcome metrics; two product principles (artifacts as working memory, personas as configuration); and a long-term thesis section on compounding value.
-
-**Scope.** Six targeted additions to `docs/product/product.md` as detailed in the plan at `.cursor/plans/carry_forward_v1_gaps_490b14c2.plan.md`.
-
-**Dependencies.** None.
-
-**Priority.** Non-blocking documentation. Can be executed at any time.
+**Priority.** Post-operational. Depends on CREW-61 being stable.
 
 ---
 
-### F-03 -- In-memory concurrency state (note for CREW-55-002)
+### F-02 -- Remediation re-entry path
 
-**Context.** CREW-55-002 specifies an in-memory rate limiter keyed on `issueKey`. The deliverable calls for an in-memory map. When that story is worked, the implementation should use a plain `Map<string, boolean>` (or `Map<string, AbortController>`) rather than any third-party state management library. No React-oriented state management is appropriate in a Node.js server context. The map is intentionally ephemeral — if the process restarts, in-flight locks are released and crash recovery (CREW-52-003) handles re-queuing.
+Delivery-build v2: the poller picks up `In Remediation` + `qa-remediation`
+label tickets, reads QA defect notes, fixes on branch, re-runs CI, removes the
+label, and re-transitions to `In QA`. Requires delivery-qa crew to exist.
 
-**Dependencies.** Addresses CREW-55-002 implementation detail.
+**Priority.** After delivery-qa crew ships.
 
-**Priority.** Captured as a note; no separate story needed.
+---
+
+### F-03 -- `delivery-review` crew
+
+`tech-lead` persona: architecture gate, PM HITL pause, MR approval + merge,
+Jira close. Triggered by polling `In QA` tickets (or `ready-for-review` signal
+from delivery-qa).
+
+**Priority.** Fast-follow after delivery-build e2e is validated.

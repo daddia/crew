@@ -58,6 +58,28 @@ export async function createMr(options: CreateMrOptions): Promise<string> {
   return data.web_url;
 }
 
+export type PipelineStatus =
+  | "created"
+  | "pending"
+  | "running"
+  | "success"
+  | "failed"
+  | "canceled";
+
+/**
+ * Return the status of the most recently created pipeline for an MR.
+ * Returns "pending" when no pipeline has been created yet so the caller
+ * treats it as a transient state and retries.
+ */
+export async function getPipelineStatus(mrWebUrl: string): Promise<PipelineStatus> {
+  const iid = extractMrIid(mrWebUrl);
+  const res = await gitlabFetch(
+    `/projects/${encodeURIComponent(PROJECT_ID)}/merge_requests/${iid}/pipelines`,
+  );
+  const pipelines = (await res.json()) as Array<{ status: PipelineStatus }>;
+  return pipelines[0]?.status ?? "pending";
+}
+
 /**
  * Fetch the unified diff for a merge request (identified by web URL).
  */

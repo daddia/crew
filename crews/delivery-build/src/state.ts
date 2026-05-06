@@ -7,6 +7,8 @@ export type Step =
   | "peer-code-review"
   | "address-feedback"
   | "open-mr"
+  | "ci-check"
+  | "ci-fix"
   | "in-review"
   | "needs-human-review";
 

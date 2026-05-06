@@ -24,13 +24,14 @@ vi.mock("../src/integrations/gitlab.js", () => ({
   createMr: vi.fn().mockResolvedValue("https://gitlab.example.com/mr/1"),
   getMrDiff: vi.fn().mockResolvedValue("--- file.ts\n+line"),
   postReviewComment: vi.fn().mockResolvedValue(undefined),
+  getPipelineStatus: vi.fn().mockResolvedValue("success"),
 }));
 
 import { runStory } from "../src/workflow.js";
 import { engineer } from "../src/agents/engineer/agent.js";
 import { seniorEngineer } from "../src/agents/senior-engineer/agent.js";
 import { transitionIssue, commentOnIssue, getIssue } from "../src/integrations/jira.js";
-import { createMr } from "../src/integrations/gitlab.js";
+import { createMr, getPipelineStatus } from "../src/integrations/gitlab.js";
 import type { StateStore } from "../src/state.js";
 
 const mockEngineer = vi.mocked(engineer.run);
@@ -39,6 +40,7 @@ const mockTransition = vi.mocked(transitionIssue);
 const mockComment = vi.mocked(commentOnIssue);
 const mockCreateMr = vi.mocked(createMr);
 const mockGetIssue = vi.mocked(getIssue);
+const mockGetPipelineStatus = vi.mocked(getPipelineStatus);
 
 function makeState(refactorCount = 0): StateStore {
   return {
@@ -65,6 +67,8 @@ function successResult(overrides: Partial<AgentResult> = {}): AgentResult {
 describe("runStory", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Skip the real 30-second wait in all tests by default.
+    process.env["CI_POLL_INTERVAL_MS"] = "0";
   });
 
   it("runs the happy-path sequence: implement then peer-review then MR", async () => {
@@ -222,6 +226,74 @@ describe("runStory", () => {
     );
     expect(addressFeedbackCall).toBeDefined();
     expect((addressFeedbackCall![0] as AgentInput).context["branchName"]).toBe("feature/ENG-1-test");
+  });
+
+  // ── CI monitoring loop ───────────────────────────────────────────────────
+
+  it("polls pipeline after MR opens and proceeds when CI is green", async () => {
+    mockEngineer.mockResolvedValue(successResult());
+    mockSeniorEngineer.mockResolvedValue(successResult());
+    // default mock returns "success"
+
+    const state = makeState();
+    await runStory({ issueKey: "ENG-1", state });
+
+    expect(mockGetPipelineStatus).toHaveBeenCalledWith("https://gitlab.example.com/mr/1");
+    expect(mockTransition).toHaveBeenCalledWith("ENG-1", "In Review");
+  });
+
+  it("calls engineer with task fix-ci on pipeline failure then proceeds on success", async () => {
+    mockEngineer.mockResolvedValue(successResult());
+    mockSeniorEngineer.mockResolvedValue(successResult());
+    // First poll: failed; second poll: success
+    mockGetPipelineStatus
+      .mockResolvedValueOnce("failed")
+      .mockResolvedValueOnce("success");
+
+    const state = makeState();
+    await runStory({ issueKey: "ENG-1", state });
+
+    const ciFixCall = mockEngineer.mock.calls.find(
+      (call) => (call[0] as AgentInput).context["task"] === "fix-ci",
+    );
+    expect(ciFixCall).toBeDefined();
+    expect((ciFixCall![0] as AgentInput).context["mrUrl"]).toBe("https://gitlab.example.com/mr/1");
+    expect(mockTransition).toHaveBeenCalledWith("ENG-1", "In Review");
+  });
+
+  it("escalates when CI fix cap is exceeded without success", async () => {
+    process.env["CI_RETRY_CAP"] = "2";
+    mockEngineer.mockResolvedValue(successResult());
+    mockSeniorEngineer.mockResolvedValue(successResult());
+    mockGetPipelineStatus.mockResolvedValue("failed");
+
+    const state = makeState();
+    await runStory({ issueKey: "ENG-1", state });
+
+    const ciFixCalls = mockEngineer.mock.calls.filter(
+      (call) => (call[0] as AgentInput).context["task"] === "fix-ci",
+    );
+    expect(ciFixCalls).toHaveLength(2);
+    expect(mockComment).toHaveBeenCalledWith("ENG-1", expect.stringContaining("Escalated"));
+    expect(mockTransition).toHaveBeenCalledWith("ENG-1", "Needs human review");
+    expect(mockTransition).not.toHaveBeenCalledWith("ENG-1", "In Review");
+
+    delete process.env["CI_RETRY_CAP"];
+  });
+
+  it("re-polls pipeline when status is running before checking again", async () => {
+    mockEngineer.mockResolvedValue(successResult());
+    mockSeniorEngineer.mockResolvedValue(successResult());
+    // First poll: running; second poll: success
+    mockGetPipelineStatus
+      .mockResolvedValueOnce("running")
+      .mockResolvedValueOnce("success");
+
+    const state = makeState();
+    await runStory({ issueKey: "ENG-1", state });
+
+    expect(mockGetPipelineStatus).toHaveBeenCalledTimes(2);
+    expect(mockTransition).toHaveBeenCalledWith("ENG-1", "In Review");
   });
 
   it("passes context.ticket to engineer for the address-feedback task", async () => {

@@ -14,6 +14,9 @@ RUN corepack enable
 WORKDIR /workspace
 
 # Layer 1: package manifests only — maximises cache reuse when source changes.
+# packages/crew/package.json is included so that pnpm can resolve the workspace
+# importer entry in pnpm-lock.yaml; @daddia/crew itself is installed from the
+# npm registry (lockfile resolution: 0.1.0, not workspace:*).
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
 COPY tooling/typescript-config/package.json ./tooling/typescript-config/
 COPY tooling/vitest-config/package.json      ./tooling/vitest-config/
@@ -22,15 +25,15 @@ COPY crews/delivery-build/package.json       ./crews/delivery-build/
 
 RUN pnpm install --frozen-lockfile
 
-# Layer 2: source — shared tooling, the @daddia/crew library, and this crew.
+# Layer 2: source — only the delivery-build crew and shared tooling.
+# packages/crew source is NOT copied; @daddia/crew is consumed from node_modules
+# (npm registry) so the image does not depend on the workspace build of @daddia/crew.
 COPY tsconfig.base.json ./
 COPY tooling/           ./tooling/
-COPY packages/crew/     ./packages/crew/
 COPY crews/delivery-build/ ./crews/delivery-build/
 
 # Build in dependency order.
 RUN pnpm --filter @repo/vitest-config         build
-RUN pnpm --filter @daddia/crew                build
 RUN pnpm --filter @daddia/crew-delivery-build build
 
 # Mirror markdown assets (prompts, skills, subagents) into dist so that
@@ -43,7 +46,7 @@ RUN set -e; cd crews/delivery-build; \
     done
 
 # Bundle the service with its production dependencies into a self-contained
-# directory.
+# directory. @daddia/crew from the registry is included automatically.
 RUN cd crews/delivery-build && pnpm deploy /deploy
 
 # ---- runtime image ----

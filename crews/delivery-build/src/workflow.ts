@@ -1,7 +1,7 @@
 import { type AgentInput } from "@daddia/crew";
 import { engineer } from "./agents/engineer/agent.js";
 import { seniorEngineer } from "./agents/senior-engineer/agent.js";
-import { createMr } from "./integrations/gitlab.js";
+import { createMr, getPipelineStatus } from "./integrations/gitlab.js";
 import { commentOnIssue, getIssue, transitionIssue, type JiraIssue } from "./integrations/jira.js";
 import { seedEngineerMemory } from "./memory.js";
 import { log } from "./observability.js";
@@ -24,6 +24,8 @@ export interface WorkflowContext {
  *   → bounded address-feedback loop (cap: REFACTOR_LOOP_CAP)
  *       → cap exceeded → escalate to human review → halt (MR NOT opened)
  *   → engineer raises merge request (only after peer review approves)
+ *   → CI monitoring loop: poll pipeline, fix on failure (cap: CI_RETRY_CAP)
+ *       → cap exceeded → escalate to human review → halt
  *   → status update: `in progress` → `in review`
  *   → log handoff; delivery-review crew polls for "In Review" tickets (event bus is a TODO)
  *   → done
@@ -32,6 +34,7 @@ export interface WorkflowContext {
  *
  * Loop caps:
  *   REFACTOR_LOOP_CAP - max peer-review feedback/fix cycles before escalation
+ *   CI_RETRY_CAP      - max CI fix attempts before escalation
  */
 export async function runStory(ctx: WorkflowContext): Promise<void> {
   const { issueKey, state } = ctx;
@@ -171,6 +174,50 @@ async function runStoryInner(
 
   state.finishStep(issueKey, "open-mr", { verdict: mrUrl });
 
+  // ── Step 4: CI monitoring loop ────────────────────────────────────────────
+  // Read caps inside the function so tests can override via process.env.
+  const ciRetryCap = parseInt(process.env["CI_RETRY_CAP"] ?? "3", 10);
+  const ciPollInterval = parseInt(process.env["CI_POLL_INTERVAL_MS"] ?? "30000", 10);
+  let ciFixAttempts = 0;
+
+  while (true) {
+    state.upsertStory(issueKey, "ci-check");
+    state.startStep(issueKey, "ci-check");
+
+    const pipelineStatus = await getPipelineStatus(mrUrl);
+
+    state.finishStep(issueKey, "ci-check", { verdict: pipelineStatus });
+
+    if (pipelineStatus === "success") {
+      break;
+    }
+
+    if (pipelineStatus === "failed") {
+      if (ciFixAttempts >= ciRetryCap) {
+        await escalateToHumanReview(issueKey, "CI fix cap reached", []);
+        return;
+      }
+
+      state.upsertStory(issueKey, "ci-fix");
+      state.startStep(issueKey, "ci-fix");
+
+      const ciFixResult = await engineer.run({
+        ...input,
+        context: { task: "fix-ci", mrUrl, ticket, ciFailure: pipelineStatus },
+      });
+
+      state.finishStep(issueKey, "ci-fix", {
+        costUsd: ciFixResult.costUsd,
+        verdict: ciFixResult.success ? "fixed" : "partial",
+      });
+
+      ciFixAttempts++;
+    } else {
+      // created, pending, running, canceled — transient; wait before re-polling
+      await sleep(ciPollInterval);
+    }
+  }
+
   // ── Done: transition to "In Review" — delivery-review crew picks up from here
   state.upsertStory(issueKey, "in-review");
   await transitionIssue(issueKey, "In Review");
@@ -178,6 +225,10 @@ async function runStoryInner(
   // Delivery-review polls for "In Review" tickets as its trigger. A dedicated
   // event bus integration is tracked separately.
   log.info("workflow.handoff", { issueKey, mrUrl });
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
