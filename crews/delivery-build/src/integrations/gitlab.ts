@@ -35,14 +35,52 @@ export class GitLabApiError extends Error {
   }
 }
 
+export class GitLabUrlError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "GitLabUrlError";
+  }
+}
+
+/**
+ * Parse the MR IID from a GitLab web URL, asserting the URL's project path
+ * matches the expected project ID. Throws GitLabUrlError on mismatch or when
+ * the URL has no `/merge_requests/{n}` segment.
+ *
+ * Numeric-only project IDs (e.g. "12345") bypass the path check because the
+ * URL always carries the human-readable path and we cannot derive one from
+ * the other without an API round-trip.
+ */
+export function extractMrIid(expectedProjectId: string, webUrl: string): string {
+  const match = webUrl.match(/^https?:\/\/[^/]+\/(.+)\/-\/merge_requests\/(\d+)/);
+  if (!match) {
+    throw new GitLabUrlError(`Cannot extract MR IID from URL: ${webUrl}`);
+  }
+  const urlProjectPath = decodeURIComponent(match[1] as string);
+  if (!/^\d+$/.test(expectedProjectId) && urlProjectPath !== expectedProjectId) {
+    throw new GitLabUrlError(
+      `Project path mismatch: expected "${expectedProjectId}", received "${urlProjectPath}"`,
+    );
+  }
+  return match[2] as string;
+}
+
 /**
  * Create a GitLab API client bound to the given identity and credentials.
  * All requests use the API URL, project ID, and access token supplied at
  * construction time.
+ *
+ * The optional `behaviour` argument caps `getMrDiff()` output by file count
+ * (`diffFileCap`, default 50) and total byte size (`diffSizeCapBytes`,
+ * default 500 000) to avoid feeding oversized diffs to the agent personas.
  */
 export function createGitlabClient(
   identity: { apiUrl: string; projectId: string },
   secrets: { gitlabAccessToken: string },
+  behaviour: { diffFileCap: number; diffSizeCapBytes: number } = {
+    diffFileCap: 50,
+    diffSizeCapBytes: 500_000,
+  },
 ): GitlabClient {
   const { apiUrl, projectId } = identity;
   const token = secrets.gitlabAccessToken;
@@ -62,12 +100,6 @@ export function createGitlabClient(
       throw new GitLabApiError(res.status, `${init?.method ?? "GET"} ${path}: ${text}`);
     }
     return res;
-  }
-
-  function extractMrIid(webUrl: string): string {
-    const match = webUrl.match(/\/merge_requests\/(\d+)/);
-    if (!match) throw new GitLabApiError(0, `Cannot extract MR IID from URL: ${webUrl}`);
-    return match[1] as string;
   }
 
   return {
@@ -99,7 +131,7 @@ export function createGitlabClient(
     },
 
     async getPipelineStatus(mrWebUrl) {
-      const iid = extractMrIid(mrWebUrl);
+      const iid = extractMrIid(projectId, mrWebUrl);
       const res = await gitlabFetch(
         `/projects/${encodeURIComponent(projectId)}/merge_requests/${iid}/pipelines`,
       );
@@ -108,16 +140,32 @@ export function createGitlabClient(
     },
 
     async getMrDiff(mrWebUrl) {
-      const iid = extractMrIid(mrWebUrl);
+      const iid = extractMrIid(projectId, mrWebUrl);
       const res = await gitlabFetch(
         `/projects/${encodeURIComponent(projectId)}/merge_requests/${iid}/diffs`,
       );
       const diffs = (await res.json()) as Array<{ diff: string; new_path: string }>;
-      return diffs.map((d) => `--- ${d.new_path}\n${d.diff}`).join("\n\n");
+      const { diffFileCap, diffSizeCapBytes } = behaviour;
+
+      let parts = diffs;
+      let fileNote = "";
+      if (diffs.length > diffFileCap) {
+        const omitted = diffs.length - diffFileCap;
+        parts = diffs.slice(0, diffFileCap);
+        fileNote = `\n[${omitted} files omitted — diff truncated at ${diffFileCap}]`;
+      }
+
+      let result = parts.map((d) => `--- ${d.new_path}\n${d.diff}`).join("\n\n") + fileNote;
+
+      if (result.length > diffSizeCapBytes) {
+        result = result.slice(0, diffSizeCapBytes) + `\n[diff truncated at ${diffSizeCapBytes} bytes]`;
+      }
+
+      return result;
     },
 
     async postReviewComment(mrWebUrl, body) {
-      const iid = extractMrIid(mrWebUrl);
+      const iid = extractMrIid(projectId, mrWebUrl);
       await gitlabFetch(
         `/projects/${encodeURIComponent(projectId)}/merge_requests/${iid}/notes`,
         { method: "POST", body: JSON.stringify({ body }) },

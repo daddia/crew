@@ -1,12 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { createGitlabClient, GitLabApiError } from "../src/integrations/gitlab.js";
+import {
+  createGitlabClient,
+  extractMrIid,
+  GitLabApiError,
+  GitLabUrlError,
+} from "../src/integrations/gitlab.js";
 import type { CreateMrOptions } from "../src/integrations/gitlab.js";
 
 const fetchMock = vi.fn();
 vi.stubGlobal("fetch", fetchMock);
 
 const client = createGitlabClient(
-  { apiUrl: "https://gitlab.test/api/v4", projectId: "my-project" },
+  { apiUrl: "https://gitlab.test/api/v4", projectId: "org/repo" },
   { gitlabAccessToken: "test-token" },
 );
 
@@ -66,6 +71,105 @@ describe("createMr", () => {
   });
 });
 
+describe("getMrDiff", () => {
+  beforeEach(() => fetchMock.mockReset());
+
+  it("returns the full diff when within both caps", async () => {
+    const diffs = [
+      { new_path: "src/a.ts", diff: "@@ -1 +1 @@\n-old\n+new" },
+      { new_path: "src/b.ts", diff: "@@ -1 +1 @@\n-x\n+y" },
+    ];
+    fetchMock.mockResolvedValueOnce(mockJson(diffs));
+
+    const result = await client.getMrDiff(MR_URL);
+
+    expect(result).toBe(
+      "--- src/a.ts\n@@ -1 +1 @@\n-old\n+new\n\n--- src/b.ts\n@@ -1 +1 @@\n-x\n+y",
+    );
+    expect(result).not.toContain("omitted");
+    expect(result).not.toContain("truncated");
+  });
+
+  it("truncates to DIFF_FILE_CAP files and appends an omission note", async () => {
+    const diffs = Array.from({ length: 80 }, (_, i) => ({
+      new_path: `src/file${i}.ts`,
+      diff: `@@ -1 +1 @@\n-old${i}\n+new${i}`,
+    }));
+    fetchMock.mockResolvedValueOnce(mockJson(diffs));
+
+    const smallCapClient = createGitlabClient(
+      { apiUrl: "https://gitlab.test/api/v4", projectId: "my-project" },
+      { gitlabAccessToken: "test-token" },
+      { diffFileCap: 50, diffSizeCapBytes: 10_000_000 },
+    );
+    const result = await smallCapClient.getMrDiff(MR_URL);
+
+    const fileSections = (result.match(/^--- /gm) ?? []).length;
+    expect(fileSections).toBe(50);
+    expect(result).toContain("[30 files omitted — diff truncated at 50]");
+  });
+
+  it("truncates the diff string to DIFF_SIZE_CAP_BYTES and appends a byte note", async () => {
+    const bigDiff = "x".repeat(1000);
+    const diffs = [{ new_path: "src/large.ts", diff: bigDiff }];
+    fetchMock.mockResolvedValueOnce(mockJson(diffs));
+
+    const tinyCapClient = createGitlabClient(
+      { apiUrl: "https://gitlab.test/api/v4", projectId: "my-project" },
+      { gitlabAccessToken: "test-token" },
+      { diffFileCap: 50, diffSizeCapBytes: 100 },
+    );
+    const result = await tinyCapClient.getMrDiff(MR_URL);
+
+    expect(result).toContain("[diff truncated at 100 bytes]");
+    const noteIndex = result.indexOf("\n[diff truncated");
+    expect(noteIndex).toBe(100);
+  });
+
+  it("applies file cap before byte cap when both are exceeded", async () => {
+    const diffs = Array.from({ length: 10 }, (_, i) => ({
+      new_path: `src/f${i}.ts`,
+      diff: "x".repeat(50),
+    }));
+    fetchMock.mockResolvedValueOnce(mockJson(diffs));
+
+    const bothCapClient = createGitlabClient(
+      { apiUrl: "https://gitlab.test/api/v4", projectId: "my-project" },
+      { gitlabAccessToken: "test-token" },
+      { diffFileCap: 3, diffSizeCapBytes: 20 },
+    );
+    const result = await bothCapClient.getMrDiff(MR_URL);
+
+    expect(result).toContain("[7 files omitted — diff truncated at 3]");
+    expect(result).toContain("[diff truncated at 20 bytes]");
+    const noteIndex = result.indexOf("\n[diff truncated at 20 bytes]");
+    expect(noteIndex).toBe(20);
+  });
+
+  it("uses default caps of 50 files and 500000 bytes when behaviour is omitted", async () => {
+    const defaultClient = createGitlabClient(
+      { apiUrl: "https://gitlab.test/api/v4", projectId: "my-project" },
+      { gitlabAccessToken: "test-token" },
+    );
+    const diffs = Array.from({ length: 10 }, (_, i) => ({
+      new_path: `src/f${i}.ts`,
+      diff: "small",
+    }));
+    fetchMock.mockResolvedValueOnce(mockJson(diffs));
+
+    const result = await defaultClient.getMrDiff(MR_URL);
+
+    expect(result).not.toContain("omitted");
+    expect(result).not.toContain("truncated");
+  });
+
+  it("throws GitLabApiError on a non-2xx response", async () => {
+    fetchMock.mockResolvedValueOnce(new Response("Not Found", { status: 404 }));
+
+    await expect(client.getMrDiff(MR_URL)).rejects.toThrow(GitLabApiError);
+  });
+});
+
 describe("getPipelineStatus", () => {
   beforeEach(() => fetchMock.mockReset());
 
@@ -105,5 +209,33 @@ describe("getPipelineStatus", () => {
     fetchMock.mockResolvedValueOnce(new Response("Not Found", { status: 404 }));
 
     await expect(client.getPipelineStatus(MR_URL)).rejects.toThrow(GitLabApiError);
+  });
+});
+
+describe("extractMrIid", () => {
+  it("returns the IID when the URL project path matches the expected project ID", () => {
+    const iid = extractMrIid("daddia/crew", "https://gitlab.com/daddia/crew/-/merge_requests/42");
+
+    expect(iid).toBe("42");
+  });
+
+  it("throws GitLabUrlError when the URL project path does not match the expected project ID", () => {
+    expect(() =>
+      extractMrIid("daddia/crew", "https://gitlab.com/other/repo/-/merge_requests/42"),
+    ).toThrow(GitLabUrlError);
+
+    expect(() =>
+      extractMrIid("daddia/crew", "https://gitlab.com/other/repo/-/merge_requests/42"),
+    ).toThrow('expected "daddia/crew"');
+
+    expect(() =>
+      extractMrIid("daddia/crew", "https://gitlab.com/other/repo/-/merge_requests/42"),
+    ).toThrow('received "other/repo"');
+  });
+
+  it("throws GitLabUrlError when the URL contains no /merge_requests/{n} segment", () => {
+    expect(() => extractMrIid("daddia/crew", "https://gitlab.com/daddia/crew")).toThrow(
+      GitLabUrlError,
+    );
   });
 });
