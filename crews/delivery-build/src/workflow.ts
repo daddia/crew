@@ -83,14 +83,21 @@ async function runStoryInner(
     context: { task: "implement-story", ticket },
   });
 
-  // Record the step with its sessionId now that we have it; the sessionId
-  // enables crash recovery to resume the interrupted Claude session.
+  // Extract branchName before finishStep so the verdict reflects whether
+  // the step produced all required outputs, not just success: true.
+  const branchNameRaw = implResult.artefacts["branchName"];
+  const branchName: string | undefined =
+    typeof branchNameRaw === "string" && branchNameRaw ? branchNameRaw : undefined;
+
+  // startStep is called after run so the sessionId is captured in the same
+  // row. The trade-off is that started_at ≈ finished_at for this step.
+  // Crash detection relies on the upsertStory call above, not this row.
   let engineerSessionId = implResult.artefacts["sessionId"] as string | undefined;
   state.startStep(issueKey, "implement", engineerSessionId);
 
   state.finishStep(issueKey, "implement", {
     costUsd: implResult.costUsd,
-    verdict: implResult.success ? "ok" : "failed",
+    verdict: (implResult.success && branchName !== undefined) ? "ok" : "failed",
   });
 
   if (!implResult.success) {
@@ -98,13 +105,12 @@ async function runStoryInner(
     return;
   }
 
-  const branchName = implResult.artefacts["branchName"];
-  if (typeof branchName !== "string" || !branchName) {
+  if (!branchName) {
     await escalateToHumanReview(issueKey, "Engineer did not produce a branch name", []);
     return;
   }
 
-  // ── Step 2: Peer review + address-feedback loop (MR not yet opened) ───────
+  // ── Step 3: Peer review + address-feedback loop (MR not yet opened) ───────
   let reviewPassed = false;
   let unresolvedItems: string[] = [];
 
@@ -148,6 +154,8 @@ async function runStoryInner(
       },
     });
 
+    // Same post-run startStep pattern as implement: captures sessionId at the
+    // cost of started_at ≈ finished_at; upsertStory above is the in-flight signal.
     engineerSessionId = feedbackResult.artefacts["sessionId"] as string | undefined;
     state.startStep(issueKey, "address-feedback", engineerSessionId);
 
@@ -162,7 +170,7 @@ async function runStoryInner(
     return;
   }
 
-  // ── Step 3: Open MR (peer review approved) ────────────────────────────────
+  // ── Step 4: Open MR (peer review approved) ────────────────────────────────
   state.upsertStory(issueKey, "open-mr");
   state.startStep(issueKey, "open-mr");
 
@@ -174,7 +182,7 @@ async function runStoryInner(
 
   state.finishStep(issueKey, "open-mr", { verdict: mrUrl });
 
-  // ── Step 4: CI monitoring loop ────────────────────────────────────────────
+  // ── Step 5: CI monitoring loop ────────────────────────────────────────────
   // Read caps inside the function so tests can override via process.env.
   const ciRetryCap = parseInt(process.env["CI_RETRY_CAP"] ?? "3", 10);
   const ciPollInterval = parseInt(process.env["CI_POLL_INTERVAL_MS"] ?? "30000", 10);
@@ -257,6 +265,7 @@ export async function addressFeedback(
       context: { task: "address-feedback", mrUrl, comments: [comment] },
     });
 
+    // Post-run startStep: captures sessionId; upsertStory above is the in-flight signal.
     const sessionId = result.artefacts["sessionId"] as string | undefined;
     state.startStep(issueKey, "address-feedback", sessionId);
 
