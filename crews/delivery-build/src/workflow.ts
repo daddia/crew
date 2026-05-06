@@ -2,7 +2,7 @@ import { type AgentInput } from "@daddia/crew";
 import { engineer } from "./agents/engineer/agent.js";
 import { seniorEngineer } from "./agents/senior-engineer/agent.js";
 import { createMr } from "./integrations/gitlab.js";
-import { commentOnIssue, transitionIssue } from "./integrations/jira.js";
+import { commentOnIssue, getIssue, transitionIssue, type JiraIssue } from "./integrations/jira.js";
 import { seedEngineerMemory } from "./memory.js";
 import { log } from "./observability.js";
 import type { StateStore } from "./state.js";
@@ -18,6 +18,7 @@ export interface WorkflowContext {
  * Run the delivery build sequence for one story.
  *
  * Sequence:
+ *   → context-seed: fetch Jira ticket (non-fatal if it fails)
  *   → engineer implements story on branch
  *   → senior-engineer peer-code-review
  *   → bounded address-feedback loop (cap: REFACTOR_LOOP_CAP)
@@ -54,14 +55,30 @@ async function runStoryInner(
 
   await seedEngineerMemory(process.env["PROJECT_DIR"] ?? process.cwd());
 
-  // ── Step 1: Implement ─────────────────────────────────────────────────────
+  // ── Step 1: Context seed ───────────────────────────────────────────────────
+  // Fetch the Jira ticket before implementation so agents have full story
+  // context. A fetch failure is non-fatal: the workflow continues with
+  // ticket = null rather than blocking the engineer entirely.
+  state.upsertStory(issueKey, "context-seed");
+  state.startStep(issueKey, "context-seed");
+
+  let ticket: JiraIssue | null = null;
+  try {
+    ticket = await getIssue(issueKey);
+  } catch (err) {
+    log.warn("workflow.context-seed.failed", { issueKey, err: String(err) });
+  }
+
+  state.finishStep(issueKey, "context-seed", { verdict: ticket ? "ok" : "failed" });
+
+  // ── Step 2: Implement ─────────────────────────────────────────────────────
   state.upsertStory(issueKey, "implement");
   state.startStep(issueKey, "implement");
   await transitionIssue(issueKey, "In Progress");
 
   const implResult = await engineer.run({
     ...input,
-    context: { task: "implement-story" },
+    context: { task: "implement-story", ticket },
   });
 
   // Carry the engineer's session ID forward so the address-feedback loop
@@ -123,6 +140,7 @@ async function runStoryInner(
       context: {
         task: "address-feedback",
         branchName,
+        ticket,
         comments: unresolvedItems,
         previousSessionId: engineerSessionId,
       },

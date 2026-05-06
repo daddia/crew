@@ -8,7 +8,7 @@ process.env["ATLASSIAN_API_TOKEN"] = "token";
 const fetchMock = vi.fn();
 vi.stubGlobal("fetch", fetchMock);
 
-import { transitionIssue, commentOnIssue } from "../src/integrations/jira.js";
+import { transitionIssue, commentOnIssue, getIssue, JiraApiError } from "../src/integrations/jira.js";
 
 function mockTransitionsResponse(
   transitions: Array<{ id: string; name: string; to: { name: string } }>,
@@ -56,6 +56,80 @@ describe("transitionIssue", () => {
     await transitionIssue("ENG-1", "Done");
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("getIssue", () => {
+  beforeEach(() => fetchMock.mockReset());
+
+  it("returns summary and description extracted from an ADF document", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          fields: {
+            summary: "Build the feature",
+            description: {
+              type: "doc",
+              version: 1,
+              content: [
+                {
+                  type: "paragraph",
+                  content: [{ type: "text", text: "Do this work." }],
+                },
+              ],
+            },
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    const issue = await getIssue("ENG-1");
+
+    expect(issue.summary).toBe("Build the feature");
+    expect(issue.description).toBe("Do this work.");
+    expect(issue.acceptanceCriteria).toBeNull();
+  });
+
+  it("returns null description when the ADF field is absent", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({ fields: { summary: "My Story", description: null } }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    const issue = await getIssue("ENG-1");
+    expect(issue.description).toBeNull();
+  });
+
+  it("concatenates text from nested ADF nodes with newlines", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          fields: {
+            summary: "Multi-paragraph",
+            description: {
+              type: "doc",
+              content: [
+                { type: "paragraph", content: [{ type: "text", text: "Line one." }] },
+                { type: "paragraph", content: [{ type: "text", text: "Line two." }] },
+              ],
+            },
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    const issue = await getIssue("ENG-1");
+    expect(issue.description).toBe("Line one.\nLine two.");
+  });
+
+  it("throws JiraApiError when the API returns a non-2xx status", async () => {
+    fetchMock.mockResolvedValueOnce(new Response("Not Found", { status: 404 }));
+
+    await expect(getIssue("ENG-999")).rejects.toThrow(JiraApiError);
   });
 });
 

@@ -63,6 +63,47 @@ export async function transitionIssue(
   });
 }
 
+export interface JiraIssue {
+  summary: string;
+  description: string | null;
+  acceptanceCriteria: string | null;
+}
+
+/**
+ * Fetch the key fields of a Jira issue.
+ * The ADF description is flattened to plain text; acceptanceCriteria is
+ * reserved for future custom-field mapping and is always null today.
+ */
+export async function getIssue(issueKey: string): Promise<JiraIssue> {
+  const res = await jiraFetch(`/issue/${issueKey}`);
+  const data = (await res.json()) as {
+    fields: { summary: string; description: unknown };
+  };
+
+  return {
+    summary: data.fields.summary,
+    description: extractAdfText(data.fields.description),
+    acceptanceCriteria: null,
+  };
+}
+
+/**
+ * Recursively extract plain text from an Atlassian Document Format (ADF) node.
+ * Returns null when the node carries no text content.
+ */
+function extractAdfText(node: unknown): string | null {
+  if (!node || typeof node !== "object") return null;
+  const n = node as { text?: string; content?: unknown[] };
+  if (typeof n.text === "string") return n.text;
+  if (Array.isArray(n.content)) {
+    const parts = n.content
+      .map(extractAdfText)
+      .filter((s): s is string => s !== null);
+    return parts.length > 0 ? parts.join("\n") : null;
+  }
+  return null;
+}
+
 /**
  * Add a comment to a Jira issue.
  */

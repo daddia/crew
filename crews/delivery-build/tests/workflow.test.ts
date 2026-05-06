@@ -14,6 +14,11 @@ vi.mock("../src/agents/senior-engineer/agent.js", () => ({
 vi.mock("../src/integrations/jira.js", () => ({
   transitionIssue: vi.fn().mockResolvedValue(undefined),
   commentOnIssue: vi.fn().mockResolvedValue(undefined),
+  getIssue: vi.fn().mockResolvedValue({
+    summary: "Test Story",
+    description: "Do the work.",
+    acceptanceCriteria: null,
+  }),
 }));
 vi.mock("../src/integrations/gitlab.js", () => ({
   createMr: vi.fn().mockResolvedValue("https://gitlab.example.com/mr/1"),
@@ -24,7 +29,7 @@ vi.mock("../src/integrations/gitlab.js", () => ({
 import { runStory } from "../src/workflow.js";
 import { engineer } from "../src/agents/engineer/agent.js";
 import { seniorEngineer } from "../src/agents/senior-engineer/agent.js";
-import { transitionIssue, commentOnIssue } from "../src/integrations/jira.js";
+import { transitionIssue, commentOnIssue, getIssue } from "../src/integrations/jira.js";
 import { createMr } from "../src/integrations/gitlab.js";
 import type { StateStore } from "../src/state.js";
 
@@ -33,6 +38,7 @@ const mockSeniorEngineer = vi.mocked(seniorEngineer.run);
 const mockTransition = vi.mocked(transitionIssue);
 const mockComment = vi.mocked(commentOnIssue);
 const mockCreateMr = vi.mocked(createMr);
+const mockGetIssue = vi.mocked(getIssue);
 
 function makeState(refactorCount = 0): StateStore {
   return {
@@ -155,6 +161,51 @@ describe("runStory", () => {
     );
   });
 
+  it("calls getIssue before engineer.run() for the implement task", async () => {
+    mockEngineer.mockResolvedValue(successResult());
+    mockSeniorEngineer.mockResolvedValue(successResult());
+
+    const state = makeState();
+    await runStory({ issueKey: "ENG-1", state });
+
+    expect(mockGetIssue).toHaveBeenCalledWith("ENG-1");
+    expect(mockGetIssue.mock.invocationCallOrder[0]).toBeLessThan(
+      mockEngineer.mock.invocationCallOrder[0] as number,
+    );
+  });
+
+  it("passes context.ticket to engineer for the implement task", async () => {
+    mockEngineer.mockResolvedValue(successResult());
+    mockSeniorEngineer.mockResolvedValue(successResult());
+
+    const state = makeState();
+    await runStory({ issueKey: "ENG-1", state });
+
+    const implementCall = mockEngineer.mock.calls.find(
+      (call) => (call[0] as AgentInput).context["task"] === "implement-story",
+    );
+    expect(implementCall).toBeDefined();
+    expect((implementCall![0] as AgentInput).context["ticket"]).toMatchObject({
+      summary: "Test Story",
+      description: "Do the work.",
+    });
+  });
+
+  it("proceeds with ticket: null when getIssue throws and emits a warn log", async () => {
+    mockGetIssue.mockRejectedValueOnce(new Error("network error"));
+    mockEngineer.mockResolvedValue(successResult());
+    mockSeniorEngineer.mockResolvedValue(successResult());
+
+    const state = makeState();
+    await runStory({ issueKey: "ENG-1", state });
+
+    const implementCall = mockEngineer.mock.calls.find(
+      (call) => (call[0] as AgentInput).context["task"] === "implement-story",
+    );
+    expect(implementCall).toBeDefined();
+    expect((implementCall![0] as AgentInput).context["ticket"]).toBeNull();
+  });
+
   it("passes branchName to engineer during address-feedback", async () => {
     let reviewCall = 0;
     mockEngineer.mockResolvedValue(successResult());
@@ -171,5 +222,25 @@ describe("runStory", () => {
     );
     expect(addressFeedbackCall).toBeDefined();
     expect((addressFeedbackCall![0] as AgentInput).context["branchName"]).toBe("feature/ENG-1-test");
+  });
+
+  it("passes context.ticket to engineer for the address-feedback task", async () => {
+    let reviewCall = 0;
+    mockEngineer.mockResolvedValue(successResult());
+    mockSeniorEngineer.mockImplementation(async (_input: AgentInput) => {
+      reviewCall++;
+      return successResult({ success: reviewCall > 1, artefacts: { branchName: "feature/ENG-1-test", comments: ["fix x"] } });
+    });
+
+    const state = makeState();
+    await runStory({ issueKey: "ENG-1", state });
+
+    const addressFeedbackCall = mockEngineer.mock.calls.find(
+      (call) => (call[0] as AgentInput).context["task"] === "address-feedback",
+    );
+    expect(addressFeedbackCall).toBeDefined();
+    expect((addressFeedbackCall![0] as AgentInput).context["ticket"]).toMatchObject({
+      summary: "Test Story",
+    });
   });
 });
