@@ -45,13 +45,20 @@ vi.mock("../src/integrations/gitlab.js", () => ({
   }),
 }));
 
-vi.mock("../src/poller.js", () => ({
-  startPoller: vi.fn().mockReturnValue(setInterval(() => {}, 9_999_999)),
-}));
+vi.mock("../src/poller.js", () => {
+  const id = setInterval(() => {}, 0);
+  clearInterval(id);
+  return { startPoller: vi.fn().mockReturnValue(id) };
+});
 
 vi.mock("../src/workflow.js", () => ({
   recoverInterruptedSteps: vi.fn().mockResolvedValue(undefined),
 }));
+
+vi.mock("../src/config.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../src/config.js")>();
+  return { ...actual, loadConfig: vi.fn(actual.loadConfig) };
+});
 
 vi.mock("../src/observability.js", () => ({
   log: mockLog,
@@ -59,6 +66,8 @@ vi.mock("../src/observability.js", () => ({
 
 import { boot } from "../src/index.js";
 import { serve } from "@hono/node-server";
+import { loadConfig } from "../src/config.js";
+import { ConfigNotFoundError } from "@daddia/crew/config";
 
 const VALID_ENV: NodeJS.ProcessEnv = {
   CREW_ID: "delivery-build-acme",
@@ -141,6 +150,14 @@ describe("boot – happy path", () => {
     await boot(VALID_ENV);
     expect(exitSpy).not.toHaveBeenCalled();
   });
+
+  it("binds the HTTP server on the configured port", async () => {
+    await boot(VALID_ENV);
+    expect(vi.mocked(serve)).toHaveBeenCalledWith(
+      expect.objectContaining({ port: 3000 }),
+      expect.any(Function),
+    );
+  });
 });
 
 describe("boot – misconfig path", () => {
@@ -153,6 +170,7 @@ describe("boot – misconfig path", () => {
 
   afterEach(() => {
     exitSpy.mockRestore();
+    vi.mocked(loadConfig).mockRestore?.();
   });
 
   it("emits config.invalid when a required env var is missing", async () => {
@@ -205,6 +223,17 @@ describe("boot – misconfig path", () => {
 
     await boot(env);
 
+    expect(vi.mocked(serve)).not.toHaveBeenCalled();
+  });
+
+  it("exits with code 1 and does not bind the server on ConfigNotFoundError", async () => {
+    vi.mocked(loadConfig).mockImplementationOnce(() => {
+      throw new ConfigNotFoundError("config.yaml not found");
+    });
+
+    await boot(VALID_ENV);
+
+    expect(exitSpy).toHaveBeenCalledWith(1);
     expect(vi.mocked(serve)).not.toHaveBeenCalled();
   });
 });

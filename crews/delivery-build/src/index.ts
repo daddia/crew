@@ -8,8 +8,7 @@ import { log } from "./observability.js";
 import { startPoller } from "./poller.js";
 import { createStateStore } from "./state.js";
 import { recoverInterruptedSteps } from "./workflow.js";
-import { loadConfig, CONFIG_SCHEMA_VERSION } from "./config.js";
-import type { Config } from "./config.js";
+import { loadConfig, CONFIG_SCHEMA_VERSION, type Config } from "./config.js";
 import { SchemaValidationError, ConfigNotFoundError, redact } from "@daddia/crew/config";
 import type { WorkflowCtxBase } from "./workflow.js";
 
