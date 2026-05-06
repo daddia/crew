@@ -22,7 +22,7 @@ export {
 } from "./hooks.js";
 export type { ToolUseEvent, PostToolUseHandler } from "./hooks.js";
 
-export { createLogger } from "./observability/index.js";
-export type { Logger, LogLevel, LogRecord } from "./observability/index.js";
+export { createLogger, initTracing, createTracer } from "./observability/index.js";
+export type { Logger, LogLevel, LogRecord, TracingOptions, Tracer } from "./observability/index.js";
 
 export { seedProjectMemory, memoryPath } from "./memory/index.js";

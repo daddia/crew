@@ -43,6 +43,7 @@ export const ConfigSchema = z.object({
     gitlabAccessToken: Secret(z.string().min(1)),
     jiraWebhookSecret: Secret(z.string().min(16)),
     gitlabWebhookSecret: Secret(z.string().min(16)),
+    honeycombApiKey: Secret(z.string().min(1)).optional(),
   }),
 });
 
@@ -72,6 +73,7 @@ const ENV_MAPPING: EnvMapping = {
   "secrets.gitlabAccessToken":             "GITLAB_PERSONAL_ACCESS_TOKEN",
   "secrets.jiraWebhookSecret":             "JIRA_WEBHOOK_SECRET",
   "secrets.gitlabWebhookSecret":           "GITLAB_WEBHOOK_SECRET",
+  "secrets.honeycombApiKey":               "HONEYCOMB_API_KEY",
 };
 
 /**

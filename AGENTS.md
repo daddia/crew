@@ -8,7 +8,7 @@ A pnpm monorepo of autonomous delivery agents. Each agent crew is a self-contain
 
 The architecture has two layers:
 
-- **`crews/`** — deployable agent crews. Each crew owns its server, workflow, state, handlers, and team of personas. A crew can be moved to its own repository by replacing `workspace:*` dependencies with published package versions.
+- **`crews/`** — deployable agent crews. Each crew owns its server, workflow, state, handlers, and team of personas. Each crew depends on the **published npm version** of `@daddia/crew`, not `workspace:*`. The Docker build installs `@daddia/crew` from the registry so the image is independent of the monorepo build. To consume new `@daddia/crew` changes in a crew, bump the `@daddia/crew` package version, publish it, then update the crew's pinned dependency.
 - **`packages/`** — shared libraries. Pure TypeScript with no side effects on import. Only crews depend on packages; packages never depend on crews.
 
 ## Repository layout
@@ -21,7 +21,7 @@ crews/
       workflow.ts     # Build sequence: context-seed → implement → peer-review → open-mr → ci-check → in-qa
       state.ts        # SQLite store (stories, steps, webhook_events) via node:sqlite
       memory.ts       # Project memory seeding for the engineer persona
-      observability.ts
+      observability.ts  # Exports log (createLogger) and tracer (createTracer); calls initTracing() in index.ts boot
       idempotency.ts  # Lazy singleton wrapping createIdempotencyStore()
       agents/         # Persona modules
         engineer/     # Implementation, address-feedback
@@ -41,7 +41,7 @@ crews/
       index.ts        # Hono server entry (port 3001 by default)
       workflow.ts     # Review sequence stub (not yet implemented)
       state.ts        # SQLite store via node:sqlite
-      observability.ts
+      observability.ts  # Exports log (createLogger) and tracer (createTracer)
     package.json      # @daddia/crew-delivery-review
 
 packages/
@@ -129,7 +129,7 @@ crews/{name}/
     index.ts          # Hono server; mounts handlers; handles SIGTERM/SIGINT
     workflow.ts       # Sequence logic; imports only agents from this crew
     state.ts          # SQLite schema and store; crew-owned, never shared
-    observability.ts  # OTLP bootstrap + structured logger
+    observability.ts  # Exports log = createLogger(name) and tracer = createTracer(name); index.ts calls initTracing() at boot
     agents/           # Team members
       {persona}/
         agent.ts      # exports `const {persona}: Agent`

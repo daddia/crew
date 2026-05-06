@@ -11,6 +11,7 @@ import { createStateStore } from "./state.js";
 import { recoverInterruptedSteps } from "./workflow.js";
 import { loadConfig, CONFIG_SCHEMA_VERSION, type Config } from "./config.js";
 import { SchemaValidationError, ConfigNotFoundError, redact } from "@daddia/crew/config";
+import { initTracing } from "@daddia/crew";
 import type { WorkflowCtxBase } from "./workflow.js";
 
 /**
@@ -44,6 +45,11 @@ export async function boot(env: NodeJS.ProcessEnv = process.env): Promise<void> 
     }
     throw err;
   }
+
+  initTracing({
+    serviceName: "delivery-build",
+    honeycombApiKey: config.secrets.honeycombApiKey,
+  });
 
   const gitSha =
     env.RAILWAY_GIT_COMMIT_SHA ?? env.GIT_SHA ?? "unknown";

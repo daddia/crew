@@ -2,60 +2,60 @@
 type: Backlog
 scope: product
 product: crew-runtime
-version: '2.0'
+version: '3.0'
 owner: daddia
 status: Active
 last_updated: 2026-05-06
 related:
   - docs/crew-flows/delivery-build.md
+  - docs/product/product.md
   - AGENTS.md
 ---
 
-# Backlog -- Delivery-Build Slice
+# Backlog -- Delivery-Build Slice (v3)
 
 Objective: ship `delivery-build` as a working end-to-end slice. The crew picks
-up a Jira story via polling, clarifies ambiguities with the PM, implements it on
-a branch, drives it through peer review and CI, and hands off to `In QA` for the
-delivery-qa crew to pick up.
+up a Jira story via polling, clarifies ambiguities with the PM, implements it
+on a branch, drives it through peer review and CI, and hands off to `In QA`
+for the delivery-qa crew to pick up.
 
 - **Crew-flow reference:** `docs/crew-flows/delivery-build.md`
+- **Product strategy:** `docs/product/product.md`
 - **AGENTS.md:** `AGENTS.md`
 - **Out of scope:** `delivery-review` and `delivery-qa` crews (fast-follow);
-  QA remediation re-entry path; OTel tracing; Turbo remote cache
+  QA remediation re-entry path; OTel tracing; Turbo remote cache; durable
+  cross-crew orchestration (see `product.md §2 Future`).
 
 ---
 
 ## 1. Summary
 
-**Objective.** Make `delivery-build` end-to-end testable against a real Jira
-board and GitLab project. The critical path is: polling trigger → workflow
-realignment (new sequence, CI gate, In QA handoff) → clarification HITL. A
-parallel correctness/infra stream (CREW-63, CREW-64) fixes the issues identified
-in the 2026-05-04 solution review that must be resolved before the system runs
-safely unattended.
+**Where we are.** The polling trigger, workflow sequence (`context-seed →
+assess-clarification → implement → peer review → open-mr → ci-check → in-qa`),
+clarification HITL step, env validation, crash recovery, single-SQLite
+consolidation, `finishStep()` correctness fix, GitHub Actions CI, and Docker
+hygiene work have all landed. See section 12 (Completed work) for the full
+provenance trail across CREW-60, CREW-61, CREW-62, CREW-63, and CREW-64.
 
-**Prerequisites (complete).** The following work shipped before this backlog was
-written and does not require stories:
+**What's left to actually ship.** Two epics. CREW-66 closes the remaining
+functional and correctness gaps that prevent the workflow from running
+unattended on real Jira + GitLab — most importantly, the agent personas don't
+yet emit the structured artefacts the workflow consumes (`branchName`,
+`title`, `questionsRequired`, `questions`, `comments`). CREW-67 adds the
+operational handles needed to deploy, monitor, and validate the slice end to
+end against a real board.
 
-- `packages/crew` consolidation (`@daddia/crew` + `@daddia/crew/webhooks`) —
-  CREW-56-001–005
-- `engineer` and `senior-engineer` personas wired to the Claude Agent SDK with
-  `memory: 'project'`, `buildAuditHook()`, subagent paths, and project memory
-  seeding — CREW-50-002, 003, 006, 007
-- `delivery-build` integrations: Jira thin client, GitLab thin client
-- `delivery-build` state store: SQLite schema with `stories`, `steps`, and
-  `webhook_events` tables
-- `delivery-build` webhook handler: `POST /webhooks/jira` and
-  `POST /webhooks/gitlab` (secondary trigger — remains in place)
-- `AGENTS.md` package names, tooling cleanup — CREW-54-001, 003, 004
+**Critical path.** CREW-66-001 and CREW-66-002 are the blocker: until the
+agents return real artefacts, every workflow run halts at the first
+`assessResult.artefacts["questionsRequired"] === true` check or returns
+without `branchName` and falls through to escalation. Everything else in
+CREW-66 is independent and parallelisable. CREW-67 starts once CREW-66 is in
+place because the end-to-end smoke test (CREW-67-005) is the gate that
+validates the slice is shippable.
 
-**Delivery approach.** CREW-60 and CREW-61 are the critical path and must land
-before CREW-62 is useful. CREW-63 and CREW-64 are independent and can proceed in
-parallel with the trigger and workflow epics.
-
-**Deferred.** `tech-lead` persona (delivery-review crew), `code-quality` persona
-(delivery-qa crew), QA remediation re-entry, OTel tracing (CREW-55-001), Turbo
-remote cache (CREW-55-006).
+**Deferred.** `tech-lead` persona (delivery-review crew), `code-quality`
+persona (delivery-qa crew), QA remediation re-entry, OTel tracing, Turbo
+remote cache, shared cross-persona memory. See section 13 (Future backlog).
 
 ---
 
@@ -63,10 +63,10 @@ remote cache (CREW-55-006).
 
 | Convention | Value |
 | --- | --- |
-| Epic ID format | `CREW-{nn}` (continuing from 60) |
+| Epic ID format | `CREW-{nn}` (continuing from 65) |
 | Story ID format | `CREW-{nn}-{nnn}` |
-| Status values | Not started, In progress, In review, Done, Blocked |
-| Priority levels | P0 (blocking), P1 (reliability), P2 (quality) |
+| Status values | Not started, In progress, Done, Blocked |
+| Priority levels | P0 (blocks end-to-end run), P1 (reliability), P2 (quality) |
 | Estimation | Fibonacci story points (1, 2, 3, 5, 8) |
 | Acceptance format | EARS + Gherkin |
 
@@ -74,14 +74,11 @@ remote cache (CREW-55-006).
 
 ## 3. Epic breakdown
 
-| Epic | Title | Priority | Deps | Points | Status |
-| --- | --- | --- | --- | --- | --- |
-| CREW-60 | Jira polling trigger | P0 | — | 5 | done |
-| CREW-61 | Workflow sequence alignment | P0 | CREW-60 | 9 | done |
-| CREW-62 | Clarification HITL step | P1 | CREW-61 | 4 | done |
-| CREW-63 | Correctness and reliability carry-forward | P1 | — | 18 | In progress |
-| CREW-64 | CI/deploy and code quality | P2 | — | 10 | Not started |
-| **Total** | | | | **46** | |
+| Epic | Title | Phase | Priority | Deps | Points | WP path | Status |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| CREW-66 | Functional and hardening completion | Now | P0 | — | 16 | `crews/delivery-build` | Not started |
+| CREW-67 | End-to-end validation and operations | Now | P0 | CREW-66 | 12 | `crews/delivery-build` | Not started |
+| **Total** | | | | | **28** | | |
 
 ---
 
@@ -89,664 +86,165 @@ remote cache (CREW-55-006).
 
 ---
 
-### CREW-60 -- Jira polling trigger
+### CREW-66 -- Functional and hardening completion
 
-**Scope.** Replace the webhook as the primary trigger with a scheduled Jira
-poller. Every `POLL_INTERVAL_MS` milliseconds the crew queries Jira for `To Do`
-stories assigned to the configured engineer and calls `runStory()` for each
-eligible result. The webhook handler remains in place as a secondary entry point.
+**Scope.** Close the remaining gaps that prevent `delivery-build` from
+running end-to-end against a real Jira board and GitLab project. Two are
+critical correctness fixes (agents must emit structured artefacts the
+workflow already consumes); the rest are reliability and idempotency
+guarantees the system needs before it's safe to leave unattended.
 
-**Key deliverables.** `crews/delivery-build/src/index.ts` starts a
-`setInterval`-based poller on boot; `integrations/jira.ts` gains a
-`searchIssues(jql)` function; the poller checks the state store before
-triggering to avoid double-processing; new env vars `JIRA_PROJECT_KEY`,
-`JIRA_ASSIGNEE_ACCOUNT_ID`, and `POLL_INTERVAL_MS` added to `.env.example`.
+**Key deliverables.** Engineer and senior-engineer parse the structured
+`AgentResult.artefacts` JSON from the SDK result message; MCP server versions
+are pinned in `mcp.json`; `createMr()` checks for an existing open MR before
+opening a new one; webhook handlers return `HTTP 429` when an `issueKey` is
+already in flight; `getMrDiff()` truncates oversized diffs by file count and
+byte size; `extractMrIid()` validates the URL's project path against
+`GITLAB_PROJECT_ID`.
 
-**Dependencies.** None.
+**Dependencies.** None. CREW-66-001 and CREW-66-002 are critical-path; the
+other five stories are independently mergeable.
 
-**Status.** done
+**Status.** Not started.
+
+**Work-package path.** `crews/delivery-build` (no separate WP design doc;
+each story is small and self-contained).
 
 ---
 
-- [x] **[CREW-60-001] Implement scheduled Jira poller**
-  - **Status:** done | **Priority:** P0 | **Estimate:** 3
-  - **Epic:** CREW-60 | **Labels:** type:feature
+- [ ] **[CREW-66-001] Engineer extracts structured artefacts from SDK result**
+  - **Status:** Not started | **Priority:** P0 | **Estimate:** 3
+  - **Epic:** CREW-66 | **Labels:** type:correctness, e2e-blocker
   - **Depends on:** —
-  - **Deliverable:** `crews/delivery-build/src/integrations/jira.ts` gains a
-    `searchIssues(jql: string)` function that calls
-    `/rest/api/3/issue/search?jql=<encoded>` and returns an array of
-    `{ issueKey: string }` objects. `crews/delivery-build/src/index.ts` starts
-    a `setInterval` loop on boot with interval `POLL_INTERVAL_MS` (default
-    300 000 ms). Each tick calls `searchIssues` with the JQL
-    `project = "${JIRA_PROJECT_KEY}" AND status = "To Do" AND assignee =
-    "${JIRA_ASSIGNEE_ACCOUNT_ID}"`, iterates the results, and calls
-    `runStory({ issueKey, state })` asynchronously for each eligible story. The
-    poller logs a `warn`-level message and continues on Jira API errors without
-    crashing. The interval is cleared in the existing SIGTERM/SIGINT shutdown
-    handlers.
+  - **Deliverable:** `crews/delivery-build/src/agents/engineer/agent.ts` parses
+    the structured JSON output specified by each skill's "Output contract"
+    section out of `resultMsg.result` and merges it into the returned
+    `AgentResult.artefacts`. The engineer recognises the three task shapes:
+    `assess-clarification` (`questionsRequired: boolean`, optional
+    `questions: string`, optional `blocker: string`), `implement-story`
+    (`branchName: string`, `title: string`, `description: string`,
+    `filesChanged`, `commits`), and `address-feedback` (same shape as
+    `implement-story` plus a `resolved: string[]`). On parse failure the
+    function returns `success: false` with `summary` quoting the parse error
+    and the first 500 characters of `resultMsg.result`. `sessionId` continues
+    to be merged in alongside the parsed artefacts. The skill prompts already
+    specify the JSON shape; this story does not modify them.
   - **Acceptance (EARS):**
-    - WHEN the delivery agent starts, THE SYSTEM SHALL begin polling Jira every
-      `POLL_INTERVAL_MS` milliseconds for `To Do` stories assigned to
-      `JIRA_ASSIGNEE_ACCOUNT_ID` in `JIRA_PROJECT_KEY`.
-    - WHEN a Jira poll returns eligible stories, THE SYSTEM SHALL call
-      `runStory()` asynchronously for each result.
-    - WHEN `POLL_INTERVAL_MS` is not set, THE SYSTEM SHALL default to `300000`.
-    - WHEN the Jira search request fails, THE SYSTEM SHALL log a `warn`-level
-      message and retry on the next scheduled tick without crashing the server.
-    - WHEN the delivery agent receives SIGTERM or SIGINT, THE SYSTEM SHALL clear
-      the poll interval before closing.
+    - WHEN `engineer.run()` returns from a successful SDK invocation,
+      THE SYSTEM SHALL parse the JSON object found in `resultMsg.result` and
+      merge it into `AgentResult.artefacts` alongside `sessionId`.
+    - WHEN the parsed artefact is from `task: "assess-clarification"`,
+      THE SYSTEM SHALL include `questionsRequired` as a boolean in
+      `AgentResult.artefacts`.
+    - WHEN the parsed artefact is from `task: "implement-story"`,
+      THE SYSTEM SHALL include `branchName` and `title` as strings in
+      `AgentResult.artefacts` whenever the model populated them.
+    - WHEN the SDK result is not a parsable JSON artefact envelope, THE
+      SYSTEM SHALL return `success: false` with a summary that names the
+      parse failure and includes a truncated excerpt of the raw result.
   - **Acceptance (Gherkin):**
 
     ```gherkin
-    Scenario: Poller discovers a new To Do story and triggers workflow
-      Given JIRA_PROJECT_KEY is "CREW" and JIRA_ASSIGNEE_ACCOUNT_ID is "user-123"
-      And Jira contains one To Do story "CREW-60-001" assigned to "user-123"
-      When the poll interval fires
-      Then a JQL search is executed for project = "CREW" AND status = "To Do" AND assignee = "user-123"
-      And runStory() is called with issueKey "CREW-60-001"
+    Scenario: Implementation result yields branchName and title
+      Given engineer.run() invoked with task "implement-story"
+      And resultMsg.result contains a JSON object with branchName "feature/CREW-1-foo" and title "Add foo"
+      When the engineer parses the result
+      Then AgentResult.artefacts.branchName equals "feature/CREW-1-foo"
+      And AgentResult.artefacts.title equals "Add foo"
+      And AgentResult.artefacts.sessionId is preserved
 
-    Scenario: Poller defaults to 5-minute interval
-      Given POLL_INTERVAL_MS is not set
-      When the delivery agent starts
-      Then the poll interval is 300000 milliseconds
+    Scenario: Clarification skill returns questionsRequired: true
+      Given engineer.run() invoked with task "assess-clarification"
+      And resultMsg.result contains { questionsRequired: true, questions: "..." }
+      When the engineer parses the result
+      Then AgentResult.artefacts.questionsRequired is the boolean true
+      And AgentResult.artefacts.questions equals the model's question text
 
-    Scenario: Jira poll failure is logged and retried
-      Given the Jira API returns a 500 error on a poll tick
-      When the poll fires
-      Then a warn-level log is emitted with the error
-      And the server continues running
-      And the next poll tick is scheduled normally
-
-    Scenario: Poller stops on SIGTERM
-      Given the delivery agent is running with an active poll interval
-      When SIGTERM is received
-      Then the poll interval is cleared before the server closes
+    Scenario: Unparsable result downgrades to success: false
+      Given engineer.run() returns a result message whose text is not JSON
+      When the engineer parses the result
+      Then AgentResult.success is false
+      And AgentResult.summary names the parse failure
+      And the summary includes the first 500 characters of the raw result
     ```
 
 ---
 
-- [x] **[CREW-60-002] Deduplication guard in poller**
-  - **Status:** done | **Priority:** P0 | **Estimate:** 2
-  - **Epic:** CREW-60 | **Labels:** type:reliability
-  - **Depends on:** CREW-60-001
-  - **Deliverable:** Inside the poller tick, before calling `runStory()`, the
-    code calls `state.getStory(issueKey)`. If the story exists and its
-    `currentStep` is not a terminal value (`in-qa`, `needs-human-review`), the
-    issueKey is skipped and a `debug`-level log is emitted. The in-flight lock
-    map from CREW-63-008 is also checked: if the issueKey is already locked, the
-    story is skipped. Terminal stories from the Jira query are silently ignored
-    (they were transitioned but Jira has not yet removed them from the board).
-    Unit test covers in-progress skip, terminal-step re-skip, and new-story
-    trigger paths.
-  - **Acceptance (EARS):**
-    - WHEN the poller discovers an issueKey that already has a non-terminal step
-      record in the state store, THE SYSTEM SHALL skip that issueKey without
-      calling `runStory()`.
-    - WHEN the poller discovers an issueKey with a terminal step record
-      (`in-qa` or `needs-human-review`), THE SYSTEM SHALL skip that issueKey.
-    - WHEN the poller discovers an issueKey with an active in-flight lock,
-      THE SYSTEM SHALL skip that issueKey.
-    - WHEN the poller discovers an issueKey not present in the state store and
-      not in-flight, THE SYSTEM SHALL call `runStory()` for that issueKey.
-  - **Acceptance (Gherkin):**
-
-    ```gherkin
-    Scenario: In-progress story is skipped by poller
-      Given a state record exists for issueKey "CREW-60-001" with currentStep "implement"
-      When the poller discovers "CREW-60-001" in the Jira results
-      Then runStory() is NOT called for "CREW-60-001"
-
-    Scenario: New story triggers runStory
-      Given no state record exists for issueKey "CREW-60-002"
-      And no in-flight lock exists for "CREW-60-002"
-      When the poller discovers "CREW-60-002" in the Jira results
-      Then runStory() is called with issueKey "CREW-60-002"
-
-    Scenario: Terminal story is not re-triggered
-      Given a state record for "CREW-60-003" with currentStep "in-qa"
-      When the poller discovers "CREW-60-003" in the Jira results
-      Then runStory() is NOT called for "CREW-60-003"
-
-    Scenario: In-flight story is not triggered a second time
-      Given an in-flight lock exists for issueKey "CREW-60-004"
-      When the poller discovers "CREW-60-004" in the Jira results
-      Then runStory() is NOT called for "CREW-60-004"
-    ```
-
----
-
-### CREW-61 -- Workflow sequence alignment
-
-**Scope.** Realign `workflow.ts` to match `docs/crew-flows/delivery-build.md`.
-The current sequence opens the MR before peer review; the correct sequence is
-implement → peer review → address feedback → open MR → CI check → In QA. A
-context-seeding step reads the full Jira ticket before the engineer starts. The
-handoff target changes from `In Review` to `In QA`. The `steps.session_id`
-column is populated so crash recovery (CREW-63-003) can resume interrupted runs.
-
-**Key deliverables.** `workflow.ts` with reordered steps; new
-`getPipelineStatus(mrUrl)` in `integrations/gitlab.ts`; `Step` type gains
-`context-seed`, `ci-fix`, and `in-qa` values; `In Review` transition removed
-from the normal path; `CI_RETRY_CAP` and `CI_POLL_INTERVAL_MS` env vars
-documented; `sessionId` wired into `state.startStep()` for agent steps.
-
-**Dependencies.** CREW-60 (polling trigger must exist before workflow changes
-are testable end-to-end; the workflow itself can be developed in parallel).
-
-**Status.** Complete. All five stories done; workflow sequence aligned with delivery-build flow diagram.
-
----
-
-- [x] **[CREW-61-001] Reorder workflow: MR opens after peer-review loop**
-  - **Status:** done | **Priority:** P0 | **Estimate:** 2
-  - **Epic:** CREW-61 | **Labels:** type:correctness
+- [ ] **[CREW-66-002] Senior-engineer extracts structured artefacts from SDK result**
+  - **Status:** Not started | **Priority:** P0 | **Estimate:** 2
+  - **Epic:** CREW-66 | **Labels:** type:correctness, e2e-blocker
   - **Depends on:** —
-  - **Deliverable:** `crews/delivery-build/src/workflow.ts` reordered so the
-    sequence is: `implement` → `peer-code-review` / `address-feedback` loop →
-    `open-mr`. The `createMr()` call moves from before the loop to after it.
-    The `Step` type in `state.ts` is reordered to reflect the new logical order.
-    The existing `workflow.test.ts` suite updated to match. No new behaviour is
-    added beyond the reorder; the escalation path when the loop cap is exceeded
-    continues to halt without opening an MR.
+  - **Deliverable:**
+    `crews/delivery-build/src/agents/senior-engineer/agent.ts` parses the
+    JSON object specified by `peer-code-review/SKILL.md` out of
+    `resultMsg.result` and merges it into `AgentResult.artefacts`. The
+    expected shape is `{ verdict: "approved" | "changes-requested",
+    comments: Array<{ path: string; line: string | number; category:
+    "blocker" | "warning" | "suggestion"; observed: string; remediation:
+    string }> }`. The workflow already consumes
+    `reviewResult.artefacts["comments"]` as `string[]`; the agent flattens
+    each finding into `"<path>:<line> [<category>] <observed> — <remediation>"`
+    so that consumers continue to work without a workflow change. Parse
+    failures fall back to `success: false` as in CREW-66-001.
   - **Acceptance (EARS):**
-    - WHEN `runStory()` executes, THE SYSTEM SHALL call `engineer.run()` for
-      implementation and the `seniorEngineer.run()` peer-review loop before
-      calling `createMr()`.
-    - WHEN the peer-review loop completes with approval, THE SYSTEM SHALL then
-      call `createMr()` to open the merge request.
-    - WHEN the peer-review loop reaches `REFACTOR_LOOP_CAP` without approval,
-      THE SYSTEM SHALL escalate without calling `createMr()`.
-    - THE SYSTEM SHALL NOT call `createMr()` before the peer-review loop has
-      completed.
+    - WHEN `seniorEngineer.run()` returns from a successful SDK invocation,
+      THE SYSTEM SHALL parse the JSON object in `resultMsg.result` and merge
+      its fields into `AgentResult.artefacts`.
+    - WHEN the parsed verdict is `"approved"`, THE SYSTEM SHALL set
+      `AgentResult.success` to `true` and `artefacts.comments` to an empty
+      string array.
+    - WHEN the parsed verdict is `"changes-requested"`, THE SYSTEM SHALL set
+      `AgentResult.success` to `false` and populate `artefacts.comments` as
+      a flat string array of finding lines.
+    - WHEN the SDK result is not a parsable JSON artefact envelope,
+      THE SYSTEM SHALL return `success: false` with a summary naming the
+      parse failure.
   - **Acceptance (Gherkin):**
 
     ```gherkin
-    Scenario: MR is opened after peer review approves
-      Given a story where the engineer implements and seniorEngineer approves on first review
-      When runStory() runs
-      Then seniorEngineer.run() is called before createMr()
-      And createMr() is called once after seniorEngineer returns success
+    Scenario: Approval result returns success with empty comments
+      Given seniorEngineer.run() returns a result whose JSON is { verdict: "approved", comments: [] }
+      When the senior-engineer parses the result
+      Then AgentResult.success is true
+      And AgentResult.artefacts.comments equals []
 
-    Scenario: MR is not opened when loop cap is exceeded
-      Given REFACTOR_LOOP_CAP is 2
-      And seniorEngineer always returns success: false
-      When runStory() runs
-      Then createMr() is never called
-      And the story transitions to "needs-human-review"
+    Scenario: Changes requested with structured findings
+      Given a JSON result with verdict "changes-requested" and two findings
+      When the senior-engineer parses the result
+      Then AgentResult.success is false
+      And AgentResult.artefacts.comments is an array of two strings
+      And each string contains the path, line, category, observed, and remediation
 
-    Scenario: Workflow order is implement then peer-review then MR
-      Given a normal story run with no failures
-      When runStory() completes
-      Then the step sequence recorded in state is: implement, peer-code-review, open-mr
-      And createMr() is called after the last seniorEngineer.run() invocation
+    Scenario: Unparsable result downgrades to success: false
+      Given seniorEngineer.run() returns a result whose text is not JSON
+      When the senior-engineer parses the result
+      Then AgentResult.success is false
+      And AgentResult.summary names the parse failure
     ```
 
 ---
 
-- [x] **[CREW-61-002] Add context-seeding step before implementation**
-  - **Status:** done | **Priority:** P0 | **Estimate:** 2
-  - **Epic:** CREW-61 | **Labels:** type:feature
-  - **Depends on:** —
-  - **Deliverable:** `crews/delivery-build/src/integrations/jira.ts` gains a
-    `getIssue(issueKey)` function that calls `/rest/api/3/issue/{issueKey}` and
-    returns a structured `{ summary, description, acceptanceCriteria }` object.
-    `workflow.ts` calls `getIssue(issueKey)` at the start of `runStory()` (after
-    the clarification step, CREW-62) and passes the result as `context.ticket`
-    in every `AgentInput` sent to `engineer.run()` (both `implement` and
-    `address-feedback` tasks). If `getIssue()` fails, a `warn`-level log is
-    emitted and the workflow continues with `context.ticket` set to `null`. The
-    `Step` type gains a `context-seed` step which is recorded in state before the
-    `getIssue()` call.
-  - **Acceptance (EARS):**
-    - WHEN `runStory()` begins, THE SYSTEM SHALL call `getIssue(issueKey)` and
-      pass the result as `context.ticket` to `engineer.run()` for the
-      `implement` task.
-    - WHEN `getIssue()` fails, THE SYSTEM SHALL log a `warn`-level message and
-      proceed with `context.ticket: null` rather than halting the workflow.
-    - THE SYSTEM SHALL pass `context.ticket` to every `engineer.run()` call in
-      the workflow (both `implement` and `address-feedback` tasks).
-  - **Acceptance (Gherkin):**
-
-    ```gherkin
-    Scenario: Ticket content is passed to engineer on implementation
-      Given a Jira issue "CREW-61-002" with description "Build the feature"
-      When runStory() starts
-      Then getIssue("CREW-61-002") is called before engineer.run() for implement
-      And the engineer's AgentInput.context.ticket contains the issue summary and description
-
-    Scenario: Ticket content is also passed on address-feedback
-      Given a peer review cycle that results in feedback
-      When engineer.run() is called for the address-feedback task
-      Then AgentInput.context.ticket is populated with the issue data
-
-    Scenario: Jira fetch failure does not halt workflow
-      Given getIssue() throws a network error
-      When runStory() starts
-      Then a warn-level log is emitted
-      And engineer.run() is still called with context.ticket as null
-    ```
-
----
-
-- [x] **[CREW-61-003] CI pipeline check and fix loop after MR open**
-  - **Status:** done | **Priority:** P0 | **Estimate:** 3
-  - **Epic:** CREW-61 | **Labels:** type:feature
-  - **Depends on:** CREW-61-001
-  - **Deliverable:** `crews/delivery-build/src/integrations/gitlab.ts` gains a
-    `getPipelineStatus(mrUrl)` function that calls
-    `GET /projects/{id}/merge_requests/{iid}/pipelines` and returns the latest
-    pipeline's `status` string (`created`, `pending`, `running`, `success`,
-    `failed`, `canceled`). `workflow.ts` enters a CI monitoring loop after
-    `createMr()`: it polls `getPipelineStatus()` every `CI_POLL_INTERVAL_MS`
-    (default 30 000 ms) until the status is `success` or `failed`. On `failed`,
-    it calls `engineer.run()` with `task: 'fix-ci'` and `context.ciFailure`
-    containing the pipeline status details. The loop is bounded by `CI_RETRY_CAP`
-    (default 3); on cap exceeded the workflow escalates. On `success` the loop
-    exits and the workflow proceeds to the In QA handoff. `CI_RETRY_CAP` and
-    `CI_POLL_INTERVAL_MS` are added to `.env.example`.
-  - **Acceptance (EARS):**
-    - WHEN an MR is opened, THE SYSTEM SHALL poll `getPipelineStatus(mrUrl)` to
-      check the CI pipeline status.
-    - WHEN the pipeline status is `success`, THE SYSTEM SHALL exit the CI loop
-      and proceed to the In QA handoff.
-    - WHEN the pipeline status is `failed`, THE SYSTEM SHALL call
-      `engineer.run()` with `task: 'fix-ci'` and pipeline failure details in
-      `context.ciFailure`.
-    - WHEN the number of CI fix attempts reaches `CI_RETRY_CAP`, THE SYSTEM
-      SHALL escalate to human review without attempting another fix.
-    - WHEN the pipeline status is `pending` or `running`, THE SYSTEM SHALL wait
-      `CI_POLL_INTERVAL_MS` before polling again.
-    - WHEN `CI_RETRY_CAP` is not set, THE SYSTEM SHALL default to `3`.
-    - WHEN `CI_POLL_INTERVAL_MS` is not set, THE SYSTEM SHALL default to
-      `30000`.
-  - **Acceptance (Gherkin):**
-
-    ```gherkin
-    Scenario: CI passes on first check
-      Given an MR whose latest pipeline has status "success"
-      When getPipelineStatus() is called
-      Then the CI loop exits with success
-      And the workflow proceeds to the In QA transition
-
-    Scenario: CI fails and engineer fixes within cap
-      Given CI_RETRY_CAP is 3
-      And the pipeline status is "failed" on first check then "success" after one fix
-      When the CI monitoring loop runs
-      Then engineer.run() is called once with task "fix-ci"
-      And the loop exits when the pipeline is green
-
-    Scenario: CI fix cap exceeded escalates workflow
-      Given CI_RETRY_CAP is 2
-      And the pipeline status is always "failed"
-      When the CI loop runs
-      Then engineer.run() is called exactly 2 times with task "fix-ci"
-      And the workflow escalates to human review without a further attempt
-
-    Scenario: Pending pipeline triggers a wait before next poll
-      Given the pipeline status is "running"
-      When getPipelineStatus() is called
-      Then the loop waits CI_POLL_INTERVAL_MS before polling again
-    ```
-
----
-
-- [x] **[CREW-61-004] Change handoff to "In QA" and document new env vars**
-  - **Status:** done | **Priority:** P0 | **Estimate:** 1
-  - **Epic:** CREW-61 | **Labels:** type:feature
-  - **Depends on:** CREW-61-003
-  - **Deliverable:** `workflow.ts` calls `transitionIssue(issueKey, "In QA")`
-    (replacing the former `"In Review"` call) after the CI pipeline passes. A
-    structured `info`-level log is emitted: `workflow.handoff-to-qa` with
-    `{ issueKey, mrUrl }`. The `Step` type replaces `in-review` with `in-qa`.
-    `crews/delivery-build/.env.example` and `README.md` updated to document
-    `CI_RETRY_CAP`, `CI_POLL_INTERVAL_MS`, `JIRA_PROJECT_KEY`,
-    `JIRA_ASSIGNEE_ACCOUNT_ID`, `POLL_INTERVAL_MS`, `PROJECT_DIR`, and
-    `ANTHROPIC_MODEL` with descriptions and defaults.
-  - **Acceptance (EARS):**
-    - WHEN the CI pipeline passes, THE SYSTEM SHALL call
-      `transitionIssue(issueKey, "In QA")`.
-    - WHEN the `In QA` transition succeeds, THE SYSTEM SHALL emit a
-      `workflow.handoff-to-qa` info log with `issueKey` and `mrUrl`.
-    - THE SYSTEM SHALL NOT call `transitionIssue(issueKey, "In Review")` during
-      a normal delivery-build workflow run.
-    - WHEN `.env.example` is read, THE SYSTEM SHALL document every env var
-      consumed by `crews/delivery-build`, including the new vars from CREW-60
-      and CREW-61.
-  - **Acceptance (Gherkin):**
-
-    ```gherkin
-    Scenario: Successful workflow transitions to In QA
-      Given a CI-green MR for issueKey "JIRA-123"
-      When the CI monitoring loop exits with success
-      Then transitionIssue("JIRA-123", "In QA") is called
-      And a workflow.handoff-to-qa info log is emitted with issueKey and mrUrl
-
-    Scenario: In Review transition is absent from normal flow
-      Given a story that completes the full workflow without escalation
-      When runStory() finishes
-      Then transitionIssue() is never called with the argument "In Review"
-
-    Scenario: .env.example documents all new env vars
-      Given crews/delivery-build/.env.example is read
-      When it is searched for CI_RETRY_CAP, CI_POLL_INTERVAL_MS, POLL_INTERVAL_MS,
-           JIRA_PROJECT_KEY, JIRA_ASSIGNEE_ACCOUNT_ID, PROJECT_DIR, and ANTHROPIC_MODEL
-      Then all seven are present with inline description comments
-    ```
-
----
-
-- [x] **[CREW-61-005] Wire sessionId into `state.startStep()` for agent steps**
-  - **Status:** done | **Priority:** P1 | **Estimate:** 1
-  - **Epic:** CREW-61 | **Labels:** type:correctness, review:#1
-  - **Depends on:** —
-  - **Deliverable:** `workflow.ts` passes the `sessionId` from
-    `AgentResult.artefacts["sessionId"]` as the third argument to
-    `state.startStep()` for the `implement` and `address-feedback` steps. For
-    non-agent steps (`open-mr`, `peer-code-review` as a step record, `in-qa`)
-    the `sessionId` argument is omitted. The `steps.session_id` column is
-    therefore populated for agent-executing steps, enabling crash recovery
-    (CREW-63-003) to resume interrupted runs. Unit tests assert the `sessionId`
-    argument is passed for agent steps and omitted for non-agent steps.
-  - **Acceptance (EARS):**
-    - WHEN `state.startStep()` is called for the `implement` step, THE SYSTEM
-      SHALL pass the engineer's `sessionId` from
-      `AgentResult.artefacts["sessionId"]`.
-    - WHEN `state.startStep()` is called for the `address-feedback` step,
-      THE SYSTEM SHALL pass the current engineer's `sessionId`.
-    - WHEN `state.startStep()` is called for a non-agent step, THE SYSTEM SHALL
-      omit the `sessionId` argument.
-  - **Acceptance (Gherkin):**
-
-    ```gherkin
-    Scenario: sessionId is stored for the implement step
-      Given engineer.run() returns an AgentResult with artefacts.sessionId "sess_abc"
-      When state.startStep() is called for the "implement" step
-      Then the sessionId argument "sess_abc" is passed to startStep
-
-    Scenario: sessionId is stored for the address-feedback step
-      Given engineer.run() for address-feedback returns artefacts.sessionId "sess_def"
-      When state.startStep() is called for the "address-feedback" step
-      Then the sessionId argument "sess_def" is passed to startStep
-
-    Scenario: Non-agent steps do not store sessionId
-      Given the workflow records the "open-mr" step
-      When state.startStep() is called for "open-mr"
-      Then no sessionId argument is passed
-    ```
-
----
-
-### CREW-62 -- Clarification HITL step
-
-**Scope.** Before transitioning a story to `In Progress`, the engineer assesses
-whether the ticket has enough information to proceed. If not, it posts structured
-questions to Jira, transitions to `Clarification Needed`, and halts. The poller
-recognises stories awaiting clarification and resumes them once a PM response
-is found, or escalates after `CLARIFICATION_TIMEOUT_HOURS`.
-
-**Key deliverables.** `workflow.ts` calls `engineer.run()` with
-`task: 'assess-clarification'` as the first step; `integrations/jira.ts` gains
-`getComments(issueKey)`; poller extended to check `clarification-pending`
-stories on each tick; `CLARIFICATION_TIMEOUT_HOURS` documented in `.env.example`.
-
-**Dependencies.** CREW-61 (workflow structure must be settled before wiring the
-clarification step into it).
-
-**Status.** Done. All stories complete.
-
----
-
-- [x] **[CREW-62-001] Engineer assesses ticket and posts clarifying questions**
-  - **Status:** Done | **Priority:** P1 | **Estimate:** 2
-  - **Epic:** CREW-62 | **Labels:** type:feature
-  - **Depends on:** CREW-61-002
-  - **Deliverable:** As the first action in `runStory()` (before the `In
-    Progress` transition), `workflow.ts` calls `engineer.run()` with
-    `task: 'assess-clarification'` and `context.ticket` populated from
-    `getIssue()`. The engineer returns an `AgentResult` where
-    `artefacts.questionsRequired` is `true` and `artefacts.questions` is a
-    non-empty string if clarification is needed, or `false` if the ticket is
-    clear. When `questionsRequired` is `true`, the workflow calls
-    `commentOnIssue(issueKey, questions)`, calls
-    `transitionIssue(issueKey, "Clarification Needed")`, records a
-    `clarification-pending` step in the state store (via `state.startStep` +
-    `state.finishStep`), and returns without proceeding to implementation. When
-    `questionsRequired` is `false`, the workflow continues to the `In Progress`
-    transition with no comment posted.
-  - **Acceptance (EARS):**
-    - [x] WHEN `runStory()` starts, THE SYSTEM SHALL call `engineer.run()` with
-      `task: 'assess-clarification'` before transitioning the ticket to
-      `In Progress`.
-    - [x] WHEN the engineer returns `artefacts.questionsRequired: true`, THE SYSTEM
-      SHALL post the questions as a Jira comment and transition to
-      `Clarification Needed`.
-    - [x] WHEN the engineer returns `artefacts.questionsRequired: false`,
-      THE SYSTEM SHALL proceed to the `In Progress` transition without posting
-      a comment.
-    - [x] WHEN clarification is needed, THE SYSTEM SHALL record a
-      `clarification-pending` step in the state store and return from
-      `runStory()` without calling `engineer.run()` for implementation.
-  - **Acceptance (Gherkin):**
-
-    ```gherkin
-    Scenario: Engineer determines no clarification is needed
-      Given a well-specified Jira ticket
-      And engineer.run() returns artefacts.questionsRequired: false
-      When runStory() starts
-      Then commentOnIssue() is not called
-      And transitionIssue() is called with "In Progress"
-      And the workflow continues to implementation
-
-    Scenario: Engineer posts clarifying questions
-      Given an ambiguous Jira ticket
-      And engineer.run() returns artefacts.questionsRequired: true
-      And artefacts.questions is "What is the expected error behaviour?"
-      When runStory() starts
-      Then commentOnIssue() is called with the questions text
-      And transitionIssue() is called with "Clarification Needed"
-      And a clarification-pending step is recorded in state
-      And runStory() returns without calling engineer.run() for implementation
-    ```
-
----
-
-- [x] **[CREW-62-002] Poller resumes clarification-pending stories**
-  - **Status:** Done | **Priority:** P1 | **Estimate:** 2
-  - **Epic:** CREW-62 | **Labels:** type:feature
-  - **Depends on:** CREW-62-001, CREW-60-001
-  - **Deliverable:** `integrations/jira.ts` gains a `getComments(issueKey)`
-    function that calls `/rest/api/3/issue/{issueKey}/comment` and returns
-    `Array<{ author: string; body: string; created: string }>`. The poller tick
-    in `index.ts` checks `state` for stories in `clarification-pending` step.
-    For each, it calls `getComments(issueKey)`, finds comments posted after the
-    `clarification-pending` step's `started_at` timestamp, and checks whether
-    any comment author is not the system bot (i.e., is a human response). If a
-    human response is found, it calls `runStory()` to resume from the
-    `In Progress` transition. If `CLARIFICATION_TIMEOUT_HOURS` (default 24)
-    have elapsed since `started_at` with no human response, the workflow
-    escalates to `Needs Human Review` with a timeout explanation.
-    `CLARIFICATION_TIMEOUT_HOURS` added to `.env.example`.
-  - **Acceptance (EARS):**
-    - [x] WHEN the poller runs and finds a story in `clarification-pending` step,
-      THE SYSTEM SHALL call `getComments(issueKey)` to check for a human
-      response posted after the clarification question.
-    - [x] WHEN a human response comment is found, THE SYSTEM SHALL resume the
-      workflow by calling `runStory()` for that issueKey.
-    - [x] WHEN no human response is found and `CLARIFICATION_TIMEOUT_HOURS` have
-      elapsed since `started_at`, THE SYSTEM SHALL escalate the story to
-      `Needs Human Review` with a timeout explanation comment.
-    - [x] WHEN `CLARIFICATION_TIMEOUT_HOURS` is not set, THE SYSTEM SHALL default
-      to `24`.
-  - **Acceptance (Gherkin):**
-
-    ```gherkin
-    Scenario: PM responds within timeout window
-      Given a story "CREW-62-001" in clarification-pending step
-      And a Jira comment from a human was posted after the clarification question
-      When the poller fires
-      Then runStory() is called to resume implementation for "CREW-62-001"
-
-    Scenario: Timeout reached with no PM response
-      Given a story "CREW-62-002" in clarification-pending step
-      And CLARIFICATION_TIMEOUT_HOURS is 24
-      And the clarification-pending step was recorded 25 hours ago
-      And no human comment exists after the question
-      When the poller fires
-      Then escalateToHumanReview() is called for "CREW-62-002"
-      And the escalation Jira comment mentions the clarification timeout
-
-    Scenario: Default timeout is 24 hours
-      Given CLARIFICATION_TIMEOUT_HOURS is not set
-      When the clarification timeout threshold is evaluated
-      Then the threshold is 86400000 milliseconds
-    ```
-
----
-
-### CREW-63 -- Correctness and reliability carry-forward
-
-**Scope.** Nine correctness and reliability fixes from the 2026-05-04 solution
-review that must be resolved before the system runs safely unattended. These are
-independent of the new flow epics and can proceed in parallel.
-
-**Key deliverables.** Startup env validation; auth header moved inside
-`jiraFetch()`; crash recovery scan on startup; pinned MCP versions; single
-SQLite connection; correct `finishStep()` WHERE clause; `createMr()` idempotency
-guard; per-issueKey in-flight lock; `getMrDiff()` size cap.
-
-**Dependencies.** None (all stories are independently mergeable).
-
-**Status.** In progress.
-
----
-
-- [x] **[CREW-63-001] Startup env var validation**
-  - **Status:** Done | **Priority:** P1 | **Estimate:** 1
-  - **Epic:** CREW-63 | **Labels:** review:#7, type:reliability
-  - **Depends on:** —
-  - **Deliverable:** `crews/delivery-build/src/index.ts` checks all required env
-    vars before the Hono server starts: `ANTHROPIC_API_KEY`,
-    `ATLASSIAN_BASE_URL`, `ATLASSIAN_EMAIL`, `ATLASSIAN_API_TOKEN`,
-    `GITLAB_PERSONAL_ACCESS_TOKEN`, `GITLAB_API_URL`, `GITLAB_PROJECT_ID`,
-    `JIRA_WEBHOOK_SECRET`, `GITLAB_WEBHOOK_SECRET`, `JIRA_PROJECT_KEY`,
-    `JIRA_ASSIGNEE_ACCOUNT_ID`. If any are absent, logs the missing keys at
-    `error` level and calls `process.exit(1)` before the server binds.
-  - **Acceptance (EARS):**
-    - WHEN the server starts and one or more required env vars are absent,
-      THE SYSTEM SHALL log the names of all missing vars at `error` level and
-      exit with code 1 before accepting any requests.
-    - WHEN all required env vars are present, THE SYSTEM SHALL start normally
-      without an error-level env validation log.
-  - **Acceptance (Gherkin):**
-
-    ```gherkin
-    Scenario: Missing env var causes immediate exit
-      Given ANTHROPIC_API_KEY is not set
-      When the delivery agent starts
-      Then a structured error log lists "ANTHROPIC_API_KEY" as missing
-      And the process exits with code 1 before the server binds
-
-    Scenario: All env vars present -- server starts normally
-      Given all required env vars are set to non-empty values
-      When the delivery agent starts
-      Then no error-level env validation log is emitted
-      And the server binds and accepts requests
-    ```
-
----
-
-- [x] **[CREW-63-002] Move Jira auth header construction inside `jiraFetch()`**
-  - **Status:** Done | **Priority:** P1 | **Estimate:** 1
-  - **Epic:** CREW-63 | **Labels:** review:#17, type:reliability
-  - **Depends on:** CREW-63-001
-  - **Deliverable:** `crews/delivery-build/src/integrations/jira.ts` constant
-    `authHeader` moved from module-level scope into the `jiraFetch()` function
-    body. The Base64 encoding of credentials is no longer evaluated at import
-    time before env validation runs.
-  - **Acceptance (EARS):**
-    - WHEN `integrations/jira.ts` is imported, THE SYSTEM SHALL NOT evaluate
-      `Buffer.from(...).toString("base64")` using env vars at module-load time.
-    - WHEN `jiraFetch()` is called, THE SYSTEM SHALL construct the
-      `Authorization` header from the current values of `ATLASSIAN_EMAIL` and
-      `ATLASSIAN_API_TOKEN` at call time.
-  - **Acceptance (Gherkin):**
-
-    ```gherkin
-    Scenario: Auth header is not evaluated at module load time
-      Given jira.ts is imported before env vars are validated
-      When the jira.ts module is evaluated
-      Then no Buffer.from credential encoding occurs at module scope
-
-    Scenario: jiraFetch constructs the header at call time
-      Given ATLASSIAN_EMAIL and ATLASSIAN_API_TOKEN are set
-      When jiraFetch() is called
-      Then the Authorization header encodes the current values of those env vars
-    ```
-
----
-
-- [x] **[CREW-63-003] Crash recovery: resume interrupted steps on startup**
-  - **Status:** Done | **Priority:** P1 | **Estimate:** 2
-  - **Epic:** CREW-63 | **Labels:** review:#8, type:reliability
-  - **Depends on:** CREW-61-005
-  - **Deliverable:** `crews/delivery-build/src/index.ts` on startup calls a new
-    `recoverInterruptedSteps(state)` function that queries the `steps` table for
-    rows where `finished_at IS NULL` and `session_id IS NOT NULL`. For each such
-    row, it calls `unstable_v2_resumeSession(sessionId)` from
-    `@anthropic-ai/claude-agent-sdk` to reconnect to the interrupted SDK
-    session, then calls `runStory({ issueKey, state })` to resume the workflow.
-    On resumption failure, it logs a `warn`-level message and calls
-    `escalateToHumanReview()`. The recovery scan runs before the HTTP server
-    starts accepting requests and before the poller interval is set up.
-  - **Acceptance (EARS):**
-    - WHEN the server starts and the `steps` table contains rows with
-      `finished_at IS NULL AND session_id IS NOT NULL`, THE SYSTEM SHALL
-      attempt to resume each interrupted step via `unstable_v2_resumeSession`.
-    - WHEN the server starts and no interrupted steps exist, THE SYSTEM SHALL
-      complete the scan without a `warn` or `error` log.
-    - WHEN the recovery scan successfully reconnects a session, THE SYSTEM SHALL
-      log at `info` level the `issueKey`, `step`, and `sessionId`.
-    - WHEN `unstable_v2_resumeSession` fails for a recovered row, THE SYSTEM
-      SHALL log a `warn`-level message and escalate that story to human review.
-  - **Acceptance (Gherkin):**
-
-    ```gherkin
-    Scenario: Interrupted step is resumed on startup
-      Given a steps row for "CREW-63-001" with step "implement", finished_at null, session_id "sess_abc"
-      When the delivery agent restarts
-      Then unstable_v2_resumeSession("sess_abc") is called
-      And an info log is emitted with issueKey "CREW-63-001" and session_id "sess_abc"
-
-    Scenario: No interrupted steps -- scan exits silently
-      Given the steps table has no rows with finished_at null
-      When the delivery agent starts
-      Then the recovery scan completes without any warn or error log
-
-    Scenario: Session resumption failure escalates to human review
-      Given a steps row with session_id "sess_gone"
-      And unstable_v2_resumeSession("sess_gone") throws an error
-      When the recovery scan runs
-      Then a warn-level log is emitted
-      And the story is transitioned to "Needs Human Review"
-    ```
-
----
-
-- [ ] **[CREW-63-004] Pin MCP server versions in `mcp.json`**
+- [ ] **[CREW-66-003] Pin MCP server versions in `mcp.json`**
   - **Status:** Not started | **Priority:** P1 | **Estimate:** 1
-  - **Epic:** CREW-63 | **Labels:** review:#9, type:reliability
+  - **Epic:** CREW-66 | **Labels:** review:#9, type:reliability
   - **Depends on:** —
-  - **Deliverable:** `crews/delivery-build/mcp.json` updated so
-    `@anthropic-ai/mcp-server-atlassian` and `@anthropic-ai/mcp-server-gitlab`
-    are referenced with explicit version strings (e.g.
-    `@anthropic-ai/mcp-server-gitlab@1.2.3`). `npx -y` no longer downloads the
-    latest version on every agent invocation.
+  - **Deliverable:** `crews/delivery-build/mcp.json` updated so each MCP
+    server package is referenced with an explicit version specifier
+    (e.g. `@anthropic-ai/mcp-server-gitlab@1.2.3`). `npx -y` no longer
+    downloads the latest version on every agent invocation, eliminating
+    version drift mid-flight and trimming agent cold-start time. A test under
+    `crews/delivery-build/tests/mcp-config.test.ts` parses `mcp.json`,
+    iterates the configured servers, and asserts every package args entry
+    contains an `@x.y.z` segment.
   - **Acceptance (EARS):**
     - WHEN `mcp.json` is read, THE SYSTEM SHALL reference each MCP server
-      package with an explicit version string.
-    - WHEN a new version of either package is published, THE SYSTEM SHALL NOT
-      automatically upgrade unless the version string in `mcp.json` is
-      explicitly updated.
+      package with an explicit version specifier of the form
+      `<package>@<semver>`.
+    - WHEN a new version of either package is published, THE SYSTEM SHALL
+      NOT automatically upgrade unless the version specifier in `mcp.json`
+      is explicitly updated.
+    - WHEN the new test suite runs, THE SYSTEM SHALL fail if any
+      `args` entry references an MCP package without a version specifier.
   - **Acceptance (Gherkin):**
 
     ```gherkin
@@ -755,114 +253,47 @@ guard; per-issueKey in-flight lock; `getMrDiff()` size cap.
       When the args array for mcp-server-gitlab is inspected
       Then the package name includes a version specifier (e.g. @1.2.3)
 
-    Scenario: Unpinned package name is absent
-      Given mcp.json is read
-      When it is checked for unversioned package references
-      Then no entry reads "@anthropic-ai/mcp-server-gitlab" without a version
+    Scenario: Test suite catches an unpinned package
+      Given mcp.json is edited to remove the version pin from atlassian
+      When the mcp-config test runs
+      Then it fails with a message naming the unpinned package
     ```
 
 ---
 
-- [x] **[CREW-63-005] Consolidate dual SQLite connections**
-  - **Status:** Done | **Priority:** P1 | **Estimate:** 2
-  - **Epic:** CREW-63 | **Labels:** review:#5, type:reliability
-  - **Depends on:** —
-  - **Deliverable:** `crews/delivery-build/src/idempotency.ts`
-    `getIdempotency()` no longer opens a second `DatabaseSync` connection to
-    `DB_PATH`. Instead the `db` instance from `createStateStore()` is passed
-    into `createIdempotencyStore()` (or the idempotency logic is merged into the
-    state store). At runtime there is exactly one `DatabaseSync` connection to
-    `DB_PATH` and the `webhook_events` table is created once.
-  - **Acceptance (EARS):**
-    - WHEN the delivery agent starts, THE SYSTEM SHALL open exactly one
-      `DatabaseSync` connection to `DB_PATH`.
-    - WHEN both the state store and idempotency store are initialised,
-      THE SYSTEM SHALL share the same underlying `DatabaseSync` instance.
-    - WHEN the `webhook_events` table schema runs, THE SYSTEM SHALL execute the
-      `CREATE TABLE IF NOT EXISTS webhook_events` statement exactly once.
-  - **Acceptance (Gherkin):**
-
-    ```gherkin
-    Scenario: Only one database connection is opened
-      Given DB_PATH is set to a valid file path
-      When the delivery agent initialises both the state store and idempotency store
-      Then only one DatabaseSync connection to DB_PATH is created
-
-    Scenario: webhook_events table is created once
-      Given the shared connection is used for both state and idempotency
-      When the schema runs
-      Then CREATE TABLE IF NOT EXISTS webhook_events executes exactly once
-    ```
-
----
-
-- [x] **[CREW-63-006] Fix `finishStep()` to filter on `step` column**
-  - **Status:** Done | **Priority:** P1 | **Estimate:** 1
-  - **Epic:** CREW-63 | **Labels:** review:#6, type:correctness
-  - **Depends on:** —
-  - **Deliverable:** `crews/delivery-build/src/state.ts` `finishStepStmt` SQL
-    updated from
-    `WHERE issue_key = ? AND finished_at IS NULL ORDER BY started_at DESC LIMIT 1`
-    to `WHERE issue_key = ? AND step = ? AND finished_at IS NULL`. `finishStep()`
-    passes `step` as the second bind parameter. The `void step` comment is
-    removed. A unit test covering the two-step replay scenario confirms the
-    correct row is updated.
-  - **Acceptance (EARS):**
-    - WHEN `finishStep(issueKey, step, result)` is called, THE SYSTEM SHALL
-      update the `steps` row matching both `issue_key = issueKey` AND
-      `step = step` with `finished_at IS NULL`.
-    - WHEN two steps for the same `issueKey` are both unfinished, THE SYSTEM
-      SHALL update the correct row as specified by the `step` argument.
-    - THE SYSTEM SHALL NOT silently discard the `step` argument.
-  - **Acceptance (Gherkin):**
-
-    ```gherkin
-    Scenario: finishStep updates the correct row
-      Given steps rows for "CREW-63" with step "implement" (unfinished) and "peer-code-review" (unfinished)
-      When finishStep("CREW-63", "peer-code-review", { verdict: "approved" }) is called
-      Then the "peer-code-review" row has finished_at set
-      And the "implement" row still has finished_at null
-
-    Scenario: step argument is not discarded
-      Given a finishStep call with step "implement"
-      When the UPDATE statement executes
-      Then the WHERE clause includes step = "implement"
-    ```
-
----
-
-- [ ] **[CREW-63-007] Add idempotency guard to `createMr()`**
+- [ ] **[CREW-66-004] Add idempotency guard to `createMr()`**
   - **Status:** Not started | **Priority:** P1 | **Estimate:** 3
-  - **Epic:** CREW-63 | **Labels:** review:#10, type:correctness
+  - **Epic:** CREW-66 | **Labels:** review:#10, type:correctness
   - **Depends on:** —
-  - **Deliverable:** `crews/delivery-build/src/integrations/gitlab.ts`
-    `createMr()` calls
+  - **Deliverable:**
+    `crews/delivery-build/src/integrations/gitlab.ts` `createMr()` calls
     `GET /projects/{id}/merge_requests?source_branch={branchName}&state=opened`
-    before `POST /merge_requests`. If an open MR already exists for the branch,
-    the function returns the existing MR's `web_url` without creating a
-    duplicate. Unit tests cover the existing-MR path and the no-existing-MR
-    path.
+    before `POST /merge_requests`. If an open MR already exists for the
+    branch, the function returns the existing MR's `web_url` without issuing
+    a duplicate POST. A `GET` failure is propagated to the caller rather
+    than swallowed. Unit tests cover the existing-MR, no-existing-MR, and
+    `GET`-failure paths.
   - **Acceptance (EARS):**
     - WHEN `createMr()` is called and an open MR already exists for
-      `branchName`, THE SYSTEM SHALL return the existing MR's `web_url` without
-      issuing a `POST /merge_requests` request.
+      `branchName`, THE SYSTEM SHALL return the existing MR's `web_url`
+      without issuing a `POST /merge_requests` request.
     - WHEN `createMr()` is called and no open MR exists for `branchName`,
-      THE SYSTEM SHALL proceed with `POST /merge_requests` and return the new
-      MR's `web_url`.
-    - WHEN the `GET /merge_requests` lookup fails, THE SYSTEM SHALL propagate
-      the error rather than silently creating a duplicate MR.
+      THE SYSTEM SHALL proceed with `POST /merge_requests` and return the
+      new MR's `web_url`.
+    - WHEN the `GET /merge_requests` lookup fails, THE SYSTEM SHALL
+      propagate the error rather than silently creating a duplicate MR.
   - **Acceptance (Gherkin):**
 
     ```gherkin
     Scenario: Existing MR is returned without duplicate POST
-      Given an open MR exists for branch "feat/CREW-63-007"
+      Given an open MR exists for branch "feature/CREW-66-004"
       When createMr() is called with that branchName
-      Then GET /merge_requests?source_branch=feat/CREW-63-007 is called
+      Then GET /merge_requests?source_branch=feature/CREW-66-004 is called
       And no POST /merge_requests request is issued
       And the existing MR's web_url is returned
 
     Scenario: No existing MR -- new MR is created
-      Given no open MR exists for branch "feat/CREW-63-007"
+      Given no open MR exists for branch "feature/CREW-66-004"
       When createMr() is called
       Then the GET lookup returns an empty list
       And POST /merge_requests is issued
@@ -871,74 +302,84 @@ guard; per-issueKey in-flight lock; `getMrDiff()` size cap.
     Scenario: GET lookup failure propagates as error
       Given the GitLab API returns 500 for the GET lookup
       When createMr() is called
-      Then the error is propagated to the caller
+      Then a GitLabApiError is thrown
       And no POST /merge_requests is issued
     ```
 
 ---
 
-- [ ] **[CREW-63-008] Per-issueKey in-flight lock**
-  - **Status:** In progress | **Priority:** P1 | **Estimate:** 3
-  - **Epic:** CREW-63 | **Labels:** review:#20, type:reliability
+- [ ] **[CREW-66-005] Webhook handlers return 429 when issueKey is in flight**
+  - **Status:** Not started | **Priority:** P1 | **Estimate:** 3
+  - **Epic:** CREW-66 | **Labels:** review:#20, type:reliability
   - **Depends on:** —
-  - **Deliverable:** `crews/delivery-build/src/workflow.ts` exports an
-    in-memory `Map<string, boolean>` named `inFlightLocks`. `runStory()` sets
-    `inFlightLocks.set(issueKey, true)` before the workflow starts and deletes
-    the key in a `finally` block when it completes or throws. The webhook
-    handlers and poller check `inFlightLocks.has(issueKey)` before calling
-    `runStory()`; if locked, the webhook handler returns `HTTP 429` with body
-    `{ error: "workflow-in-flight", issueKey }` and the poller skips the story
-    (as per CREW-60-002). Unit tests cover the lock-set, lock-release, and
-    duplicate-trigger paths.
+  - **Deliverable:** The poller already maintains an in-process
+    `inFlight: Set<string>` in `crews/delivery-build/src/poller.ts`. Move
+    that lock into a shared module (`crews/delivery-build/src/in-flight.ts`)
+    that exports `acquire(issueKey)`, `release(issueKey)`, and
+    `has(issueKey)`. Update `poller.ts` to use the shared module, and update
+    `handlers/jira.ts` and `handlers/gitlab.ts` to check `has(issueKey)`
+    before dispatching the workflow. When the lock is held, the handler
+    returns `HTTP 429` with body
+    `{ error: "workflow-in-flight", issueKey }`. Each handler that does
+    dispatch the workflow calls `acquire()` before the `setImmediate`
+    callback and `release()` in the workflow's `finally` block (lift the
+    `acquire/release` pattern out of `pollTick` into a shared
+    `runStoryWithLock` wrapper). Unit tests cover the lock-held, lock-free,
+    and workflow-completion-releases-lock paths for both webhook handlers.
   - **Acceptance (EARS):**
-    - [ ] WHEN a webhook event arrives for an `issueKey` that already has an
+    - WHEN a webhook event arrives for an `issueKey` that already has an
       in-flight workflow, THE SYSTEM SHALL return HTTP 429 with body
-      `{ error: "workflow-in-flight", issueKey }`. -- not implemented: webhook
-      handlers do not check `inFlight` and do not return 429
+      `{ error: "workflow-in-flight", issueKey }`.
     - WHEN a webhook event arrives for an `issueKey` with no in-flight
-      workflow, THE SYSTEM SHALL process the event normally.
-    - THE SYSTEM SHALL release the in-flight lock for an `issueKey` when its
-      workflow completes or fails. -- met by poller's `inFlight` Set
+      workflow, THE SYSTEM SHALL acquire the lock and dispatch the workflow.
+    - WHEN a workflow completes or throws, THE SYSTEM SHALL release the
+      in-flight lock for its `issueKey`.
+    - THE SYSTEM SHALL share a single `inFlight` set between the poller and
+      the webhook handlers within a single process.
   - **Acceptance (Gherkin):**
 
     ```gherkin
-    Scenario: Duplicate webhook for in-flight story is rate limited
-      Given a workflow is in flight for issueKey "CREW-63-008"
-      When a second webhook event arrives for the same issueKey
-      Then HTTP 429 is returned with body { error: "workflow-in-flight", issueKey: "CREW-63-008" }
+    Scenario: Duplicate Jira webhook for in-flight story is rate limited
+      Given a workflow is in flight for issueKey "CREW-66-005"
+      When a Jira "Ready for Dev" event arrives for the same issueKey
+      Then HTTP 429 is returned with body { error: "workflow-in-flight", issueKey: "CREW-66-005" }
 
-    Scenario: Webhook for idle story is processed normally
-      Given no workflow is in flight for issueKey "CREW-63-009"
-      When a webhook event arrives for "CREW-63-009"
-      Then the event is processed and HTTP 200 is returned
+    Scenario: GitLab note webhook respects the same lock
+      Given a workflow is in flight for issueKey "CREW-66-006"
+      When a GitLab note webhook arrives for the same issueKey
+      Then HTTP 429 is returned with body { error: "workflow-in-flight", issueKey: "CREW-66-006" }
 
     Scenario: Lock is released after workflow completion
-      Given a workflow for "CREW-63-008" completes
-      When a new webhook event arrives for "CREW-63-008"
+      Given a workflow for "CREW-66-007" completes successfully
+      When a new webhook event arrives for "CREW-66-007"
       Then HTTP 200 is returned and the workflow starts
     ```
 
 ---
 
-- [ ] **[CREW-63-009] Cap `getMrDiff()` by file count and byte size**
+- [ ] **[CREW-66-006] Cap `getMrDiff()` by file count and byte size**
   - **Status:** Not started | **Priority:** P1 | **Estimate:** 3
-  - **Epic:** CREW-63 | **Labels:** review:#25, type:reliability
+  - **Epic:** CREW-66 | **Labels:** review:#25, type:reliability
   - **Depends on:** —
-  - **Deliverable:** `crews/delivery-build/src/integrations/gitlab.ts`
-    `getMrDiff()` truncates the response to `DIFF_FILE_CAP` files (default 50)
-    and `DIFF_SIZE_CAP_BYTES` bytes (default 500 000). When the file cap is
-    exceeded, the first `DIFF_FILE_CAP` files are retained and a note
-    `"[N files omitted — diff truncated at DIFF_FILE_CAP]"` is appended. When
-    the byte cap is exceeded, the diff is truncated and a note appended. Both
-    caps are configurable via env vars and documented in `.env.example`.
+  - **Deliverable:**
+    `crews/delivery-build/src/integrations/gitlab.ts` `getMrDiff()` truncates
+    its return value to `DIFF_FILE_CAP` files (default 50) and
+    `DIFF_SIZE_CAP_BYTES` bytes (default 500 000). When the file cap is
+    exceeded, the first `DIFF_FILE_CAP` files are kept and a trailing note
+    `"[N files omitted — diff truncated at DIFF_FILE_CAP]"` is appended.
+    When the byte cap is exceeded, the diff is truncated to the cap and a
+    `"[diff truncated at DIFF_SIZE_CAP_BYTES bytes]"` note is appended.
+    Both caps are added to the `behaviour` block of the `Config` schema in
+    `config.ts`, mapped to the env vars `DIFF_FILE_CAP` and
+    `DIFF_SIZE_CAP_BYTES`, and documented in `.env.example` and `README.md`.
   - **Acceptance (EARS):**
-    - WHEN `getMrDiff()` returns more than `DIFF_FILE_CAP` files, THE SYSTEM
-      SHALL truncate to the first `DIFF_FILE_CAP` files and append a note
-      indicating how many files were omitted.
-    - WHEN the total diff size exceeds `DIFF_SIZE_CAP_BYTES`, THE SYSTEM SHALL
-      truncate the diff and append a note indicating truncation.
-    - WHEN the diff is within both caps, THE SYSTEM SHALL return the full diff
-      without modification.
+    - WHEN `getMrDiff()` would return more than `DIFF_FILE_CAP` files,
+      THE SYSTEM SHALL truncate to the first `DIFF_FILE_CAP` files and
+      append a note indicating how many files were omitted.
+    - WHEN the assembled diff exceeds `DIFF_SIZE_CAP_BYTES`, THE SYSTEM
+      SHALL truncate the string to the cap and append a truncation note.
+    - WHEN the diff is within both caps, THE SYSTEM SHALL return the full
+      diff without modification.
     - WHEN `DIFF_FILE_CAP` is not set, THE SYSTEM SHALL default to `50`.
     - WHEN `DIFF_SIZE_CAP_BYTES` is not set, THE SYSTEM SHALL default to
       `500000`.
@@ -959,195 +400,36 @@ guard; per-issueKey in-flight lock; `getMrDiff()` size cap.
     Scenario: Diff exceeding byte cap is truncated
       Given a MR diff that exceeds DIFF_SIZE_CAP_BYTES
       When getMrDiff() is called
-      Then the returned string is within the byte cap
+      Then the returned string length is at most DIFF_SIZE_CAP_BYTES plus the note
       And a truncation note is appended
     ```
 
 ---
 
-### CREW-64 -- CI/deploy and code quality
-
-**Scope.** Seven low-effort improvements that make the codebase safe to
-contribute to and deploy from. These do not affect the runtime delivery flow but
-are needed for sustainable development. All stories are independent.
-
-**Key deliverables.** `corepack enable` in Dockerfile; GitHub Actions CI
-workflow; explicit lockfile COPY; env var documentation; test mock cleanup;
-`extractMrIid()` validation; loop bound comment.
-
-**Dependencies.** None (all stories are independently mergeable).
-
-**Status.** Not started.
-
----
-
-- [ ] **[CREW-64-001] Fix `delivery-review` Dockerfile to use `corepack enable`**
+- [ ] **[CREW-66-007] Validate `extractMrIid()` URL project path**
   - **Status:** Not started | **Priority:** P2 | **Estimate:** 1
-  - **Epic:** CREW-64 | **Labels:** review:#3, type:infrastructure
+  - **Epic:** CREW-66 | **Labels:** review:#18, type:correctness
   - **Depends on:** —
-  - **Deliverable:** `crews/delivery-review/Dockerfile` (if it exists) and any
-    Dockerfile in the repo that uses `RUN npm install -g pnpm@9` updated to
-    `RUN corepack enable`, so the pnpm version declared in `packageManager` in
-    `package.json` is used. `pnpm install --frozen-lockfile` completes without a
-    lockfile format mismatch error.
+  - **Deliverable:**
+    `crews/delivery-build/src/integrations/gitlab.ts` `extractMrIid()` parses
+    the project path segment from the URL (everything between the host and
+    `/-/merge_requests/`) and asserts it matches the URL-decoded
+    `GITLAB_PROJECT_ID` (or its numeric form). On mismatch the function
+    throws a typed `GitLabUrlError` rather than silently returning an IID
+    from the wrong project. A new `GitLabUrlError extends Error` is exported
+    from `gitlab.ts`. Unit tests cover the matching path, the mismatch path,
+    and the missing-`/merge_requests/` path.
   - **Acceptance (EARS):**
-    - WHEN a Docker image is built for any crew, THE SYSTEM SHALL use
-      `corepack enable` rather than `npm install -g pnpm@N` to activate pnpm.
-    - WHEN `pnpm install --frozen-lockfile` runs inside the built image,
-      THE SYSTEM SHALL complete without a lockfile format version mismatch.
-  - **Acceptance (Gherkin):**
-
-    ```gherkin
-    Scenario: Dockerfile uses corepack enable
-      Given any Dockerfile in the crews/ directory
-      When the RUN instruction for pnpm activation is inspected
-      Then it reads "RUN corepack enable" and not "npm install -g pnpm"
-    ```
-
----
-
-- [ ] **[CREW-64-002] Add GitHub Actions CI pipeline**
-  - **Status:** Not started | **Priority:** P2 | **Estimate:** 3
-  - **Epic:** CREW-64 | **Labels:** review:#4, type:infrastructure
-  - **Depends on:** —
-  - **Deliverable:** `.github/workflows/ci.yml` that triggers on `push` and
-    `pull_request` to `main`; runs `pnpm install --frozen-lockfile`, `pnpm
-    lint`, `pnpm typecheck`, and `pnpm test`; fails the workflow if any command
-    exits non-zero; Node.js version pinned to match the repo's `.nvmrc` or
-    `engines` field; pnpm activated via `corepack enable`; `~/.pnpm-store`
-    cached keyed on `pnpm-lock.yaml` hash.
-  - **Acceptance (EARS):**
-    - WHEN a commit is pushed to `main` or a pull request targets `main`,
-      THE SYSTEM SHALL trigger the CI workflow.
-    - WHEN `pnpm lint`, `pnpm typecheck`, or `pnpm test` exits non-zero,
-      THE SYSTEM SHALL fail the CI workflow and report the errors.
-    - WHEN all three commands exit zero, THE SYSTEM SHALL mark the workflow as
-      passed.
-    - THE SYSTEM SHALL cache the pnpm store between runs keyed on
-      `pnpm-lock.yaml`.
-  - **Acceptance (Gherkin):**
-
-    ```gherkin
-    Scenario: Clean codebase passes CI
-      Given a commit with no lint, type, or test errors
-      When the CI workflow runs
-      Then all steps exit zero and the workflow is marked as passed
-
-    Scenario: Dependency boundary violation fails CI
-      Given a commit where packages/crew imports from crews/delivery-build
-      When pnpm lint runs
-      Then dependency-cruiser reports a boundary violation and CI fails
-
-    Scenario: pnpm store is cached between runs
-      Given a prior CI run has populated the pnpm store cache
-      When a subsequent run restores the cache
-      Then pnpm install skips redownloading already-cached packages
-    ```
-
----
-
-- [ ] **[CREW-64-003] Fix Dockerfile lockfile `COPY` from glob to explicit**
-  - **Status:** Not started | **Priority:** P2 | **Estimate:** 1
-  - **Epic:** CREW-64 | **Labels:** review:#22, type:infrastructure
-  - **Depends on:** —
-  - **Deliverable:** Every `Dockerfile` in the repo changed from
-    `COPY pnpm-lock.yaml* ./` to `COPY pnpm-lock.yaml ./` (removing the
-    optional glob suffix). The intent is explicit and a missing lockfile will
-    error loudly at the `COPY` step rather than silently proceeding.
-  - **Acceptance (EARS):**
-    - WHEN any Dockerfile is evaluated, THE SYSTEM SHALL use
-      `COPY pnpm-lock.yaml ./` without an optional glob suffix.
-    - WHEN `pnpm-lock.yaml` is absent during a Docker build, THE SYSTEM SHALL
-      fail at the `COPY` step rather than silently proceeding.
-  - **Acceptance (Gherkin):**
-
-    ```gherkin
-    Scenario: Lockfile is copied explicitly
-      Given all Dockerfiles in the repo
-      When the COPY instruction for the lockfile is inspected
-      Then each reads "COPY pnpm-lock.yaml ./" without a wildcard suffix
-    ```
-
----
-
-- [ ] **[CREW-64-004] Document `PROJECT_DIR` and `ANTHROPIC_MODEL` env vars**
-  - **Status:** Not started | **Priority:** P2 | **Estimate:** 1
-  - **Epic:** CREW-64 | **Labels:** type:docs
-  - **Depends on:** CREW-61-004
-  - **Deliverable:** `crews/delivery-build/.env.example` updated to include
-    `PROJECT_DIR` (used by `workflow.ts` for memory seeding; defaults to
-    `process.cwd()`) and `ANTHROPIC_MODEL` (optional override for the Claude
-    model used by both personas; defaults to `claude-opus-4-5`), each with an
-    inline description comment. `README.md` environment variable table also
-    updated with these two entries. (CREW-61-004 adds the polling and CI vars;
-    this story covers only the two gaps from the CREW-50 validation.)
-  - **Acceptance (EARS):**
-    - WHEN `crews/delivery-build/.env.example` is read, THE SYSTEM SHALL list
-      `PROJECT_DIR` and `ANTHROPIC_MODEL` with description comments.
-    - WHEN `crews/delivery-build/README.md` is read, THE SYSTEM SHALL document
-      `PROJECT_DIR` and `ANTHROPIC_MODEL` in the environment variable table.
-  - **Acceptance (Gherkin):**
-
-    ```gherkin
-    Scenario: .env.example includes PROJECT_DIR and ANTHROPIC_MODEL
-      Given crews/delivery-build/.env.example is read
-      When it is searched for PROJECT_DIR and ANTHROPIC_MODEL
-      Then both are present with non-empty description comments
-
-    Scenario: README table includes both vars
-      Given crews/delivery-build/README.md is read
-      When the environment variables table is inspected
-      Then PROJECT_DIR and ANTHROPIC_MODEL appear as rows with descriptions
-    ```
-
----
-
-- [ ] **[CREW-64-005] Remove spurious `db` property from test mock helpers**
-  - **Status:** Not started | **Priority:** P2 | **Estimate:** 1
-  - **Epic:** CREW-64 | **Labels:** review:#13, type:test
-  - **Depends on:** —
-  - **Deliverable:** `crews/delivery-build/tests/workflow.test.ts` and
-    `crews/delivery-build/tests/handlers.jira.test.ts` `makeState()` helpers
-    have `db: {} as never` removed. `pnpm typecheck` passes with no
-    excess-property errors on the state mock literal.
-  - **Acceptance (EARS):**
-    - WHEN `makeState()` is called in test helpers, THE SYSTEM SHALL return an
-      object whose properties are a subset of the `StateStore` interface with no
-      excess properties.
-    - WHEN `pnpm typecheck` runs, THE SYSTEM SHALL report zero TypeScript errors
-      related to `db` in test mock objects.
-  - **Acceptance (Gherkin):**
-
-    ```gherkin
-    Scenario: makeState() has no excess db property
-      Given workflow.test.ts and handlers.jira.test.ts
-      When the makeState() objects are inspected
-      Then neither contains a "db" property
-
-    Scenario: pnpm typecheck passes after removal
-      Given db: {} as never is removed from both test files
-      When pnpm typecheck runs
-      Then no TypeScript errors related to the mock objects are reported
-    ```
-
----
-
-- [ ] **[CREW-64-006] Fix `extractMrIid()` URL validation**
-  - **Status:** Not started | **Priority:** P2 | **Estimate:** 2
-  - **Epic:** CREW-64 | **Labels:** review:#18, type:correctness
-  - **Depends on:** —
-  - **Deliverable:** `crews/delivery-build/src/integrations/gitlab.ts`
-    `extractMrIid()` validates that the extracted project path (from the URL)
-    matches `GITLAB_PROJECT_ID` before returning the IID. If there is a
-    mismatch, the function throws a typed `GitLabUrlError` rather than silently
-    returning a wrong IID. Unit tests cover the valid path and the mismatch
-    path.
-  - **Acceptance (EARS):**
-    - WHEN `extractMrIid()` is called with a URL whose project path does not
-      match `GITLAB_PROJECT_ID`, THE SYSTEM SHALL throw a typed error rather
-      than returning an IID from the wrong project.
-    - WHEN `extractMrIid()` is called with a valid URL matching
-      `GITLAB_PROJECT_ID`, THE SYSTEM SHALL return the correct numeric IID.
+    - WHEN `extractMrIid()` is called with a URL whose project path matches
+      `GITLAB_PROJECT_ID`, THE SYSTEM SHALL return the numeric IID as a
+      string.
+    - WHEN `extractMrIid()` is called with a URL whose project path does
+      not match `GITLAB_PROJECT_ID`, THE SYSTEM SHALL throw
+      `GitLabUrlError` with a message naming both the expected and received
+      project paths.
+    - WHEN `extractMrIid()` is called with a URL that contains no
+      `/merge_requests/{n}` segment, THE SYSTEM SHALL throw
+      `GitLabUrlError`.
   - **Acceptance (Gherkin):**
 
     ```gherkin
@@ -1155,41 +437,296 @@ workflow; explicit lockfile COPY; env var documentation; test mock cleanup;
       Given GITLAB_PROJECT_ID is "daddia/crew"
       And a webUrl of "https://gitlab.com/daddia/crew/-/merge_requests/42"
       When extractMrIid(webUrl) is called
-      Then 42 is returned
+      Then "42" is returned
 
-    Scenario: URL from wrong project throws
+    Scenario: URL from wrong project throws GitLabUrlError
       Given GITLAB_PROJECT_ID is "daddia/crew"
       And a webUrl of "https://gitlab.com/other/repo/-/merge_requests/42"
       When extractMrIid(webUrl) is called
-      Then a typed GitLabUrlError is thrown indicating project path mismatch
+      Then GitLabUrlError is thrown
+      And the error message names "daddia/crew" and "other/repo"
+
+    Scenario: URL without merge_requests segment throws
+      Given a webUrl of "https://gitlab.com/daddia/crew"
+      When extractMrIid(webUrl) is called
+      Then GitLabUrlError is thrown
     ```
 
 ---
 
-- [x] **[CREW-64-007] Add loop-bound asymmetry comment to `workflow.ts`**
-  - **Status:** done | **Priority:** P2 | **Estimate:** 1
-  - **Epic:** CREW-64 | **Labels:** review:#23, type:docs
+### CREW-67 -- End-to-end validation and operations
+
+**Scope.** Add the operational handles needed to deploy, monitor, and
+validate the slice end-to-end. The epic ends with a real story executed on
+a real Jira board against a real GitLab project — the gate that proves the
+slice is shippable. This epic intentionally stays minimal: the goal is
+"shippable end-to-end", not "fully observable at scale".
+
+**Key deliverables.** A pre-flight diagnostics command that verifies
+configuration against the real Jira board and GitLab project before the
+server binds; a per-story cost summary log emitted on workflow completion;
+the `/healthz` endpoint extended with poller and in-flight state; an
+operations runbook covering deploy, monitor, and recover; the first end-to-
+end story run captured as a smoke test report.
+
+**Dependencies.** CREW-66 (the workflow must be functional and idempotent
+before it is exercised against a real board). All five stories within this
+epic are independent except CREW-67-005, which gates on the rest.
+
+**Status.** Not started.
+
+**Work-package path.** `crews/delivery-build` (operational and validation
+work; no separate WP design doc).
+
+---
+
+- [ ] **[CREW-67-001] Pre-flight diagnostics command**
+  - **Status:** Not started | **Priority:** P1 | **Estimate:** 3
+  - **Epic:** CREW-67 | **Labels:** type:feature, type:operations
   - **Depends on:** —
-  - **Deliverable:** `crews/delivery-build/src/workflow.ts` peer-review loop
-    has a comment explaining the asymmetry: with `REFACTOR_LOOP_CAP=N` the loop
-    runs `N+1` senior-engineer peer-review calls (iterations 0 through N) but
-    only `N` address-feedback calls (the `if (iteration >= REFACTOR_LOOP_CAP)
-    break` prevents the Nth address-feedback). `AGENTS.md` updated to reflect
-    this semantic precisely.
+  - **Deliverable:** New `crews/delivery-build/src/diagnostics.ts` exporting
+    a `runDiagnostics(config: Config)` function and a `pnpm diagnose` script
+    in `crews/delivery-build/package.json` that loads the config, runs the
+    diagnostics, and prints a coloured pass/fail report. Each check returns
+    `{ name, ok, detail }` and they cover, in order: (1) Jira API
+    reachability via `searchIssues("ORDER BY created DESC")` returning a
+    `200`; (2) Jira project key exists by querying
+    `GET /rest/api/3/project/{JIRA_PROJECT_KEY}`; (3) the four expected
+    transition names (`In Progress`, `Clarification Needed`, `In QA`,
+    `Needs human review`) are available on the first issue returned by the
+    project search; (4) GitLab API reachability via
+    `GET /projects/{GITLAB_PROJECT_ID}`; (5) MCP server processes boot
+    successfully (spawn each, wait for the initial handshake, kill);
+    (6) `DB_PATH` directory is writable. Any failure exits with code 1 and
+    prints the failing check's `detail`. The `boot()` function in
+    `index.ts` does not call `runDiagnostics` automatically — it is an
+    operator-driven command.
   - **Acceptance (EARS):**
-    - WHEN `workflow.ts` is read, THE SYSTEM SHALL contain a comment at the
-      peer-review loop bound explaining the `N+1` senior-engineer call count
-      versus the `N` address-feedback call count.
-    - WHEN `AGENTS.md` documents the loop cap, THE SYSTEM SHALL accurately
-      state the asymmetry.
+    - WHEN `pnpm diagnose` is run with a complete `.env`, THE SYSTEM SHALL
+      execute every check and print a summary with one line per check.
+    - WHEN any check fails, THE SYSTEM SHALL exit with code 1 and the final
+      summary line SHALL state which checks failed.
+    - WHEN every check passes, THE SYSTEM SHALL exit with code 0.
+    - WHEN one of the four expected Jira transitions is not available on
+      the probed issue, THE SYSTEM SHALL fail the transitions check and
+      list the missing transition names.
   - **Acceptance (Gherkin):**
 
     ```gherkin
-    Scenario: Loop bound comment explains asymmetry
-      Given workflow.ts at the peer-review loop
-      When the code comment near the loop bound is read
-      Then it explains that REFACTOR_LOOP_CAP=N allows N+1 senior-engineer calls
-      And that only N address-feedback calls are made
+    Scenario: Diagnostics pass on a properly configured environment
+      Given a .env with valid Jira and GitLab credentials and a board configured with the four expected statuses
+      When pnpm diagnose is run
+      Then the exit code is 0
+      And the summary lists six passing checks
+
+    Scenario: Diagnostics fail when a transition is missing
+      Given the Jira board lacks the "Clarification Needed" transition
+      When pnpm diagnose is run
+      Then the exit code is 1
+      And the transitions check is reported as failed with "Clarification Needed" named as missing
+
+    Scenario: Diagnostics fail when GitLab project is unreachable
+      Given an invalid GITLAB_PERSONAL_ACCESS_TOKEN
+      When pnpm diagnose is run
+      Then the exit code is 1
+      And the GitLab reachability check is reported as failed
+    ```
+
+---
+
+- [ ] **[CREW-67-002] Per-story cost summary log on workflow completion**
+  - **Status:** Not started | **Priority:** P1 | **Estimate:** 2
+  - **Epic:** CREW-67 | **Labels:** type:observability
+  - **Depends on:** —
+  - **Deliverable:** `crews/delivery-build/src/workflow.ts` emits a single
+    `workflow.complete` `info`-level log entry at every terminal exit point
+    (`in-qa` handoff, `Needs human review` escalation, clarification halt).
+    The log payload aggregates from `state.getStepHistory(issueKey)` and
+    contains: `issueKey`, `terminalStep`, `success: boolean`,
+    `totalCostUsd: number` (sum of `cost_usd` across steps), `stepCount`,
+    `agentSteps` (`{ step: string; sessionId: string; costUsd: number }`
+    array, only steps where `session_id IS NOT NULL`), `durationMs`
+    (now − first step `started_at`), and `mrUrl` (if any). The same payload
+    shape is emitted on escalation paths so cost can be attributed to
+    abandoned runs. The log is the foundation for `product.md §7` autonomy
+    rate and cost-per-run metrics.
+  - **Acceptance (EARS):**
+    - WHEN `runStory()` reaches the `In QA` handoff, THE SYSTEM SHALL emit
+      a single `workflow.complete` info log with `success: true` and a
+      `totalCostUsd` summed across all step rows for the issueKey.
+    - WHEN `runStory()` escalates to `Needs human review`, THE SYSTEM SHALL
+      emit a `workflow.complete` info log with `success: false` and the
+      same cost summary.
+    - WHEN the workflow halts at `Clarification Needed`, THE SYSTEM SHALL
+      emit a `workflow.complete` info log with `terminalStep:
+      "clarification-pending"` and the cost incurred so far.
+    - WHEN no agent steps have run, THE SYSTEM SHALL emit `totalCostUsd: 0`
+      and `agentSteps: []` rather than omitting the fields.
+  - **Acceptance (Gherkin):**
+
+    ```gherkin
+    Scenario: Successful run logs cost summary
+      Given a story that runs implement, peer-code-review, open-mr, ci-check, in-qa
+      And implement.cost_usd is 0.50 and address-feedback.cost_usd is 0.20
+      When the workflow reaches the In QA transition
+      Then a workflow.complete info log is emitted
+      And the payload's totalCostUsd is 0.70
+      And the payload's success is true
+      And the payload contains an agentSteps array with sessionId and costUsd per agent step
+
+    Scenario: Escalation logs cost summary too
+      Given a story whose refactor loop cap is exceeded after two address-feedback passes
+      When the workflow escalates to Needs human review
+      Then a workflow.complete info log is emitted with success: false
+      And totalCostUsd reflects all agent step costs incurred
+
+    Scenario: Clarification halt logs partial cost summary
+      Given a story whose engineer returns questionsRequired: true
+      When the workflow halts at Clarification Needed
+      Then a workflow.complete info log is emitted with terminalStep "clarification-pending"
+    ```
+
+---
+
+- [ ] **[CREW-67-003] Health endpoint exposes poller state and in-flight count**
+  - **Status:** Not started | **Priority:** P2 | **Estimate:** 2
+  - **Epic:** CREW-67 | **Labels:** type:observability
+  - **Depends on:** CREW-66-005
+  - **Deliverable:** `crews/delivery-build/src/index.ts` `/healthz`
+    endpoint returns
+    `{ ok: true, schemaVersion, poller: { lastTickAt, lastTickStatus,
+    inFlightCount, inFlight: string[] }, db: { ok, path } }`. The poller
+    publishes its `lastTickAt` and `lastTickStatus` ("ok" | "error") into a
+    small in-memory state object exported alongside the `inFlight` set
+    (CREW-66-005). The DB check runs `SELECT 1` against the SQLite
+    connection and reports `ok: false` if the query throws. The HTTP
+    response remains `200 OK` regardless — operators read the structured
+    body — to avoid Railway's healthcheck bouncing the container on transient
+    DB hiccups. A new `tests/healthz.test.ts` covers the happy path, a
+    failed DB check, and a stale `lastTickAt`.
+  - **Acceptance (EARS):**
+    - WHEN `/healthz` is requested, THE SYSTEM SHALL return HTTP 200 with a
+      JSON body containing `ok`, `schemaVersion`, `poller`, and `db`.
+    - WHEN the poller has executed at least one tick, THE SYSTEM SHALL
+      include `lastTickAt` (ms epoch) and `lastTickStatus` in the response.
+    - WHEN one or more workflows are in flight, THE SYSTEM SHALL include
+      `inFlightCount` and `inFlight` (issueKey array) reflecting the shared
+      in-flight set from CREW-66-005.
+    - WHEN the SQLite connection is healthy, THE SYSTEM SHALL set
+      `db.ok` to `true` and include the `dbPath` in the response.
+  - **Acceptance (Gherkin):**
+
+    ```gherkin
+    Scenario: /healthz includes poller and db state
+      Given the poller has executed two ticks and one workflow is in flight for "CREW-67-003"
+      When GET /healthz is requested
+      Then the response is HTTP 200
+      And the body contains lastTickStatus "ok"
+      And the body contains inFlightCount 1 with inFlight ["CREW-67-003"]
+      And the body contains db.ok true
+
+    Scenario: /healthz reflects DB outage
+      Given the SQLite connection throws on SELECT 1
+      When GET /healthz is requested
+      Then the response is HTTP 200
+      And the body contains db.ok false
+    ```
+
+---
+
+- [ ] **[CREW-67-004] Operations runbook for delivery-build**
+  - **Status:** Not started | **Priority:** P2 | **Estimate:** 2
+  - **Epic:** CREW-67 | **Labels:** type:docs
+  - **Depends on:** CREW-67-001, CREW-67-002, CREW-67-003
+  - **Deliverable:** New `docs/runbook/delivery-build.md` covering: (1)
+    pre-deploy checklist that walks through `pnpm diagnose` against the
+    target environment; (2) Railway deploy steps with the exact env vars
+    the service requires (cross-link `crews/delivery-build/README.md`
+    rather than restating); (3) post-deploy smoke test (verify `/healthz`,
+    verify a poll tick log appears within `POLL_INTERVAL_MS`); (4)
+    monitoring guide listing the structured log events to alert on
+    (`workflow.escalate`, `poller.search-error`, `recovery.session-failed`,
+    `workflow.complete` with `success: false`); (5) recovery procedures
+    for the three failure modes the system already handles (in-flight on
+    boot, clarification timeout, refactor cap reached) plus the SQLite
+    volume-loss path; (6) cost controls — how to set `REFACTOR_LOOP_CAP`,
+    `CI_RETRY_CAP`, and `CLARIFICATION_TIMEOUT_HOURS` against the cost
+    budget. The runbook references `docs/crew-flows/delivery-build.md` for
+    the canonical sequence.
+  - **Acceptance (EARS):**
+    - WHEN `docs/runbook/delivery-build.md` is read, THE SYSTEM SHALL
+      contain numbered sections for pre-deploy, deploy, post-deploy smoke
+      test, monitoring, recovery, and cost controls.
+    - WHEN the runbook references an env var, THE SYSTEM SHALL link to the
+      env var's documented row in `crews/delivery-build/README.md` rather
+      than restating the description.
+    - WHEN the runbook references the workflow sequence, THE SYSTEM SHALL
+      cross-reference `docs/crew-flows/delivery-build.md` rather than
+      narrating it inline.
+  - **Acceptance (Gherkin):**
+
+    ```gherkin
+    Scenario: Runbook contains all six required sections
+      Given the runbook is read
+      When the section headings are inspected
+      Then sections for "Pre-deploy", "Deploy", "Smoke test", "Monitoring", "Recovery", and "Cost controls" are present
+
+    Scenario: Runbook does not duplicate env var documentation
+      Given the runbook references CI_RETRY_CAP
+      When the reference is followed
+      Then it links to crews/delivery-build/README.md rather than describing the variable inline
+    ```
+
+---
+
+- [ ] **[CREW-67-005] First end-to-end story run on real Jira and GitLab**
+  - **Status:** Not started | **Priority:** P0 | **Estimate:** 3
+  - **Epic:** CREW-67 | **Labels:** type:validation, e2e-blocker
+  - **Depends on:** CREW-66-001, CREW-66-002, CREW-66-003, CREW-66-004,
+    CREW-66-005, CREW-66-006, CREW-67-001, CREW-67-002
+  - **Deliverable:** A real Jira story is taken end-to-end through the
+    `delivery-build` slice on a sandboxed Jira project and a sandboxed
+    GitLab project. The story is small and well-specified (single-file
+    change, AC stated as EARS). Capture: the Jira issue link; the
+    `pnpm diagnose` output; the run's structured logs from the Railway
+    deploy (poll tick, context-seed, assess-clarification, implement,
+    peer-code-review pass, open-mr, ci-check pass, in-qa transition);
+    the resulting MR URL; the `workflow.complete` cost summary; the time
+    from polled-pickup to In QA. Save the report under
+    `docs/reviews/2026-Q2-delivery-build-e2e.md`. The report explicitly
+    notes any deviations from the documented sequence in
+    `docs/crew-flows/delivery-build.md`. If the run escalates, the report
+    documents the cause and at least one follow-up story is filed against
+    a new epic (or against CREW-66/66 if the cause maps to an existing
+    story scope).
+  - **Acceptance (EARS):**
+    - WHEN the e2e run completes, THE SYSTEM SHALL transition the test
+      issue to `In QA` and the MR's pipeline SHALL be green.
+    - WHEN the run completes, THE SYSTEM SHALL emit the `workflow.complete`
+      info log captured in `docs/reviews/2026-Q2-delivery-build-e2e.md`.
+    - WHEN the e2e report is filed, THE SYSTEM SHALL include the issue
+      link, MR URL, total cost in USD, total duration, and a copy of the
+      structured log line for each step transition.
+    - WHEN the run does not reach `In QA`, THE SYSTEM SHALL escalate to
+      `Needs human review` (already covered in CREW-61-004) and the report
+      SHALL document the cause and at least one follow-up story.
+  - **Acceptance (Gherkin):**
+
+    ```gherkin
+    Scenario: First e2e run reaches In QA
+      Given a small, well-specified Jira story on the sandbox project
+      And the delivery-build service is deployed and pnpm diagnose has passed
+      When the poller picks up the story on its next tick
+      Then the workflow runs context-seed, assess-clarification, implement, peer-code-review, open-mr, ci-check
+      And the Jira issue transitions to In QA
+      And a workflow.complete info log is emitted with success: true
+      And docs/reviews/2026-Q2-delivery-build-e2e.md is filed with the issue link, MR URL, and cost summary
+
+    Scenario: First e2e run escalates -- gap is recorded
+      Given a story that triggers an escalation path
+      When the workflow transitions to Needs human review
+      Then docs/reviews/2026-Q2-delivery-build-e2e.md documents the cause
+      And at least one follow-up story is filed referencing the cause
     ```
 
 ---
@@ -1197,91 +734,84 @@ workflow; explicit lockfile COPY; env var documentation; test mock cleanup;
 ## 5. Dependency graph
 
 ```text
-CREW-60 (Jira polling trigger)
-  +-- CREW-60-001 (searchIssues + setInterval poller)
-        +-- CREW-60-002 (dedup guard — state + in-flight lock check)
-              +-- CREW-62-002 (clarification resume via poller tick)
+CREW-66 (Functional and hardening completion)
+  +-- CREW-66-001 (engineer artefact extraction) [e2e blocker]
+  +-- CREW-66-002 (senior-engineer artefact extraction) [e2e blocker]
+  +-- CREW-66-003 (pin MCP versions)
+  +-- CREW-66-004 (createMr idempotency)
+  +-- CREW-66-005 (webhook in-flight 429)
+        +-- CREW-67-003 (healthz exposes shared in-flight)
+  +-- CREW-66-006 (getMrDiff size cap)
+  +-- CREW-66-007 (extractMrIid project validation)
 
-CREW-61 (Workflow sequence alignment)
-  +-- CREW-61-001 (reorder: MR after peer review)
-  +-- CREW-61-002 (context seeding: getIssue → context.ticket)
-        +-- CREW-62-001 (clarification assessment step)
-  +-- CREW-61-003 (CI pipeline check — after CREW-61-001)
-        +-- CREW-61-004 (In QA handoff — after CREW-61-003)
-  +-- CREW-61-005 (sessionId → startStep)
-        +-- CREW-63-003 (crash recovery — needs session_id in steps table)
-
-CREW-62 (Clarification HITL)
-  +-- CREW-62-001 (after CREW-61-002)
-  +-- CREW-62-002 (after CREW-62-001 + CREW-60-001)
-
-CREW-63 (Correctness/reliability — all independent)
-  +-- CREW-63-001 (env validation)
-        +-- CREW-63-002 (auth header inside jiraFetch — best after 001)
-  +-- CREW-63-003 (crash recovery — needs CREW-61-005)
-  +-- CREW-63-004 (MCP pin)
-  +-- CREW-63-005 (SQLite consolidation)
-  +-- CREW-63-006 (finishStep fix)
-  +-- CREW-63-007 (createMr idempotency)
-  +-- CREW-63-008 (in-flight lock — consumed by CREW-60-002)
-  +-- CREW-63-009 (getMrDiff cap)
-
-CREW-64 (CI/deploy/quality — all independent)
+CREW-67 (End-to-end validation and operations)
+  +-- CREW-67-001 (pre-flight diagnostics)
+  +-- CREW-67-002 (cost summary log)
+  +-- CREW-67-003 (healthz state) -- after CREW-66-005
+  +-- CREW-67-004 (runbook) -- after 66-001, 66-002, 66-003
+  +-- CREW-67-005 (e2e run) -- after CREW-66 + 66-001 + 66-002
 ```
 
 ## 6. Critical path
 
 ```text
-CREW-60-001 (poller)
-  → CREW-60-002 (dedup)
-  → CREW-61-001 (reorder workflow)
-  → CREW-61-002 (context seed)
-  → CREW-61-003 (CI check)
-  → CREW-61-004 (In QA handoff)
-  → system is end-to-end testable
-
-CREW-63-008 (in-flight lock)  } unblocked; needed before e2e run
-CREW-63-006 (finishStep fix)  }
-CREW-63-007 (createMr idempotency) }
+CREW-66-001 (engineer artefact extraction)
+  → CREW-66-002 (senior-engineer artefact extraction)
+  → CREW-66-004 (createMr idempotency)
+  → CREW-66-005 (webhook in-flight 429)
+  → CREW-67-001 (pre-flight diagnostics)
+  → CREW-67-002 (cost summary log)
+  → CREW-67-005 (first e2e run on real Jira + GitLab)
 ```
+
+CREW-66-003, CREW-66-006, CREW-66-007, CREW-67-003, and CREW-67-004 are
+parallelisable around the critical path.
 
 ## 7. Minimum viable slice
 
-The smallest coherent path that produces an end-to-end testable delivery-build
-run:
+The smallest set of stories that produces a runnable, observable end-to-end
+delivery-build slice — i.e. one that we can hand to a real story and watch
+land in `In QA`:
 
-1. **CREW-60-001** — poller discovers and triggers stories
-2. **CREW-60-002** — dedup guard prevents double-runs
-3. **CREW-61-001** — MR opens after peer review (correct order)
-4. **CREW-61-002** — engineer receives full ticket context
-5. **CREW-61-003** — CI is checked before handoff
-6. **CREW-61-004** — ticket lands in `In QA`
-7. **CREW-63-006** — `finishStep()` updates the right row (correctness)
-8. **CREW-63-007** — no duplicate MRs on retry (correctness)
-9. **CREW-63-008** — in-flight lock prevents concurrent runs
+1. **CREW-66-001** — engineer extracts artefacts so the workflow's
+   `branchName`, `title`, and `questionsRequired` checks have real values.
+2. **CREW-66-002** — senior-engineer extracts artefacts so the peer-review
+   loop receives real `comments`.
+3. **CREW-66-003** — MCP versions are pinned so agent invocations don't
+   silently change behaviour mid-run.
+4. **CREW-66-004** — `createMr` is idempotent so a retry does not produce
+   duplicates.
+5. **CREW-66-005** — webhook in-flight 429 closes the only remaining
+   concurrency hole.
+6. **CREW-67-001** — `pnpm diagnose` confirms the target environment is
+   correct before the first run.
+7. **CREW-67-002** — `workflow.complete` log captures cost and duration so
+   we can read what happened.
+8. **CREW-67-005** — actually run a story end-to-end.
 
-With this slice in place a story can be picked up from Jira, implemented,
-reviewed, MR'd, CI-checked, and handed to QA without data corruption or
-duplicate side effects. Clarification (CREW-62), crash recovery (CREW-63-003),
-and CI/deploy hardening (CREW-64) follow.
+CREW-66-006, CREW-66-007, CREW-67-003, and CREW-67-004 follow once the
+slice is proven. They harden the system against the long tail of cases the
+first run did not exercise.
 
 ## 8. Assumptions
 
 | ID | Assumption | Impact if wrong |
 | --- | --- | --- |
-| A1 | Jira board uses status names `"To Do"`, `"In Progress"`, `"Clarification Needed"`, `"In QA"`, `"Needs Human Review"` exactly as written | `transitionIssue()` silently no-ops if the transition name doesn't match; validate status names against the board before first run |
-| A2 | `JIRA_ASSIGNEE_ACCOUNT_ID` is a Jira account ID (not a display name) suitable for use in JQL `assignee = "..."` queries | Incorrect format causes the poller's JQL to return no results; verify via Jira API before configuring |
-| A3 | The `@anthropic-ai/claude-agent-sdk` `getPipelineStatus` approach (MCP GitLab tools) returns pipeline status quickly enough for the CI polling loop to be practical | If the SDK/MCP round-trip adds >30 s latency, `CI_POLL_INTERVAL_MS` may need tuning; spike during CREW-61-003 |
-| A4 | The Railway persistent volume at `DB_PATH` survives restarts, making crash recovery (CREW-63-003) meaningful | Without persistence the SQLite state is ephemeral and crash recovery is moot |
+| A1 | The engineer and senior-engineer skill prompts are sufficient to elicit the JSON artefact envelope (current `prompt.md` and `SKILL.md` files document the contract) | Without reliable JSON output the parser in CREW-66-001/002 falls back to `success: false` repeatedly; mitigation is to add an explicit "respond ONLY in JSON" instruction at the end of each skill's Output contract section if needed |
+| A2 | `JIRA_ASSIGNEE_ACCOUNT_ID` is a Jira account ID (not display name) usable in JQL `assignee = "..."` queries | Wrong format causes the poller's JQL to return no results; CREW-67-001 catches this in the project-reachability check |
+| A3 | The Jira board exposes the four transition names exactly as written: `In Progress`, `Clarification Needed`, `In QA`, `Needs human review` | `transitionIssue()` silently no-ops on a name miss; CREW-67-001 transitions check catches this before deploy |
+| A4 | The Railway persistent volume at `DB_PATH` survives restarts so crash recovery (already shipped in CREW-63-003) remains meaningful | Without persistence the SQLite state is ephemeral and the recovery scan is a no-op |
+| A5 | The first e2e run uses a sandbox Jira project + GitLab project so a failed run does not affect a production board | Without a sandbox the first run's failure modes ship visible work into a real backlog; mitigation is to gate CREW-67-005 on having a sandbox configured |
 
 ## 9. Risks
 
 | ID | Risk | Likelihood | Impact | Mitigation |
 | --- | --- | --- | --- | --- |
-| R1 | Jira status names on the actual board differ from the names used in `transitionIssue()` calls | Medium | High | Audit board config before first run; add a startup check that logs available transitions for the first polled issue |
-| R2 | CI pipeline takes >10 min per run, causing the CI poll loop to block the workflow for extended periods | Medium | Medium | Make `CI_POLL_INTERVAL_MS` configurable; consider a max-wait cap separate from `CI_RETRY_CAP` |
-| R3 | `getPipelineStatus()` via GitLab MCP returns stale pipeline data due to caching | Low | Medium | Verify MCP response freshness in a smoke test; fall back to direct REST call if needed |
-| R4 | `finishStep()` race condition: two concurrent workflow callbacks both update the same unfinished step row | Low | Medium | CREW-63-006 adds the `step` column filter; CREW-63-008 in-flight lock prevents concurrent runs for the same issueKey |
+| R1 | Agent does not consistently emit valid JSON in `resultMsg.result`, causing CREW-66-001/002 to downgrade most runs to `success: false` | Medium | High | First-line: tighten the skill's Output contract to explicitly say "respond ONLY with the JSON object — no surrounding prose". Second-line: parse the longest JSON-shaped substring, not the whole result, before failing. |
+| R2 | The pinned MCP version (CREW-66-003) breaks against the SDK's expected protocol after a future SDK upgrade | Low | Medium | Pin in a single place; on SDK upgrade, run `pnpm diagnose` (which boots the MCP servers) before merging. |
+| R3 | `getPipelineStatus` via GitLab MCP returns stale pipeline data due to caching | Low | Medium | Verify response freshness during the e2e run (CREW-67-005); fall back to direct REST call if stale. |
+| R4 | First e2e run reveals an agent-tool gap (e.g. engineer needs a tool not in the allowlist) | Medium | Medium | The escalation path catches the failure cleanly; CREW-67-005 explicitly accepts an escalation outcome and requires a follow-up story rather than treating it as a blocker. |
+| R5 | Cost-per-run on a real story exceeds expected budget by an order of magnitude | Low | High | CREW-67-002's `workflow.complete` log is the first place we see this; tighten `REFACTOR_LOOP_CAP` and `CI_RETRY_CAP` defaults if the first run is materially over budget. |
 
 ## 10. Definition of Done
 
@@ -1290,55 +820,123 @@ A story in this backlog is done when:
 - [ ] All EARS acceptance statements hold and every Gherkin scenario passes.
 - [ ] `pnpm typecheck` passes with zero new errors.
 - [ ] `pnpm lint` passes with no new dependency-cruiser violations.
-- [ ] `pnpm test` passes with no new failures; new behaviour has >= 80% branch
-      coverage.
-- [ ] New env vars documented in `.env.example` and `README.md`.
-- [ ] `AGENTS.md` updated if the repo's public surface or conventions changed.
-- [ ] PR merged to `main`.
+- [ ] `pnpm test` passes with no new failures; new behaviour has ≥ 80%
+      branch coverage.
+- [ ] New env vars (if any) documented in `crews/delivery-build/.env.example`
+      and `crews/delivery-build/README.md`.
+- [ ] `AGENTS.md` updated if the repo's public surface or conventions
+      changed.
+- [ ] PR merged to `main` via the GitHub Actions CI pipeline.
 
 ## 11. Handoff
 
-When CREW-60 and CREW-61 close, delivery-build can be run end-to-end against a
-real Jira board. When CREW-62 closes, the crew no longer stalls on ambiguous
-tickets. When CREW-63 closes, the system is safe to run unattended. When CREW-64
-closes, every PR is gated by CI and the codebase is clean.
+When CREW-66 closes, the workflow is functionally complete and idempotent.
+When CREW-67 closes, the slice has been validated against a real Jira board
+and GitLab project, with a runbook and observability in place to operate
+unattended.
 
-After the delivery-build slice is validated end-to-end:
+After CREW-67-005 succeeds:
 
-- `delivery-review` fast-follows with `tech-lead` persona (final code review,
-  MR merge, Jira close)
-- `delivery-qa` crew follows with `qa-engineer` persona
-- Remediation re-entry path (delivery-build v2) opens once delivery-qa exists
+- `delivery-review` fast-follows with the `tech-lead` persona (final code
+  review, MR merge, Jira close).
+- `delivery-qa` follows with the `qa-engineer` persona — its trigger is the
+  `In QA` transition emitted at the end of `delivery-build`.
+- The remediation re-entry path opens once `delivery-qa` exists.
+- `product.md §7` autonomy rate and cost-per-run metrics get their first
+  data points from CREW-67-002 logs.
 
 ---
 
-## 12. Future backlog
+## 12. Completed work (provenance)
+
+The following epics shipped before this revision and are not re-listed in
+section 4. Story-level detail is preserved in git history; this table
+summarises the outcome.
+
+| Epic | Title | Outcome | Notes |
+| --- | --- | --- | --- |
+| CREW-50 | Engineer + senior-engineer SDK wiring | Done | `memory: 'project'`, `buildAuditHook()`, subagent paths, project memory seeding |
+| CREW-54 | AGENTS.md + tooling cleanup | Done | Package names normalised |
+| CREW-55 | Deferred runtime concerns | Deferred | OTel tracing, Turbo remote cache deferred to Next phase |
+| CREW-56 | `@daddia/crew` consolidation | Done | Main entry + `./webhooks` subpath |
+| CREW-60 | Jira polling trigger | Done | `searchIssues`, `setInterval` poller, dedup against state + in-flight set |
+| CREW-61 | Workflow sequence alignment | Done | `context-seed → assess-clarification → implement → peer-review → open-mr → ci-check → in-qa`; `CI_RETRY_CAP`/`CI_POLL_INTERVAL_MS`; `In QA` handoff; `sessionId` wired into `state.startStep` |
+| CREW-62 | Clarification HITL | Done | `assess-clarification` engineer task; `getComments` poller resume; `CLARIFICATION_TIMEOUT_HOURS` |
+| CREW-63-001 | Startup env validation | Done | Replaced by zod-driven `loadConfig` + `SchemaValidationError` exit in `boot()` |
+| CREW-63-002 | Auth header timing | Done | Header construction moved into `createJiraClient` factory; no module-load-time side effects |
+| CREW-63-003 | Crash recovery | Done | `recoverInterruptedSteps()` runs before HTTP server bind |
+| CREW-63-005 | Single SQLite connection | Done | `webhook_events` table on the shared state-store handle; no second `DatabaseSync` |
+| CREW-63-006 | `finishStep()` filter | Done | `WHERE issue_key = ? AND step = ? AND finished_at IS NULL` |
+| CREW-63-008 | In-flight lock (poller side) | Partial | Poller owns an `inFlight` set; webhook side rolled into CREW-66-005 |
+| CREW-64-001 | `corepack enable` | Done | `crews/delivery-build/Dockerfile` |
+| CREW-64-002 | GitHub Actions CI | Done | `.github/workflows/ci.yml` runs lint, typecheck, test on push and PR to `main` |
+| CREW-64-003 | Explicit Dockerfile lockfile COPY | Done | `COPY pnpm-lock.yaml ./` without glob |
+| CREW-64-004 | `PROJECT_DIR` and `ANTHROPIC_MODEL` documented | Done | Listed in `.env.example` and `README.md` |
+| CREW-64-005 | Test mock cleanup | Done | No `db: {} as never` in `tests/` |
+| CREW-64-007 | Loop-bound asymmetry comment | Done | Documented in `workflow.ts` and `AGENTS.md` |
+
+The unfinished CREW-63 and CREW-64 stories carry forward into CREW-66:
+
+- CREW-63-004 (pin MCP versions) → **CREW-66-003**
+- CREW-63-007 (`createMr` idempotency) → **CREW-66-004**
+- CREW-63-008 (webhook in-flight lock — webhook side) → **CREW-66-005**
+- CREW-63-009 (`getMrDiff` size cap) → **CREW-66-006**
+- CREW-64-006 (`extractMrIid` validation) → **CREW-66-007**
+
+---
+
+## 13. Future backlog
 
 ### F-01 -- Shared team memory across personas
 
-Each persona currently writes to its own `memory: 'project'` directory. After
-three or more stories complete end-to-end, add a shared read path so the
-engineer can see patterns the senior engineer has flagged without direct
-inter-persona communication.
+Each persona currently writes to its own `memory: 'project'` directory.
+After three or more stories complete end-to-end, add a shared read path so
+the engineer can see patterns the senior engineer has flagged without
+direct inter-persona communication.
 
-**Priority.** Post-operational. Depends on CREW-61 being stable.
+**Priority.** Post-operational. Depends on CREW-67 completing.
 
 ---
 
 ### F-02 -- Remediation re-entry path
 
 Delivery-build v2: the poller picks up `In Remediation` + `qa-remediation`
-label tickets, reads QA defect notes, fixes on branch, re-runs CI, removes the
-label, and re-transitions to `In QA`. Requires delivery-qa crew to exist.
+label tickets, reads QA defect notes, fixes on branch, re-runs CI, removes
+the label, and re-transitions to `In QA`. Requires the `delivery-qa` crew
+to exist.
 
-**Priority.** After delivery-qa crew ships.
+**Priority.** After `delivery-qa` ships.
 
 ---
 
 ### F-03 -- `delivery-review` crew
 
-`tech-lead` persona: architecture gate, PM HITL pause, MR approval + merge,
-Jira close. Triggered by polling `In QA` tickets (or `ready-for-review` signal
-from delivery-qa).
+`tech-lead` persona: architecture gate, PM HITL pause, MR approval +
+merge, Jira close. Triggered by polling `In QA` tickets (or
+`ready-for-review` signal from `delivery-qa`).
 
-**Priority.** Fast-follow after delivery-build e2e is validated.
+**Priority.** Fast-follow once CREW-67-005 demonstrates the slice.
+
+---
+
+### F-04 -- Observability stack
+
+OpenTelemetry tracing across the workflow, structured log shipping to a
+managed log store, dashboards keyed on `workflow.complete` and
+`workflow.escalate`. Currently CREW-67-002's structured log is the
+substitute. Move to a real telemetry stack once a second crew is operating
+and per-crew dashboards are needed.
+
+**Priority.** Next phase, once two or more crews are running.
+
+---
+
+### F-05 -- Durable cross-crew orchestration
+
+Per `product.md §2 Future`: a coordination layer above individual crews
+for fan-out, fan-in, and pipelines that span hours or days. This sits
+above `delivery-build`, `delivery-qa`, and `delivery-review` rather than
+inside any of them.
+
+**Priority.** Future phase. Out of scope until at least three crews are in
+production.

@@ -13,6 +13,24 @@
       "skillPath": "write-backlog/SKILL.md",
       "computedHash": "2f98920180a8e137e6ccc2bd2a1eaecfb3bf820f72762d29f4b7b003c57f0e69"
     },
+    "write-product": {
+      "source": "daddia/skills",
+      "sourceType": "github",
+      "skillPath": "write-product/SKILL.md",
+      "computedHash": "5ff27c9cd93ef4ddb4d6a12c2884a12002560647aa099b59d608557ae4cf15bd"
+    },
+    "write-roadmap": {
+      "source": "daddia/skills",
+      "sourceType": "github",
+      "skillPath": "write-roadmap/SKILL.md",
+      "computedHash": "7f34d80becc0ea0304b86e2c743e4b6b9919257e701d9400ca804375ad4b99a5"
+    },
+    "write-solution": {
+      "source": "daddia/skills",
+      "sourceType": "github",
+      "skillPath": "write-solution/SKILL.md",
+      "computedHash": "e5795cf29926dfea55632fcbdf83b41624e6964d6b8129297bda7dbae9362dac"
+    },
     "write-wp-design": {
       "source": "daddia/skills",
       "sourceType": "github",
