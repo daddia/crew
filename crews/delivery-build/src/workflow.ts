@@ -96,7 +96,7 @@ async function runStoryInner(
 
   const assessResult = await engineer.run({
     ...input,
-    context: { task: "assess-clarification", ticket },
+    context: { task: "assess-clarification", ticket, model: behaviour.anthropicModel },
   });
 
   // Record cost and outcome for audit. SessionId is captured post-run per the
@@ -136,7 +136,7 @@ async function runStoryInner(
 
   const implResult = await engineer.run({
     ...input,
-    context: { task: "implement-story", ticket },
+    context: { task: "implement-story", ticket, model: behaviour.anthropicModel },
   });
 
   // Extract branchName before finishStep so the verdict reflects whether
@@ -176,7 +176,7 @@ async function runStoryInner(
 
     const reviewResult = await seniorEngineer.run({
       ...input,
-      context: { task: "peer-code-review", branchName },
+      context: { task: "peer-code-review", branchName, model: behaviour.anthropicModel },
     });
 
     state.finishStep(issueKey, "peer-code-review", {
@@ -205,6 +205,7 @@ async function runStoryInner(
         ticket,
         comments: unresolvedItems,
         previousSessionId: engineerSessionId,
+        model: behaviour.anthropicModel,
       },
     });
 
@@ -262,7 +263,7 @@ async function runStoryInner(
 
       const ciFixResult = await engineer.run({
         ...input,
-        context: { task: "fix-ci", mrUrl, ticket, ciFailure: pipelineStatus },
+        context: { task: "fix-ci", mrUrl, ticket, ciFailure: pipelineStatus, model: behaviour.anthropicModel },
       });
 
       state.finishStep(issueKey, "ci-fix", {
@@ -310,7 +311,7 @@ export async function addressFeedback(
 
     const result = await engineer.run({
       issueKey,
-      context: { task: "address-feedback", mrUrl, comments: [comment] },
+      context: { task: "address-feedback", mrUrl, comments: [comment], model: behaviour.anthropicModel },
     });
 
     const sessionId = result.artefacts["sessionId"] as string | undefined;

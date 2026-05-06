@@ -10,6 +10,10 @@
       "dependsOn": ["^build"],
       "outputs": []
     },
+    "lint": {
+      "dependsOn": [],
+      "outputs": []
+    },
     "test": {
       "dependsOn": ["^build"],
       "outputs": ["coverage/**"]

@@ -68,7 +68,7 @@ async function run(input: AgentInput): Promise<AgentResult> {
       definition,
       input,
       resumeWithinMs: RESUME_WITHIN_MS,
-      model: process.env["ANTHROPIC_MODEL"] ?? DEFAULT_MODEL,
+      model: (input.context["model"] as string | undefined) ?? DEFAULT_MODEL,
       auditHook,
     },
     previousSessionId,
