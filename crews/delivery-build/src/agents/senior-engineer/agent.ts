@@ -13,6 +13,63 @@ import {
   type AgentResult,
 } from "@daddia/crew";
 
+/**
+ * Flatten a single comment entry from the peer-code-review JSON output.
+ * Accepts either a pre-formatted string or a structured object with path,
+ * line, category, observed, and remediation fields.
+ */
+function flattenComment(c: unknown, index: number): string {
+  if (typeof c === "string") return c;
+  if (typeof c === "object" && c !== null && !Array.isArray(c)) {
+    const co = c as Record<string, unknown>;
+    return `${String(co["path"] ?? "")}:${String(co["line"] ?? "")} [${String(co["category"] ?? "")}] ${String(co["observed"] ?? "")} — ${String(co["remediation"] ?? "")}`;
+  }
+  throw new Error(`Comment at index ${index} has unexpected type`);
+}
+
+/**
+ * Parse the structured JSON artefact emitted by the peer-code-review skill.
+ * Expected shape: { verdict: "approved" | "changes-requested", comments: [...] }
+ *
+ * Throws a descriptive Error on any parse or validation failure so the caller
+ * can produce a structured `success: false` result with an excerpt of the raw
+ * result included in the summary.
+ */
+export function parseReviewResult(raw: string): {
+  verdict: "approved" | "changes-requested";
+  comments: string[];
+} {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (e) {
+    throw new Error(
+      `JSON parse failure: ${e instanceof Error ? e.message : String(e)}`,
+      { cause: e },
+    );
+  }
+
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    throw new Error("Result is not a JSON object");
+  }
+
+  const obj = parsed as Record<string, unknown>;
+  const { verdict, comments } = obj;
+
+  if (verdict !== "approved" && verdict !== "changes-requested") {
+    throw new Error(`Unexpected verdict value: ${String(verdict)}`);
+  }
+
+  if (!Array.isArray(comments)) {
+    throw new Error("comments field is not an array");
+  }
+
+  return {
+    verdict,
+    comments: comments.map(flattenComment),
+  };
+}
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const ALLOWED_TOOLS = [
@@ -94,10 +151,29 @@ async function run(input: AgentInput): Promise<AgentResult> {
     }
 
     if (resultMsg.subtype === "success") {
+      let verdict: "approved" | "changes-requested";
+      let comments: string[];
+
+      try {
+        ({ verdict, comments } = parseReviewResult(resultMsg.result));
+      } catch (e) {
+        const errMsg = e instanceof Error ? e.message : String(e);
+        const excerpt = resultMsg.result.slice(0, 500);
+        return {
+          success: false,
+          summary: `${errMsg} — raw result excerpt: ${excerpt}`,
+          artefacts: { sessionId },
+          costUsd: resultMsg.total_cost_usd,
+        };
+      }
+
       return {
-        success: true,
+        success: verdict === "approved",
         summary: resultMsg.result,
-        artefacts: { sessionId },
+        artefacts: {
+          sessionId,
+          comments: verdict === "approved" ? [] : comments,
+        },
         costUsd: resultMsg.total_cost_usd,
       };
     }
