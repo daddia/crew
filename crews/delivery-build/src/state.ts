@@ -9,7 +9,7 @@ export type Step =
   | "open-mr"
   | "ci-check"
   | "ci-fix"
-  | "in-review"
+  | "in-qa"
   | "needs-human-review";
 
 export interface StoryRow {

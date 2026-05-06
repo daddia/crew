@@ -26,8 +26,8 @@ export interface WorkflowContext {
  *   → engineer raises merge request (only after peer review approves)
  *   → CI monitoring loop: poll pipeline, fix on failure (cap: CI_RETRY_CAP)
  *       → cap exceeded → escalate to human review → halt
- *   → status update: `in progress` → `in review`
- *   → log handoff; delivery-review crew polls for "In Review" tickets (event bus is a TODO)
+ *   → status update: `in progress` → `in qa`
+ *   → log handoff-to-qa; delivery-qa crew picks up "In QA" tickets
  *   → done
  *
  * On loop cap: transition to "Needs human review", comment with unresolved items, stop.
@@ -218,13 +218,10 @@ async function runStoryInner(
     }
   }
 
-  // ── Done: transition to "In Review" — delivery-review crew picks up from here
-  state.upsertStory(issueKey, "in-review");
-  await transitionIssue(issueKey, "In Review");
-
-  // Delivery-review polls for "In Review" tickets as its trigger. A dedicated
-  // event bus integration is tracked separately.
-  log.info("workflow.handoff", { issueKey, mrUrl });
+  // ── Done: transition to "In QA" — delivery-qa crew picks up from here
+  state.upsertStory(issueKey, "in-qa");
+  await transitionIssue(issueKey, "In QA");
+  log.info("workflow.handoff-to-qa", { issueKey, mrUrl });
 }
 
 function sleep(ms: number): Promise<void> {

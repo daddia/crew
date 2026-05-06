@@ -5,6 +5,10 @@ vi.mock("../src/memory.js", () => ({
   seedEngineerMemory: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("../src/observability.js", () => ({
+  log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+}));
+
 vi.mock("../src/agents/engineer/agent.js", () => ({
   engineer: { name: "engineer", run: vi.fn() },
 }));
@@ -28,6 +32,7 @@ vi.mock("../src/integrations/gitlab.js", () => ({
 }));
 
 import { runStory } from "../src/workflow.js";
+import { log } from "../src/observability.js";
 import { engineer } from "../src/agents/engineer/agent.js";
 import { seniorEngineer } from "../src/agents/senior-engineer/agent.js";
 import { transitionIssue, commentOnIssue, getIssue } from "../src/integrations/jira.js";
@@ -41,6 +46,7 @@ const mockComment = vi.mocked(commentOnIssue);
 const mockCreateMr = vi.mocked(createMr);
 const mockGetIssue = vi.mocked(getIssue);
 const mockGetPipelineStatus = vi.mocked(getPipelineStatus);
+const mockLogInfo = vi.mocked(log.info);
 
 function makeState(refactorCount = 0): StateStore {
   return {
@@ -69,6 +75,8 @@ describe("runStory", () => {
     vi.clearAllMocks();
     // Skip the real 30-second wait in all tests by default.
     process.env["CI_POLL_INTERVAL_MS"] = "0";
+    // Restore the default CI status so tests that override it don't bleed through.
+    mockGetPipelineStatus.mockResolvedValue("success");
   });
 
   it("runs the happy-path sequence: implement then peer-review then MR", async () => {
@@ -85,9 +93,9 @@ describe("runStory", () => {
     expect(engineerOrder).toBeLessThan(reviewOrder);
     expect(reviewOrder).toBeLessThan(createMrOrder);
 
-    // Handoff: transition to "In Review", not "Done".
-    expect(mockTransition).toHaveBeenCalledWith("ENG-1", "In Review");
-    expect(mockTransition).not.toHaveBeenCalledWith("ENG-1", "Done");
+    // Handoff: transition to "In QA"; legacy "In Review" must not be called.
+    expect(mockTransition).toHaveBeenCalledWith("ENG-1", "In QA");
+    expect(mockTransition).not.toHaveBeenCalledWith("ENG-1", "In Review");
   });
 
   it("calls createMr() once after seniorEngineer returns success", async () => {
@@ -148,7 +156,7 @@ describe("runStory", () => {
     expect(mockEngineer).toHaveBeenCalledTimes(2);
     expect(mockSeniorEngineer).toHaveBeenCalledTimes(2);
     expect(mockCreateMr).toHaveBeenCalledTimes(1);
-    expect(mockTransition).toHaveBeenCalledWith("ENG-1", "In Review");
+    expect(mockTransition).toHaveBeenCalledWith("ENG-1", "In QA");
   });
 
   it("passes branchName (not mrUrl) to senior engineer during peer review", async () => {
@@ -239,7 +247,7 @@ describe("runStory", () => {
     await runStory({ issueKey: "ENG-1", state });
 
     expect(mockGetPipelineStatus).toHaveBeenCalledWith("https://gitlab.example.com/mr/1");
-    expect(mockTransition).toHaveBeenCalledWith("ENG-1", "In Review");
+    expect(mockTransition).toHaveBeenCalledWith("ENG-1", "In QA");
   });
 
   it("calls engineer with task fix-ci on pipeline failure then proceeds on success", async () => {
@@ -258,7 +266,7 @@ describe("runStory", () => {
     );
     expect(ciFixCall).toBeDefined();
     expect((ciFixCall![0] as AgentInput).context["mrUrl"]).toBe("https://gitlab.example.com/mr/1");
-    expect(mockTransition).toHaveBeenCalledWith("ENG-1", "In Review");
+    expect(mockTransition).toHaveBeenCalledWith("ENG-1", "In QA");
   });
 
   it("escalates when CI fix cap is exceeded without success", async () => {
@@ -293,7 +301,7 @@ describe("runStory", () => {
     await runStory({ issueKey: "ENG-1", state });
 
     expect(mockGetPipelineStatus).toHaveBeenCalledTimes(2);
-    expect(mockTransition).toHaveBeenCalledWith("ENG-1", "In Review");
+    expect(mockTransition).toHaveBeenCalledWith("ENG-1", "In QA");
   });
 
   it("passes context.ticket to engineer for the address-feedback task", async () => {
@@ -314,5 +322,31 @@ describe("runStory", () => {
     expect((addressFeedbackCall![0] as AgentInput).context["ticket"]).toMatchObject({
       summary: "Test Story",
     });
+  });
+
+  // ── In QA handoff ─────────────────────────────────────────────────────────
+
+  it("emits workflow.handoff-to-qa log after transitioning to In QA", async () => {
+    mockEngineer.mockResolvedValue(successResult());
+    mockSeniorEngineer.mockResolvedValue(successResult());
+
+    const state = makeState();
+    await runStory({ issueKey: "ENG-1", state });
+
+    expect(mockLogInfo).toHaveBeenCalledWith(
+      "workflow.handoff-to-qa",
+      expect.objectContaining({ issueKey: "ENG-1", mrUrl: "https://gitlab.example.com/mr/1" }),
+    );
+  });
+
+  it("never transitions to In Review in the normal workflow path", async () => {
+    mockEngineer.mockResolvedValue(successResult());
+    mockSeniorEngineer.mockResolvedValue(successResult());
+
+    const state = makeState();
+    await runStory({ issueKey: "ENG-1", state });
+
+    expect(mockTransition).not.toHaveBeenCalledWith("ENG-1", "In Review");
+    expect(mockTransition).toHaveBeenCalledWith("ENG-1", "In QA");
   });
 });
