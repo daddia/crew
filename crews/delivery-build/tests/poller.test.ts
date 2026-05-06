@@ -7,7 +7,8 @@ vi.mock("../src/observability.js", () => ({
   log: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
 
-import { pollTick, startPoller, inFlight } from "../src/poller.js";
+import { pollTick, startPoller } from "../src/poller.js";
+import { inFlight } from "../src/in-flight.js";
 import { runStory } from "../src/workflow.js";
 import { log } from "../src/observability.js";
 import type { StateStore, Step, StepRow } from "../src/state.js";

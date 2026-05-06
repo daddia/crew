@@ -6,8 +6,14 @@ vi.mock("../src/workflow.js", () => ({
   runStory: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("../src/observability.js", () => ({
+  log: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+  tracer: {},
+}));
+
 import { jiraHandler } from "../src/handlers/jira.js";
 import { runStory } from "../src/workflow.js";
+import { inFlight } from "../src/in-flight.js";
 import type { StateStore } from "../src/state.js";
 import type { WorkflowCtxBase } from "../src/workflow.js";
 import type { JiraClient } from "../src/integrations/jira.js";
@@ -70,7 +76,10 @@ const validPayload = JSON.stringify({
 });
 
 describe("POST /webhooks/jira", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    inFlight.clear();
+  });
 
   it("returns 403 when signature is missing", async () => {
     const app = makeApp(makeState());
@@ -132,5 +141,55 @@ describe("POST /webhooks/jira", () => {
     expect(res.status).toBe(200);
     const json = await res.json() as Record<string, unknown>;
     expect(json["ignored"]).toBe(true);
+  });
+
+  it("returns 429 when the issueKey is already in flight", async () => {
+    inFlight.add("ENG-99");
+    const app = makeApp(makeState());
+    const res = await app.request("/webhooks/jira", {
+      method: "POST",
+      body: validPayload,
+      headers: {
+        "Content-Type": "application/json",
+        "x-hub-signature-256": signBody(validPayload),
+      },
+    });
+    expect(res.status).toBe(429);
+    const json = await res.json() as Record<string, unknown>;
+    expect(json["error"]).toBe("workflow-in-flight");
+    expect(json["issueKey"]).toBe("ENG-99");
+    await new Promise((r) => setImmediate(r));
+    expect(runStory).not.toHaveBeenCalled();
+  });
+
+  it("acquires the lock before dispatch and releases it after workflow completes", async () => {
+    let resolveWorkflow!: () => void;
+    const workflowPromise = new Promise<void>((resolve) => {
+      resolveWorkflow = resolve;
+    });
+    vi.mocked(runStory).mockReturnValueOnce(workflowPromise);
+
+    const app = makeApp(makeState());
+    await app.request("/webhooks/jira", {
+      method: "POST",
+      body: validPayload,
+      headers: {
+        "Content-Type": "application/json",
+        "x-hub-signature-256": signBody(validPayload),
+      },
+    });
+
+    // Lock must be held immediately after the handler returns (before setImmediate fires).
+    expect(inFlight.has("ENG-99")).toBe(true);
+
+    await new Promise((r) => setImmediate(r));
+    // Still held while the workflow promise is pending.
+    expect(inFlight.has("ENG-99")).toBe(true);
+
+    resolveWorkflow();
+    await workflowPromise;
+    await new Promise((r) => setImmediate(r));
+    // Released once the workflow settles.
+    expect(inFlight.has("ENG-99")).toBe(false);
   });
 });

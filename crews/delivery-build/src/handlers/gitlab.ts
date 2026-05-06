@@ -3,6 +3,7 @@ import { verifySignature } from "@daddia/crew/webhooks";
 import { log } from "../observability.js";
 import type { StateStore } from "../state.js";
 import { addressFeedback, type WorkflowCtxBase } from "../workflow.js";
+import { acquire, release, has } from "../in-flight.js";
 
 export async function gitlabHandler(
   c: Context,
@@ -57,12 +58,22 @@ export async function gitlabHandler(
   const comment: string = body.object_attributes.note;
   const mrUrl: string = body.merge_request?.url ?? "";
 
+  if (has(issueKey)) {
+    log.info("gitlab.handler.in-flight", { issueKey });
+    return c.json({ error: "workflow-in-flight", issueKey }, 429);
+  }
+
   log.info("gitlab.handler.dispatch", { issueKey, eventId });
 
+  acquire(issueKey);
   setImmediate(() => {
-    addressFeedback({ issueKey, state, ...ctxBase }, comment, mrUrl).catch((err) => {
-      log.error("gitlab.handler.workflow-error", { issueKey, err: String(err) });
-    });
+    addressFeedback({ issueKey, state, ...ctxBase }, comment, mrUrl)
+      .catch((err) => {
+        log.error("gitlab.handler.workflow-error", { issueKey, err: String(err) });
+      })
+      .finally(() => {
+        release(issueKey);
+      });
   });
 
   return c.json({ ok: true });

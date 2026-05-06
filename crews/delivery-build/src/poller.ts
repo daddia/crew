@@ -4,14 +4,11 @@ import { log } from "./observability.js";
 import { runStory } from "./workflow.js";
 import type { WorkflowCtxBase } from "./workflow.js";
 import type { Step, StateStore } from "./state.js";
+import { acquire, release, has, inFlight } from "./in-flight.js";
+
+export { inFlight };
 
 const TERMINAL_STEPS = new Set<Step>(["in-qa", "needs-human-review"]);
-
-/**
- * Tracks issueKeys whose runStory() call is currently executing.
- * Exported so tests can inspect and reset it between runs.
- */
-export const inFlight = new Set<string>();
 
 /**
  * Dependencies for the poller — all values are injected at construction time
@@ -92,18 +89,18 @@ export async function pollTick(deps: PollerDeps, state: StateStore): Promise<voi
       continue;
     }
 
-    if (inFlight.has(issueKey)) {
+    if (has(issueKey)) {
       log.debug("poller.skip-in-flight", { issueKey });
       continue;
     }
 
-    inFlight.add(issueKey);
+    acquire(issueKey);
     void runStory({ issueKey, state, ...ctxBase })
       .catch((err) => {
         log.error("poller.run-story-error", { issueKey, err: String(err) });
       })
       .finally(() => {
-        inFlight.delete(issueKey);
+        release(issueKey);
       });
   }
 
@@ -116,7 +113,7 @@ export async function pollTick(deps: PollerDeps, state: StateStore): Promise<voi
   for (const story of pendingStories) {
     const { issueKey } = story;
 
-    if (inFlight.has(issueKey)) {
+    if (has(issueKey)) {
       log.debug("poller.skip-in-flight", { issueKey });
       continue;
     }
@@ -154,13 +151,13 @@ export async function pollTick(deps: PollerDeps, state: StateStore): Promise<voi
 
     if (humanResponse) {
       log.info("poller.clarification-resolved", { issueKey });
-      inFlight.add(issueKey);
+      acquire(issueKey);
       void runStory({ issueKey, state, ...ctxBase })
         .catch((err) => {
           log.error("poller.run-story-error", { issueKey, err: String(err) });
         })
         .finally(() => {
-          inFlight.delete(issueKey);
+          release(issueKey);
         });
       continue;
     }

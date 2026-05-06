@@ -5,8 +5,14 @@ vi.mock("../src/workflow.js", () => ({
   addressFeedback: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("../src/observability.js", () => ({
+  log: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+  tracer: {},
+}));
+
 import { gitlabHandler } from "../src/handlers/gitlab.js";
 import { addressFeedback } from "../src/workflow.js";
+import { inFlight } from "../src/in-flight.js";
 import type { StateStore } from "../src/state.js";
 import type { WorkflowCtxBase } from "../src/workflow.js";
 import type { JiraClient } from "../src/integrations/jira.js";
@@ -67,7 +73,10 @@ const notePayload = JSON.stringify({
 });
 
 describe("POST /webhooks/gitlab", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    inFlight.clear();
+  });
 
   it("returns 403 when token is missing", async () => {
     const app = makeApp(makeState());
@@ -134,5 +143,57 @@ describe("POST /webhooks/gitlab", () => {
     });
     await new Promise((r) => setImmediate(r));
     expect(addressFeedback).not.toHaveBeenCalled();
+  });
+
+  it("returns 429 when the issueKey is already in flight", async () => {
+    inFlight.add("ENG-99");
+    const app = makeApp(makeState());
+    const res = await app.request("/webhooks/gitlab", {
+      method: "POST",
+      body: notePayload,
+      headers: {
+        "Content-Type": "application/json",
+        "x-gitlab-token": SECRET,
+        "x-gitlab-event-uuid": "evt-002",
+      },
+    });
+    expect(res.status).toBe(429);
+    const json = await res.json() as Record<string, unknown>;
+    expect(json["error"]).toBe("workflow-in-flight");
+    expect(json["issueKey"]).toBe("ENG-99");
+    await new Promise((r) => setImmediate(r));
+    expect(addressFeedback).not.toHaveBeenCalled();
+  });
+
+  it("acquires the lock before dispatch and releases it after workflow completes", async () => {
+    let resolveWorkflow!: () => void;
+    const workflowPromise = new Promise<void>((resolve) => {
+      resolveWorkflow = resolve;
+    });
+    vi.mocked(addressFeedback).mockReturnValueOnce(workflowPromise);
+
+    const app = makeApp(makeState());
+    await app.request("/webhooks/gitlab", {
+      method: "POST",
+      body: notePayload,
+      headers: {
+        "Content-Type": "application/json",
+        "x-gitlab-token": SECRET,
+        "x-gitlab-event-uuid": "evt-003",
+      },
+    });
+
+    // Lock must be held immediately after the handler returns.
+    expect(inFlight.has("ENG-99")).toBe(true);
+
+    await new Promise((r) => setImmediate(r));
+    // Still held while the workflow promise is pending.
+    expect(inFlight.has("ENG-99")).toBe(true);
+
+    resolveWorkflow();
+    await workflowPromise;
+    await new Promise((r) => setImmediate(r));
+    // Released once the workflow settles.
+    expect(inFlight.has("ENG-99")).toBe(false);
   });
 });
