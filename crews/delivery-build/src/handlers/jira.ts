@@ -3,7 +3,7 @@ import { checkReplayWindow, verifySignature } from "@daddia/crew/webhooks";
 import { log } from "../observability.js";
 import type { StateStore } from "../state.js";
 import { runStory, type WorkflowCtxBase } from "../workflow.js";
-import { acquire, release, has } from "../in-flight.js";
+import { has, runStoryWithLock } from "../in-flight.js";
 
 export async function jiraHandler(
   c: Context,
@@ -60,18 +60,14 @@ export async function jiraHandler(
 
   log.info("jira.handler.dispatch", { issueKey, eventId });
 
-  // Acquire before setImmediate so the lock is visible to any concurrent
-  // request that arrives before the callback fires.
-  acquire(issueKey);
-  setImmediate(() => {
-    runStory({ issueKey, state, ...ctxBase })
-      .catch((err) => {
-        log.error("jira.handler.workflow-error", { issueKey, err: String(err) });
-      })
-      .finally(() => {
-        release(issueKey);
-      });
-  });
+  runStoryWithLock(
+    issueKey,
+    () => runStory({ issueKey, state, ...ctxBase }),
+    (err) => {
+      log.error("jira.handler.workflow-error", { issueKey, err: String(err) });
+    },
+    { deferred: true },
+  );
 
   return c.json({ ok: true });
 }

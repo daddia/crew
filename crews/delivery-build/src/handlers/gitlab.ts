@@ -3,7 +3,7 @@ import { verifySignature } from "@daddia/crew/webhooks";
 import { log } from "../observability.js";
 import type { StateStore } from "../state.js";
 import { addressFeedback, type WorkflowCtxBase } from "../workflow.js";
-import { acquire, release, has } from "../in-flight.js";
+import { has, runStoryWithLock } from "../in-flight.js";
 
 export async function gitlabHandler(
   c: Context,
@@ -65,16 +65,14 @@ export async function gitlabHandler(
 
   log.info("gitlab.handler.dispatch", { issueKey, eventId });
 
-  acquire(issueKey);
-  setImmediate(() => {
-    addressFeedback({ issueKey, state, ...ctxBase }, comment, mrUrl)
-      .catch((err) => {
-        log.error("gitlab.handler.workflow-error", { issueKey, err: String(err) });
-      })
-      .finally(() => {
-        release(issueKey);
-      });
-  });
+  runStoryWithLock(
+    issueKey,
+    () => addressFeedback({ issueKey, state, ...ctxBase }, comment, mrUrl),
+    (err) => {
+      log.error("gitlab.handler.workflow-error", { issueKey, err: String(err) });
+    },
+    { deferred: true },
+  );
 
   return c.json({ ok: true });
 }

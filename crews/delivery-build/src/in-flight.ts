@@ -18,3 +18,36 @@ export function release(issueKey: string): void {
 export function has(issueKey: string): boolean {
   return inFlight.has(issueKey);
 }
+
+/**
+ * Acquire the in-flight lock for issueKey and dispatch the workflow function.
+ * The lock is released when `fn()` settles (success or error); errors from
+ * `fn` are passed to `onError`.
+ *
+ * The lock is acquired synchronously so a concurrent caller observes
+ * `has(issueKey)` before this function returns. Set `deferred: true` to
+ * start `fn()` on the next tick via `setImmediate` — webhook handlers use
+ * this so the HTTP response can flush before the workflow's synchronous
+ * prefix runs. The poller calls without `deferred` because it has no
+ * response to flush.
+ */
+export function runStoryWithLock(
+  issueKey: string,
+  fn: () => Promise<unknown>,
+  onError: (err: unknown) => void,
+  options: { deferred?: boolean } = {},
+): void {
+  acquire(issueKey);
+  const start = (): void => {
+    void fn()
+      .catch(onError)
+      .finally(() => {
+        release(issueKey);
+      });
+  };
+  if (options.deferred) {
+    setImmediate(start);
+  } else {
+    start();
+  }
+}
