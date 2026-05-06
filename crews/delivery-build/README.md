@@ -48,6 +48,7 @@ Human feedback injected as MR comments is handled by `POST /webhooks/gitlab`, wh
 | `REFACTOR_LOOP_CAP` | Optional; max peer-review iterations before escalation, defaults to `2` |
 | `CI_RETRY_CAP` | Optional; max CI fix attempts before escalation, defaults to `3` |
 | `CI_POLL_INTERVAL_MS` | Optional; ms between CI pipeline polls, defaults to `30000` |
+| `CLARIFICATION_TIMEOUT_HOURS` | Optional; hours to wait for PM clarification before escalating, defaults to `24` |
 
 **Persistent volume** — the SQLite database must survive redeploys. In the Railway dashboard, add a volume to the service and mount it at `/data`. Then set `DB_PATH=/data/delivery-build.db`.
 

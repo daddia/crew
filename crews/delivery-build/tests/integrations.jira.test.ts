@@ -8,7 +8,7 @@ process.env["ATLASSIAN_API_TOKEN"] = "token";
 const fetchMock = vi.fn();
 vi.stubGlobal("fetch", fetchMock);
 
-import { transitionIssue, commentOnIssue, getIssue, searchIssues, JiraApiError } from "../src/integrations/jira.js";
+import { transitionIssue, commentOnIssue, getIssue, searchIssues, getComments, JiraApiError } from "../src/integrations/jira.js";
 
 function mockTransitionsResponse(
   transitions: Array<{ id: string; name: string; to: { name: string } }>,
@@ -209,5 +209,93 @@ describe("commentOnIssue", () => {
       body: { content: Array<{ content: Array<{ text: string }> }> };
     };
     expect(body.body.content[0]?.content[0]?.text).toBe("hello world");
+  });
+});
+
+describe("getComments", () => {
+  beforeEach(() => fetchMock.mockReset());
+
+  it("returns author email, plain-text body, and created for each comment", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          comments: [
+            {
+              author: { emailAddress: "pm@example.com", displayName: "PM" },
+              body: {
+                type: "doc",
+                version: 1,
+                content: [{ type: "paragraph", content: [{ type: "text", text: "Here is the answer." }] }],
+              },
+              created: "2026-01-01T12:00:00.000+0000",
+            },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    const comments = await getComments("ENG-1");
+
+    expect(comments).toHaveLength(1);
+    expect(comments[0]).toMatchObject({
+      author: "pm@example.com",
+      body: "Here is the answer.",
+      created: "2026-01-01T12:00:00.000+0000",
+    });
+  });
+
+  it("falls back to displayName when emailAddress is absent", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          comments: [
+            {
+              author: { displayName: "External User" },
+              body: null,
+              created: "2026-01-01T12:00:00.000+0000",
+            },
+          ],
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    const comments = await getComments("ENG-1");
+
+    expect(comments[0]?.author).toBe("External User");
+    expect(comments[0]?.body).toBe("");
+  });
+
+  it("returns an empty array when there are no comments", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ comments: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const comments = await getComments("ENG-1");
+    expect(comments).toEqual([]);
+  });
+
+  it("calls the correct Jira API endpoint", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify({ comments: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    await getComments("ENG-42");
+
+    const [url] = fetchMock.mock.calls[0] as [string];
+    expect(url).toContain("/issue/ENG-42/comment");
+  });
+
+  it("throws JiraApiError when the API returns a non-2xx status", async () => {
+    fetchMock.mockResolvedValueOnce(new Response("Not Found", { status: 404 }));
+
+    await expect(getComments("ENG-999")).rejects.toThrow(JiraApiError);
   });
 });

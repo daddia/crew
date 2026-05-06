@@ -4,9 +4,13 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 // them up. Each test that needs different values resets them locally.
 process.env["JIRA_PROJECT_KEY"] = "CREW";
 process.env["JIRA_ASSIGNEE_ACCOUNT_ID"] = "user-123";
+process.env["ATLASSIAN_EMAIL"] = "bot@example.com";
 
 vi.mock("../src/integrations/jira.js", () => ({
   searchIssues: vi.fn(),
+  getComments: vi.fn(),
+  commentOnIssue: vi.fn().mockResolvedValue(undefined),
+  transitionIssue: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("../src/workflow.js", () => ({
   runStory: vi.fn().mockResolvedValue(undefined),
@@ -16,12 +20,15 @@ vi.mock("../src/observability.js", () => ({
 }));
 
 import { pollTick, startPoller, inFlight } from "../src/poller.js";
-import { searchIssues } from "../src/integrations/jira.js";
+import { searchIssues, getComments, commentOnIssue, transitionIssue } from "../src/integrations/jira.js";
 import { runStory } from "../src/workflow.js";
 import { log } from "../src/observability.js";
-import type { StateStore, Step } from "../src/state.js";
+import type { StateStore, Step, StepRow } from "../src/state.js";
 
 const mockSearchIssues = vi.mocked(searchIssues);
+const mockGetComments = vi.mocked(getComments);
+const mockCommentOnIssue = vi.mocked(commentOnIssue);
+const mockTransitionIssue = vi.mocked(transitionIssue);
 const mockRunStory = vi.mocked(runStory);
 const mockLogWarn = vi.mocked(log.warn);
 const mockLogDebug = vi.mocked(log.debug);
@@ -30,6 +37,7 @@ function makeState(getStoryImpl?: (key: string) => { issueKey: string; currentSt
   return {
     upsertStory: vi.fn(),
     getStory: vi.fn().mockImplementation(getStoryImpl ?? (() => undefined)),
+    getStoriesAtStep: vi.fn().mockReturnValue([]),
     startStep: vi.fn(),
     finishStep: vi.fn(),
     getStepHistory: vi.fn().mockReturnValue([]),
@@ -46,6 +54,9 @@ describe("pollTick", () => {
   beforeEach(() => {
     inFlight.clear();
     mockSearchIssues.mockReset();
+    mockGetComments.mockReset().mockResolvedValue([]);
+    mockCommentOnIssue.mockReset().mockResolvedValue(undefined);
+    mockTransitionIssue.mockReset().mockResolvedValue(undefined);
     mockRunStory.mockReset().mockResolvedValue(undefined);
     mockLogWarn.mockReset();
     mockLogDebug.mockReset();
@@ -182,6 +193,174 @@ describe("pollTick", () => {
     await new Promise((r) => setTimeout(r, 0));
 
     expect(inFlight.has("CREW-NEW")).toBe(false);
+  });
+
+  // ── Clarification resume (CREW-62-002) ────────────────────────────────────
+
+  function makePendingStep(startedAt: number): StepRow {
+    return {
+      issueKey: "irrelevant",
+      step: "clarification-pending",
+      sessionId: null,
+      startedAt,
+      finishedAt: startedAt + 100,
+      costUsd: null,
+      verdict: "pending",
+    };
+  }
+
+  it("calls runStory to resume when a human comment is found after the clarification question", async () => {
+    const pendingStartedAt = Date.now() - 1000;
+    const state = makeState();
+    vi.mocked(state.getStoriesAtStep).mockReturnValue([
+      { issueKey: "CREW-P1", currentStep: "clarification-pending", startedAt: pendingStartedAt },
+    ]);
+    vi.mocked(state.getStepHistory).mockReturnValue([makePendingStep(pendingStartedAt)]);
+    mockGetComments.mockResolvedValue([
+      { author: "human@example.com", body: "Here is the answer.", created: new Date(pendingStartedAt + 500).toISOString() },
+    ]);
+    mockSearchIssues.mockResolvedValue([]);
+
+    await pollTick(state);
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(mockRunStory).toHaveBeenCalledWith({ issueKey: "CREW-P1", state });
+  });
+
+  it("does not resume when the only post-question comment is from the bot", async () => {
+    const pendingStartedAt = Date.now() - 1000;
+    const state = makeState();
+    vi.mocked(state.getStoriesAtStep).mockReturnValue([
+      { issueKey: "CREW-P2", currentStep: "clarification-pending", startedAt: pendingStartedAt },
+    ]);
+    vi.mocked(state.getStepHistory).mockReturnValue([makePendingStep(pendingStartedAt)]);
+    mockGetComments.mockResolvedValue([
+      { author: "bot@example.com", body: "Questions from the engineer.", created: new Date(pendingStartedAt + 200).toISOString() },
+    ]);
+    mockSearchIssues.mockResolvedValue([]);
+
+    await pollTick(state);
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(mockRunStory).not.toHaveBeenCalled();
+  });
+
+  it("does not resume when human comment predates the clarification question", async () => {
+    const pendingStartedAt = Date.now() - 1000;
+    const state = makeState();
+    vi.mocked(state.getStoriesAtStep).mockReturnValue([
+      { issueKey: "CREW-P3", currentStep: "clarification-pending", startedAt: pendingStartedAt },
+    ]);
+    vi.mocked(state.getStepHistory).mockReturnValue([makePendingStep(pendingStartedAt)]);
+    mockGetComments.mockResolvedValue([
+      // created is before pendingStartedAt
+      { author: "human@example.com", body: "Old comment.", created: new Date(pendingStartedAt - 500).toISOString() },
+    ]);
+    mockSearchIssues.mockResolvedValue([]);
+
+    await pollTick(state);
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(mockRunStory).not.toHaveBeenCalled();
+  });
+
+  it("escalates and transitions to Needs Human Review when timeout elapses with no reply", async () => {
+    process.env["CLARIFICATION_TIMEOUT_HOURS"] = "24";
+    const pendingStartedAt = Date.now() - 25 * 60 * 60 * 1000; // 25 hours ago
+    const state = makeState();
+    vi.mocked(state.getStoriesAtStep).mockReturnValue([
+      { issueKey: "CREW-P4", currentStep: "clarification-pending", startedAt: pendingStartedAt },
+    ]);
+    vi.mocked(state.getStepHistory).mockReturnValue([makePendingStep(pendingStartedAt)]);
+    mockGetComments.mockResolvedValue([]);
+    mockSearchIssues.mockResolvedValue([]);
+
+    await pollTick(state);
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(vi.mocked(state.upsertStory)).toHaveBeenCalledWith("CREW-P4", "needs-human-review");
+    expect(mockCommentOnIssue).toHaveBeenCalledWith("CREW-P4", expect.stringContaining("Clarification timeout"));
+    expect(mockTransitionIssue).toHaveBeenCalledWith("CREW-P4", "Needs human review");
+
+    delete process.env["CLARIFICATION_TIMEOUT_HOURS"];
+  });
+
+  it("does not escalate when timeout has not elapsed", async () => {
+    process.env["CLARIFICATION_TIMEOUT_HOURS"] = "24";
+    const pendingStartedAt = Date.now() - 1 * 60 * 60 * 1000; // 1 hour ago
+    const state = makeState();
+    vi.mocked(state.getStoriesAtStep).mockReturnValue([
+      { issueKey: "CREW-P5", currentStep: "clarification-pending", startedAt: pendingStartedAt },
+    ]);
+    vi.mocked(state.getStepHistory).mockReturnValue([makePendingStep(pendingStartedAt)]);
+    mockGetComments.mockResolvedValue([]);
+    mockSearchIssues.mockResolvedValue([]);
+
+    await pollTick(state);
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(mockCommentOnIssue).not.toHaveBeenCalled();
+    expect(mockTransitionIssue).not.toHaveBeenCalledWith("CREW-P5", "Needs human review");
+
+    delete process.env["CLARIFICATION_TIMEOUT_HOURS"];
+  });
+
+  it("defaults CLARIFICATION_TIMEOUT_HOURS to 24 (86400000 ms)", async () => {
+    delete process.env["CLARIFICATION_TIMEOUT_HOURS"];
+    // 23 hours ago — should not have timed out at 24h default
+    const pendingStartedAt = Date.now() - 23 * 60 * 60 * 1000;
+    const state = makeState();
+    vi.mocked(state.getStoriesAtStep).mockReturnValue([
+      { issueKey: "CREW-P6", currentStep: "clarification-pending", startedAt: pendingStartedAt },
+    ]);
+    vi.mocked(state.getStepHistory).mockReturnValue([makePendingStep(pendingStartedAt)]);
+    mockGetComments.mockResolvedValue([]);
+    mockSearchIssues.mockResolvedValue([]);
+
+    await pollTick(state);
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(mockCommentOnIssue).not.toHaveBeenCalled();
+  });
+
+  it("skips a clarification-pending story that is already in-flight", async () => {
+    inFlight.add("CREW-INFLIGHT");
+    const pendingStartedAt = Date.now() - 1000;
+    const state = makeState();
+    vi.mocked(state.getStoriesAtStep).mockReturnValue([
+      { issueKey: "CREW-INFLIGHT", currentStep: "clarification-pending", startedAt: pendingStartedAt },
+    ]);
+    mockGetComments.mockResolvedValue([
+      { author: "human@example.com", body: "Answer", created: new Date(pendingStartedAt + 500).toISOString() },
+    ]);
+    mockSearchIssues.mockResolvedValue([]);
+
+    await pollTick(state);
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(mockRunStory).not.toHaveBeenCalled();
+  });
+
+  it("continues checking remaining pending stories when getComments fails for one", async () => {
+    const pendingStartedAt = Date.now() - 1000;
+    const state = makeState();
+    vi.mocked(state.getStoriesAtStep).mockReturnValue([
+      { issueKey: "CREW-FAIL", currentStep: "clarification-pending", startedAt: pendingStartedAt },
+      { issueKey: "CREW-OK", currentStep: "clarification-pending", startedAt: pendingStartedAt },
+    ]);
+    vi.mocked(state.getStepHistory).mockReturnValue([makePendingStep(pendingStartedAt)]);
+    mockGetComments
+      .mockRejectedValueOnce(new Error("network error"))
+      .mockResolvedValueOnce([
+        { author: "human@example.com", body: "Answer", created: new Date(pendingStartedAt + 500).toISOString() },
+      ]);
+    mockSearchIssues.mockResolvedValue([]);
+
+    await pollTick(state);
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(mockRunStory).toHaveBeenCalledWith({ issueKey: "CREW-OK", state });
+    expect(mockRunStory).not.toHaveBeenCalledWith({ issueKey: "CREW-FAIL", state });
   });
 });
 

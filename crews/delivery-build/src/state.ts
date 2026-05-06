@@ -59,6 +59,7 @@ const SCHEMA = `
 export interface StateStore {
   upsertStory(issueKey: string, step: Step): void;
   getStory(issueKey: string): StoryRow | undefined;
+  getStoriesAtStep(step: Step): StoryRow[];
   startStep(issueKey: string, step: Step, sessionId?: string): void;
   finishStep(
     issueKey: string,
@@ -84,6 +85,11 @@ export function createStateStore(dbPath: string): StateStore {
   const getStoryStmt = db.prepare(
     `SELECT issue_key as issueKey, current_step as currentStep, started_at as startedAt
      FROM stories WHERE issue_key = ?`,
+  );
+
+  const getStoriesAtStepStmt = db.prepare(
+    `SELECT issue_key as issueKey, current_step as currentStep, started_at as startedAt
+     FROM stories WHERE current_step = ?`,
   );
 
   const startStepStmt = db.prepare(
@@ -120,6 +126,10 @@ export function createStateStore(dbPath: string): StateStore {
 
     getStory(issueKey) {
       return getStoryStmt.get(issueKey) as StoryRow | undefined;
+    },
+
+    getStoriesAtStep(step) {
+      return getStoriesAtStepStmt.all(step) as unknown as StoryRow[];
     },
 
     startStep(issueKey, step, sessionId) {

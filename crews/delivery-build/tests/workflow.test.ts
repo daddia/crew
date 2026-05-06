@@ -52,6 +52,7 @@ function makeState(refactorCount = 0): StateStore {
   return {
     upsertStory: vi.fn(),
     getStory: vi.fn(),
+    getStoriesAtStep: vi.fn().mockReturnValue([]),
     startStep: vi.fn(),
     finishStep: vi.fn(),
     getStepHistory: vi.fn().mockReturnValue([]),

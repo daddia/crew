@@ -130,6 +130,35 @@ export async function commentOnIssue(
   });
 }
 
+export interface JiraComment {
+  author: string;
+  body: string;
+  created: string;
+}
+
+/**
+ * Fetch comments on a Jira issue.
+ * Each entry's `author` is the commenter's email address (falls back to
+ * displayName when emailAddress is absent, e.g. for external accounts).
+ * The `body` is extracted from ADF to plain text; `created` is the ISO 8601
+ * timestamp string returned by the API.
+ */
+export async function getComments(issueKey: string): Promise<JiraComment[]> {
+  const res = await jiraFetch(`/issue/${issueKey}/comment`);
+  const data = (await res.json()) as {
+    comments: Array<{
+      author: { emailAddress?: string; displayName?: string };
+      body: unknown;
+      created: string;
+    }>;
+  };
+  return data.comments.map((c) => ({
+    author: c.author.emailAddress ?? c.author.displayName ?? "",
+    body: extractAdfText(c.body) ?? "",
+    created: c.created,
+  }));
+}
+
 /**
  * Search for issues matching a JQL query.
  * Returns one `{ issueKey }` entry per matching issue.
