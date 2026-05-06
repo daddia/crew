@@ -15,25 +15,34 @@ The architecture has two layers:
 
 ```
 crews/
-  delivery/           # The delivery crew (tech-lead, engineer, senior-engineer)
+  delivery-build/     # Build crew: implement → peer-review → address-feedback → hand off to delivery-review
     src/
       index.ts        # Hono server entry
-      workflow.ts     # Delivery sequence: implement → peer-review → final-review
-      state.ts        # SQLite store (stories, phases, webhook_events)
+      workflow.ts     # Build sequence: implement → open-mr → peer-review → address-feedback
+      state.ts        # SQLite store (stories, steps, webhook_events) via node:sqlite
+      memory.ts       # Project memory seeding for the engineer persona
       observability.ts
+      idempotency.ts  # Lazy singleton wrapping createIdempotencyStore()
       agents/         # Persona modules
-        tech-lead/    # Final code review, triage
         engineer/     # Implementation, address-feedback
         senior-engineer/ # Peer review
       handlers/       # Inbound webhook handlers
-        jira.ts       # POST /webhooks/jira
-        gitlab.ts     # POST /webhooks/gitlab
+        jira.ts       # POST /webhooks/jira  (trigger: "Ready for Dev" transition)
+        gitlab.ts     # POST /webhooks/gitlab (trigger: MR note events)
       integrations/   # Thin idempotent clients for external systems
         jira.ts
         gitlab.ts
     mcp.json          # MCP server config (Atlassian, GitLab)
     Dockerfile
-    package.json      # @daddia/crew-delivery
+    package.json      # @daddia/crew-delivery-build
+
+  delivery-review/    # Review crew: final-code-review → stakeholder-review → merge (scaffolded)
+    src/
+      index.ts        # Hono server entry (port 3001 by default)
+      workflow.ts     # Review sequence stub (not yet implemented)
+      state.ts        # SQLite store via node:sqlite
+      observability.ts
+    package.json      # @daddia/crew-delivery-review
 
 packages/
   crew/               # @daddia/crew — shared library (main entry + ./webhooks subpath)

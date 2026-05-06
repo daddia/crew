@@ -28,9 +28,11 @@ export async function gitlabHandler(
     return c.json({ ok: true, ignored: true });
   }
 
-  // 2. Timestamp replay window — GitLab doesn't send a timestamp in the body,
-  //    so we use the X-Gitlab-Event-UUID as the event id and skip the window
-  //    check here (the idempotency store handles duplicate delivery).
+  // 2. Replay protection — GitLab does not include a delivery timestamp in the
+  //    request body, so checkReplayWindow() cannot be applied here (it requires
+  //    a millisecond timestamp to compare against the current time). Duplicate
+  //    delivery is instead handled by the idempotency store below, which rejects
+  //    any event whose (provider, eventId) pair has already been processed.
   const eventId =
     (c.req.header("x-gitlab-event-uuid") as string | undefined) ??
     String(body.object_attributes.id);

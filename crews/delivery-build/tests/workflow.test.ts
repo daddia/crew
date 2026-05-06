@@ -117,6 +117,8 @@ describe("runStory", () => {
     const state = makeState();
     await runStory({ issueKey: "ENG-1", state });
 
+    // Engineer is called once for implement and once for address-feedback.
+    expect(mockEngineer).toHaveBeenCalledTimes(2);
     expect(mockSeniorEngineer).toHaveBeenCalledTimes(2);
     expect(mockTransition).toHaveBeenCalledWith("ENG-1", "In Review");
   });

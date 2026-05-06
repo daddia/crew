@@ -46,6 +46,12 @@ Human feedback injected as MR comments is handled by `POST /webhooks/gitlab`, wh
 - Jira: `https://<railway-domain>/webhooks/jira` — trigger on issue transition to "Ready for Dev"
 - GitLab: `https://<railway-domain>/webhooks/gitlab` — trigger on MR note (comment) events
 
+## Requirements
+
+**Node.js ≥ 22.5.0.** The state store uses the built-in `node:sqlite` module
+(`DatabaseSync`), which was added as an experimental API in Node 22.5.0. An
+`ExperimentalWarning` is emitted at startup on Node 22; Node 23+ runs silently.
+
 ## Running locally
 
 ```bash

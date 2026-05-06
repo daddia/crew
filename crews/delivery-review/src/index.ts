@@ -6,6 +6,9 @@ import { createStateStore } from "./state.js";
 const PORT = parseInt(process.env["PORT"] ?? "3001", 10);
 const DB_PATH = process.env["DB_PATH"] ?? "./data/delivery-review.db";
 
+// State is initialised eagerly so the DB file is created and WAL mode is set
+// before the first request. Once webhook handlers are wired they will receive
+// this store; the reference is also needed for graceful shutdown.
 const state = createStateStore(DB_PATH);
 
 const app = new Hono();

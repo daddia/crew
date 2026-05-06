@@ -46,7 +46,7 @@ Story-level backlog derived from the [`20260504-solution-review.md`](../reviews/
 
 | Epic | Title | Priority | Deps | Points | Status |
 | --- | --- | --- | --- | --- | --- |
-| CREW-50 | SDK session wire-up | P0 | — | 18 | Not started |
+| CREW-50 | SDK session wire-up | P0 | — | 18 | In progress |
 | CREW-51 | Container, CI, and deploy hygiene | P0/P1 | — | 5 | Not started |
 | CREW-52 | Startup reliability and crash recovery | P1 | CREW-50 | 8 | Not started |
 | CREW-53 | State and data integrity | P1 | — | 6 | Not started |
@@ -68,14 +68,14 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
 
 **Dependencies.** None.
 
-**Status.** Not started.
+**Status.** In progress.
 
 **Branch.** `fix/CREW-50-sdk-session`
 
 ---
 
 - [ ] **[CREW-50-001] Wire `resolveSession()` to the Claude Code SDK**
-  - **Status:** Not started | **Priority:** P0 | **Estimate:** 5
+  - **Status:** In progress | **Priority:** P0 | **Estimate:** 5
   - **Epic:** CREW-50 | **Labels:** review:#1, review:#2, type:infrastructure
   - **Depends on:** —
   - **Deliverable:** `packages/crew/src/session.ts` `resolveSession()` calls `unstable_v2_createSession()` when no prior `sessionId` exists for the given `issueKey`, and `unstable_v2_resumeSession(sessionId)` when one does; the Claude Code SDK owns the full conversation transcript in its own JSONL files under `~/.claude/projects/` — Crew stores only the `sessionId` in the `phases` table as a resume key and does not duplicate the transcript; `isResumed: true` is returned on the resume path so the address-feedback loop can detect it; `resolveSession()` no longer returns `crypto.randomUUID()` without a real SDK call; unit tests covering create-path, resume-path, and SDK error propagation.
@@ -84,7 +84,7 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
     - WHEN `resolveSession()` is called and a `sessionId` already exists for the given `issueKey`, THE SYSTEM SHALL call `unstable_v2_resumeSession(sessionId)` and return `{ sessionId, isResumed: true }`.
     - WHEN the SDK returns an error during session creation or resumption, THE SYSTEM SHALL propagate the error to the caller and SHALL NOT return a random UUID as a fallback.
     - THE SYSTEM SHALL NOT call `crypto.randomUUID()` as the sole source of a `sessionId` return value.
-    - THE SYSTEM SHALL store only the `sessionId` in Crew's `phases` table; it SHALL NOT store the conversation transcript.
+    - THE SYSTEM SHALL store only the `sessionId` in Crew's `phases` table; it SHALL NOT store the conversation transcript. -- not wired: `state.startStep()` is never called with a `sessionId` argument in `workflow.ts`; the column exists but is always NULL
   - **Acceptance (Gherkin):**
 
     ```gherkin
@@ -110,8 +110,8 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
 
 ---
 
-- [ ] **[CREW-50-002] Implement `engineer` persona `run()`**
-  - **Status:** Not started | **Priority:** P0 | **Estimate:** 3
+- [x] **[CREW-50-002] Implement `engineer` persona `run()`**
+  - **Status:** Done | **Priority:** P0 | **Estimate:** 3
   - **Epic:** CREW-50 | **Labels:** review:#1, type:feature
   - **Depends on:** CREW-50-001
   - **Deliverable:** `crews/delivery/src/agents/engineer/agent.ts` `run()` builds `AgentDefinition` from `promptPath`, `skillPaths`, `subagentPaths`, `allowedTools`, `mcpServerNames`, and `memory: 'project'`; calls `resolveSession()` from `@daddia/crew`; executes the session using the SDK; returns a populated `AgentResult` with `success`, `summary`, `artefacts`, and `costUsd`; `buildAuditHook()` attached for every run; the function no longer throws `"not implemented"`. Setting `memory: 'project'` causes the SDK to create and maintain a persistent project memory directory, inject Read/Write/Edit tools into the session, and load `MEMORY.md` into context automatically.
@@ -148,8 +148,8 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
 
 ---
 
-- [ ] **[CREW-50-003] Implement `senior-engineer` persona `run()`**
-  - **Status:** Not started | **Priority:** P0 | **Estimate:** 2
+- [x] **[CREW-50-003] Implement `senior-engineer` persona `run()`**
+  - **Status:** Done | **Priority:** P0 | **Estimate:** 2
   - **Epic:** CREW-50 | **Labels:** review:#1, type:feature
   - **Depends on:** CREW-50-001
   - **Deliverable:** `crews/delivery/src/agents/senior-engineer/agent.ts` `run()` follows the same pattern as CREW-50-002; builds `AgentDefinition` from persona-specific paths, tools, and `memory: 'project'`; calls `resolveSession()`; returns populated `AgentResult`; `buildAuditHook()` attached; no longer throws.
@@ -229,13 +229,13 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
 
 ---
 
-- [ ] **[CREW-50-006] Thread `subagentPaths` into SDK session**
-  - **Status:** Not started | **Priority:** P1 | **Estimate:** 2
+- [x] **[CREW-50-006] Thread `subagentPaths` into SDK session**
+  - **Status:** Done | **Priority:** P1 | **Estimate:** 2
   - **Epic:** CREW-50 | **Labels:** review:#12, type:feature
   - **Depends on:** CREW-50-001
   - **Deliverable:** `packages/crew/src/loaders.ts` `readSubagentsDir()` output is read and passed to the SDK session as subagent system prompts (or the equivalent SDK concept for `.claude/agents/` files); each persona `run()` implementation passes `subagentPaths` from its `AgentDefinition` through to the session invocation; integration test confirming subagent files are loaded and injected when present; when `subagentPaths` is empty the session still starts without error.
   - **Acceptance (EARS):**
-    - WHEN `subagentPaths` in an `AgentDefinition` is non-empty, THE SYSTEM SHALL read each file and inject its contents into the SDK session as a subagent definition before invoking the session.
+    - WHEN `subagentPaths` in an `AgentDefinition` is non-empty, THE SYSTEM SHALL read each file and inject its contents into the SDK session as a subagent definition before invoking the session. -- implemented via `settingSources: ['project']` (SDK discovers `.claude/agents/` automatically) rather than explicit file injection; deviation is acceptable
     - WHEN `subagentPaths` is empty, THE SYSTEM SHALL start the SDK session without error and without attempting to read any subagent files.
     - WHEN a path in `subagentPaths` does not exist on disk, THE SYSTEM SHALL log a `warn`-level message and continue session creation without that subagent.
   - **Acceptance (Gherkin):**
@@ -260,8 +260,8 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
 
 ---
 
-- [ ] **[CREW-50-007] Seed initial project memory on first run**
-  - **Status:** Not started | **Priority:** P1 | **Estimate:** 2
+- [x] **[CREW-50-007] Seed initial project memory on first run**
+  - **Status:** Done | **Priority:** P1 | **Estimate:** 2
   - **Epic:** CREW-50 | **Labels:** type:feature
   - **Depends on:** CREW-50-002
   - **Deliverable:** On the first run for a project (when `MEMORY.md` does not yet exist in the SDK's project memory directory), the engineer persona writes an initial memory file covering observable project context: language and runtime, package manager, test framework, coding conventions visible from the codebase, and any patterns in `AGENTS.md`. This bootstraps the memory system so it is useful from run one rather than accumulating gradually. The seed write is skipped on subsequent runs where `MEMORY.md` already exists.
@@ -293,6 +293,17 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
 
 ---
 
+- [ ] **[CREW-50-008] Document `PROJECT_DIR` and `ANTHROPIC_MODEL` env vars**
+  - **Status:** Not started | **Priority:** P2 | **Estimate:** 1
+  - **Epic:** CREW-50 | **Labels:** type:quality
+  - **Depends on:** —
+  - **Deliverable:** `crews/delivery-build/.env.example` and `README.md` updated to include `PROJECT_DIR` (used by `workflow.ts` for memory seeding) and `ANTHROPIC_MODEL` (used by both persona `agent.ts` files as the optional model override); both vars documented with description and sensible default values.
+  - **Acceptance (EARS):**
+    - WHEN a developer reads `crews/delivery-build/.env.example`, THE SYSTEM SHALL list `PROJECT_DIR` and `ANTHROPIC_MODEL` with inline comments describing their purpose and defaults.
+    - WHEN a developer reads `crews/delivery-build/README.md`, THE SYSTEM SHALL document `PROJECT_DIR` and `ANTHROPIC_MODEL` in the environment variables table.
+
+---
+
 ### CREW-51 -- Container, CI, and deploy hygiene
 
 **Scope.** Three targeted fixes that make builds reproducible and protected: fix the pnpm version mismatch in the code-reviewer Dockerfile, add a GitHub Actions CI pipeline, and make the Dockerfile `COPY` for the lockfile explicit.
@@ -305,28 +316,7 @@ Now epics (CREW-50 through CREW-53) have full story detail below. CREW-54 and CR
 
 ---
 
-- [ ] **[CREW-51-001] Fix code-reviewer Dockerfile to use `corepack enable`**
-  - **Status:** Not started | **Priority:** P0 | **Estimate:** 1
-  - **Epic:** CREW-51 | **Labels:** review:#3, type:infrastructure
-  - **Depends on:** —
-  - **Deliverable:** `crews/code-reviewer/Dockerfile` line 2 changed from `RUN npm install -g pnpm@9` to `RUN corepack enable`; `pnpm install --frozen-lockfile` succeeds against the existing `pnpm-lock.yaml` (pnpm 10 lockfile format) in CI and local Docker builds.
-  - **Acceptance (EARS):**
-    - WHEN the code-reviewer Docker image is built, THE SYSTEM SHALL use `corepack enable` to activate the pnpm version declared in `packageManager` in `package.json`.
-    - WHEN `pnpm install --frozen-lockfile` runs inside the built image, THE SYSTEM SHALL complete without a lockfile format version mismatch error.
-  - **Acceptance (Gherkin):**
-
-    ```gherkin
-    Scenario: Code-reviewer image builds with pnpm 10
-      Given the code-reviewer Dockerfile uses corepack enable
-      When docker build runs for crews/code-reviewer
-      Then the build completes without error
-      And pnpm install --frozen-lockfile succeeds inside the container
-
-    Scenario: pnpm version matches workspace packageManager field
-      Given the Dockerfile activates pnpm via corepack
-      When pnpm --version is called inside the container
-      Then the reported version matches the packageManager field in package.json
-    ```
+- [N/A] **[CREW-51-001] Fix code-reviewer Dockerfile**
 
 ---
 

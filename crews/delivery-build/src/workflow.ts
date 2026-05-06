@@ -1,4 +1,4 @@
-import { IterationCapReached, type AgentInput } from "@daddia/crew";
+import { type AgentInput } from "@daddia/crew";
 import { engineer } from "./agents/engineer/agent.js";
 import { seniorEngineer } from "./agents/senior-engineer/agent.js";
 import { createMr, getMrDiff } from "./integrations/gitlab.js";
@@ -24,7 +24,7 @@ export interface WorkflowContext {
  *   → bounded address-feedback loop (cap: REFACTOR_LOOP_CAP)
  *       → cap exceeded → emit `blocked` event, notify tech-lead → halt
  *   → status update: `in progress` → `in review`
- *   → emit `ready-for-review` event (handoff to delivery-review crew)
+ *   → log handoff; delivery-review crew polls for "In Review" tickets (event bus is a TODO)
  *   → done
  *
  * On loop cap: transition to "Needs human review", comment with unresolved items, stop.
@@ -37,6 +37,20 @@ export async function runStory(ctx: WorkflowContext): Promise<void> {
   const input: AgentInput = { issueKey, context: {} };
 
   log.info("workflow.start", { issueKey });
+
+  try {
+    await runStoryInner(ctx, input);
+  } catch (err) {
+    log.error("workflow.unhandled-error", { issueKey, err: String(err) });
+    await escalateToHumanReview(issueKey, "Unexpected workflow error", []);
+  }
+}
+
+async function runStoryInner(
+  ctx: WorkflowContext,
+  input: AgentInput,
+): Promise<void> {
+  const { issueKey, state } = ctx;
 
   await seedEngineerMemory(process.env["PROJECT_DIR"] ?? process.cwd());
 
@@ -65,12 +79,18 @@ export async function runStory(ctx: WorkflowContext): Promise<void> {
   }
 
   // ── Step 2: Open MR ───────────────────────────────────────────────────────
+  const branchName = implResult.artefacts["branchName"];
+  if (typeof branchName !== "string" || !branchName) {
+    await escalateToHumanReview(issueKey, "Engineer did not produce a branch name", []);
+    return;
+  }
+
   state.upsertStory(issueKey, "open-mr");
   state.startStep(issueKey, "open-mr");
 
   const mrUrl = await createMr({
     issueKey,
-    branchName: implResult.artefacts["branchName"] as string,
+    branchName,
     title: `[${issueKey}] ${implResult.artefacts["title"] as string ?? "Automated delivery"}`,
   });
 
@@ -134,11 +154,13 @@ export async function runStory(ctx: WorkflowContext): Promise<void> {
     return;
   }
 
-  // ── Done: hand off to delivery-review ─────────────────────────────────────
+  // ── Done: transition to "In Review" — delivery-review crew picks up from here
   state.upsertStory(issueKey, "in-review");
   await transitionIssue(issueKey, "In Review");
 
-  log.info("workflow.ready-for-review", { issueKey, mrUrl });
+  // Delivery-review polls for "In Review" tickets as its trigger. A dedicated
+  // event bus integration is tracked separately.
+  log.info("workflow.handoff", { issueKey, mrUrl });
 }
 
 /**
@@ -152,30 +174,40 @@ export async function addressFeedback(
 ): Promise<void> {
   const { issueKey, state } = ctx;
 
-  const iterationCount = state.countRefactorIterations(issueKey);
-  if (iterationCount >= REFACTOR_LOOP_CAP) {
-    log.warn("workflow.address-feedback.cap-exceeded", {
+  try {
+    const iterationCount = state.countRefactorIterations(issueKey);
+    if (iterationCount >= REFACTOR_LOOP_CAP) {
+      log.warn("workflow.address-feedback.cap-exceeded", {
+        issueKey,
+        iterationCount,
+      });
+      await escalateToHumanReview(issueKey, "Refactor loop cap reached on human feedback", [comment]);
+      return;
+    }
+
+    state.upsertStory(issueKey, "address-feedback");
+    state.startStep(issueKey, "address-feedback");
+
+    // Session continuity: previousSessionId is not threaded through here
+    // because the state store does not yet persist session IDs. Until
+    // StateStore.getLastSessionId() exists, the engineer always starts a fresh
+    // session for human-posted feedback. The inline peer-review loop (runStory)
+    // carries session IDs in memory, so it is unaffected.
+    const result = await engineer.run({
       issueKey,
-      iterationCount,
+      context: { task: "address-feedback", mrUrl, comments: [comment] },
     });
-    await escalateToHumanReview(issueKey, "Refactor loop cap reached on human feedback", [comment]);
-    return;
+
+    state.finishStep(issueKey, "address-feedback", {
+      costUsd: result.costUsd,
+      verdict: result.success ? "addressed" : "partial",
+    });
+
+    log.info("workflow.address-feedback.done", { issueKey, success: result.success });
+  } catch (err) {
+    log.error("workflow.address-feedback.unhandled-error", { issueKey, err: String(err) });
+    await escalateToHumanReview(issueKey, "Unexpected error addressing feedback", []);
   }
-
-  state.upsertStory(issueKey, "address-feedback");
-  state.startStep(issueKey, "address-feedback");
-
-  const result = await engineer.run({
-    issueKey,
-    context: { task: "address-feedback", mrUrl, comments: [comment] },
-  });
-
-  state.finishStep(issueKey, "address-feedback", {
-    costUsd: result.costUsd,
-    verdict: result.success ? "addressed" : "partial",
-  });
-
-  log.info("workflow.address-feedback.done", { issueKey, success: result.success });
 }
 
 async function escalateToHumanReview(

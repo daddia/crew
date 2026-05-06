@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "validate": {
+      "source": "daddia/skills",
+      "sourceType": "github",
+      "skillPath": "validate/SKILL.md",
+      "computedHash": "0a155261485e9ce0f6680202f3a697e1ccb7ec98b2aef8b3ac3d931e61de6d20"
+    },
     "write-backlog": {
       "source": "daddia/skills",
       "sourceType": "github",

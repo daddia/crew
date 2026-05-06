@@ -24,14 +24,17 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
-  crews/code-reviewer:
+  crews/delivery-build:
     dependencies:
-      '@anthropic-ai/claude-code':
-        specifier: ^2.1.128
-        version: 2.1.128
       '@daddia/crew':
-        specifier: ^0.1.0
-        version: 0.1.0(zod@4.4.3)
+        specifier: workspace:*
+        version: link:../../packages/crew
+      '@hono/node-server':
+        specifier: ^2.0.1
+        version: 2.0.1(hono@4.12.17)
+      hono:
+        specifier: ^4.12.17
+        version: 4.12.17
     devDependencies:
       '@repo/typescript-config':
         specifier: workspace:*
@@ -49,20 +52,14 @@ importers:
         specifier: ^4.1.5
         version: 4.1.5(@types/node@25.6.0)(@vitest/coverage-istanbul@4.1.5)(@vitest/ui@4.1.5)(jsdom@29.1.1)(vite@6.4.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0))
 
-  crews/delivery:
+  crews/delivery-review:
     dependencies:
-      '@anthropic-ai/claude-code':
-        specifier: ^2.1.128
-        version: 2.1.128
       '@daddia/crew':
-        specifier: ^0.1.0
-        version: 0.1.0(zod@4.4.3)
+        specifier: workspace:*
+        version: link:../../packages/crew
       '@hono/node-server':
         specifier: ^2.0.1
         version: 2.0.1(hono@4.12.17)
-      better-sqlite3:
-        specifier: ^12.9.0
-        version: 12.9.0
       hono:
         specifier: ^4.12.17
         version: 4.12.17
@@ -73,9 +70,6 @@ importers:
       '@repo/vitest-config':
         specifier: workspace:*
         version: link:../../tooling/vitest-config
-      '@types/better-sqlite3':
-        specifier: ^7.6.13
-        version: 7.6.13
       '@types/node':
         specifier: ^25.6.0
         version: 25.6.0
@@ -482,9 +476,6 @@ packages:
   '@csstools/css-tokenizer@4.0.0':
     resolution: {integrity: sha512-QxULHAm7cNu72w97JUNCBFODFaXpbDg+dP8b/oWFAZ2MTRppA3U00Y2L1HqaS4J6yBqxwa/Y3nMBaxVKbB/NsA==}
     engines: {node: '>=20.19.0'}
-
-  '@daddia/crew@0.1.0':
-    resolution: {integrity: sha512-L3wLDSyhXAxEe9jkd4d4qjTB+O5f5jyV8myTg8aLgK6+bzYWcdp+AOs9ftk7JoGHPysVjH3nkXhBdrucYvBPhw==}
 
   '@esbuild/aix-ppc64@0.25.12':
     resolution: {integrity: sha512-Hhmwd6CInZ3dwpuGTF8fJG6yoWmsToE+vYgD4nytZVxcu1ulHpUQRAB1UJ8+N1Am3Mz4+xOByoQoSZf4D+CpkA==}
@@ -3593,16 +3584,6 @@ snapshots:
       css-tree: 3.2.1
 
   '@csstools/css-tokenizer@4.0.0': {}
-
-  '@daddia/crew@0.1.0(zod@4.4.3)':
-    dependencies:
-      '@anthropic-ai/claude-agent-sdk': 0.2.128(zod@4.4.3)
-      '@anthropic-ai/claude-code': 2.1.128
-      better-sqlite3: 12.9.0
-    transitivePeerDependencies:
-      - '@cfworker/json-schema'
-      - supports-color
-      - zod
 
   '@esbuild/aix-ppc64@0.25.12':
     optional: true

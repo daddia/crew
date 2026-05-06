@@ -40,6 +40,9 @@ const SCHEMA = `
     verdict     TEXT
   );
 
+  -- Populated by createIdempotencyStore() from @daddia/crew/webhooks.
+  -- Required by every inbound webhook handler for deduplication; included
+  -- here so the schema is complete when handlers are wired.
   CREATE TABLE IF NOT EXISTS webhook_events (
     provider    TEXT NOT NULL,
     event_id    TEXT NOT NULL,
@@ -87,7 +90,7 @@ export function createStateStore(dbPath: string): StateStore {
      SET finished_at = ?, cost_usd = ?, verdict = ?
      WHERE id = (
        SELECT id FROM steps
-       WHERE issue_key = ? AND finished_at IS NULL
+       WHERE issue_key = ? AND step = ? AND finished_at IS NULL
        ORDER BY started_at DESC LIMIT 1
      )`,
   );
@@ -113,8 +116,7 @@ export function createStateStore(dbPath: string): StateStore {
     },
 
     finishStep(issueKey, step, { costUsd, verdict }) {
-      finishStepStmt.run(Date.now(), costUsd ?? null, verdict ?? null, issueKey);
-      void step;
+      finishStepStmt.run(Date.now(), costUsd ?? null, verdict ?? null, issueKey, step);
     },
 
     getStepHistory(issueKey) {

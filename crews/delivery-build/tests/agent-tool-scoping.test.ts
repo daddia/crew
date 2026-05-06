@@ -7,33 +7,10 @@
 import { describe, it, expect } from "vitest";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { readSkillsDir, readSubagentsDir, type AgentDefinition } from "@daddia/crew";
+import { readSkillsDir, readSubagentsDir } from "@daddia/crew";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const agentsDir = join(__dirname, "../src/agents");
-
-async function loadDefinition(personaName: string): Promise<AgentDefinition> {
-  const base = join(agentsDir, personaName);
-  const [skillPaths, subagentPaths] = await Promise.all([
-    readSkillsDir(join(base, ".claude", "skills")),
-    readSubagentsDir(join(base, ".claude", "agents")),
-  ]);
-
-  const mod = (await import(
-    join(base, "agent.js")
-  )) as Record<string, unknown>;
-
-  // Each agent module re-exports its AgentDefinition via buildDefinition.
-  // We reconstruct it from the known shape rather than calling the SDK.
-  return {
-    name: personaName as AgentDefinition["name"],
-    promptPath: join(base, "prompt.md"),
-    skillPaths,
-    subagentPaths,
-    allowedTools: [],   // populated per-persona below
-    mcpServerNames: [],
-  };
-}
 
 const WRITE_TOOLS = [
   "mcp__gitlab__push_file",

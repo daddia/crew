@@ -1,5 +1,9 @@
 # Build context is the workspace root.
-# docker build -f crews/delivery/Dockerfile -t crew-delivery .
+# docker build -f crews/delivery-build/Dockerfile -t crew-delivery-build .
+#
+# Requires Node >= 22.5.0. The node:sqlite module (used by state.ts) is
+# experimental in Node 22 — an ExperimentalWarning is emitted at startup but
+# the module is fully functional. Node 23+ removes the warning.
 
 FROM node:22-slim AS base
 
@@ -10,31 +14,28 @@ RUN corepack enable
 WORKDIR /workspace
 
 # Layer 1: package manifests only — maximises cache reuse when source changes.
-# packages/crew/package.json is included so that pnpm can resolve the workspace
-# importer entry in pnpm-lock.yaml; @daddia/crew itself is installed from the
-# npm registry (lockfile resolution: 0.1.0, not workspace:*).
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
 COPY tooling/typescript-config/package.json ./tooling/typescript-config/
 COPY tooling/vitest-config/package.json      ./tooling/vitest-config/
 COPY packages/crew/package.json              ./packages/crew/
-COPY crews/delivery/package.json             ./crews/delivery/
+COPY crews/delivery-build/package.json       ./crews/delivery-build/
 
 RUN pnpm install --frozen-lockfile
 
-# Layer 2: source — only the delivery crew and shared tooling.
-# packages/crew source is NOT copied; @daddia/crew is consumed from node_modules
-# (npm registry) so the image does not depend on the workspace build of @daddia/crew.
+# Layer 2: source — shared tooling, the @daddia/crew library, and this crew.
 COPY tsconfig.base.json ./
 COPY tooling/           ./tooling/
-COPY crews/delivery/    ./crews/delivery/
+COPY packages/crew/     ./packages/crew/
+COPY crews/delivery-build/ ./crews/delivery-build/
 
 # Build in dependency order.
-RUN pnpm --filter @repo/vitest-config    build
-RUN pnpm --filter @daddia/crew-delivery  build
+RUN pnpm --filter @repo/vitest-config         build
+RUN pnpm --filter @daddia/crew                build
+RUN pnpm --filter @daddia/crew-delivery-build build
 
 # Mirror markdown assets (prompts, skills, subagents) into dist so that
 # __dirname-relative lookups in agent.ts resolve correctly at runtime.
-RUN set -e; cd crews/delivery; \
+RUN set -e; cd crews/delivery-build; \
     for f in $(find src -name "*.md"); do \
       rel="${f#src/}"; \
       mkdir -p "dist/$(dirname "$rel")"; \
@@ -42,8 +43,8 @@ RUN set -e; cd crews/delivery; \
     done
 
 # Bundle the service with its production dependencies into a self-contained
-# directory. @daddia/crew from the registry is included automatically.
-RUN cd crews/delivery && pnpm deploy /deploy
+# directory.
+RUN cd crews/delivery-build && pnpm deploy /deploy
 
 # ---- runtime image ----
 FROM node:22-slim AS runtime
@@ -53,12 +54,12 @@ WORKDIR /app
 COPY --from=base /deploy .
 
 # Persistent data directory — mount a volume at /data and set
-# DB_PATH=/data/delivery.db in the environment.
+# DB_PATH=/data/delivery-build.db in the environment.
 RUN mkdir -p /data
 
 ENV NODE_ENV=production
 ENV PORT=3000
-ENV DB_PATH=/data/delivery.db
+ENV DB_PATH=/data/delivery-build.db
 
 EXPOSE 3000
 
