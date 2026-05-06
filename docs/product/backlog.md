@@ -77,7 +77,7 @@ remote cache (CREW-55-006).
 | Epic | Title | Priority | Deps | Points | Status |
 | --- | --- | --- | --- | --- | --- |
 | CREW-60 | Jira polling trigger | P0 | — | 5 | Not started |
-| CREW-61 | Workflow sequence alignment | P0 | CREW-60 | 9 | Not started |
+| CREW-61 | Workflow sequence alignment | P0 | CREW-60 | 9 | done |
 | CREW-62 | Clarification HITL step | P1 | CREW-61 | 4 | Not started |
 | CREW-63 | Correctness and reliability carry-forward | P1 | — | 18 | In progress |
 | CREW-64 | CI/deploy and code quality | P2 | — | 10 | Not started |
@@ -233,12 +233,12 @@ documented; `sessionId` wired into `state.startStep()` for agent steps.
 **Dependencies.** CREW-60 (polling trigger must exist before workflow changes
 are testable end-to-end; the workflow itself can be developed in parallel).
 
-**Status.** Not started.
+**Status.** Complete. All five stories done; workflow sequence aligned with delivery-build flow diagram.
 
 ---
 
-- [ ] **[CREW-61-001] Reorder workflow: MR opens after peer-review loop**
-  - **Status:** Not started | **Priority:** P0 | **Estimate:** 2
+- [x] **[CREW-61-001] Reorder workflow: MR opens after peer-review loop**
+  - **Status:** done | **Priority:** P0 | **Estimate:** 2
   - **Epic:** CREW-61 | **Labels:** type:correctness
   - **Depends on:** —
   - **Deliverable:** `crews/delivery-build/src/workflow.ts` reordered so the
@@ -283,8 +283,8 @@ are testable end-to-end; the workflow itself can be developed in parallel).
 
 ---
 
-- [ ] **[CREW-61-002] Add context-seeding step before implementation**
-  - **Status:** Not started | **Priority:** P0 | **Estimate:** 2
+- [x] **[CREW-61-002] Add context-seeding step before implementation**
+  - **Status:** done | **Priority:** P0 | **Estimate:** 2
   - **Epic:** CREW-61 | **Labels:** type:feature
   - **Depends on:** —
   - **Deliverable:** `crews/delivery-build/src/integrations/jira.ts` gains a
@@ -328,8 +328,8 @@ are testable end-to-end; the workflow itself can be developed in parallel).
 
 ---
 
-- [ ] **[CREW-61-003] CI pipeline check and fix loop after MR open**
-  - **Status:** Not started | **Priority:** P0 | **Estimate:** 3
+- [x] **[CREW-61-003] CI pipeline check and fix loop after MR open**
+  - **Status:** done | **Priority:** P0 | **Estimate:** 3
   - **Epic:** CREW-61 | **Labels:** type:feature
   - **Depends on:** CREW-61-001
   - **Deliverable:** `crews/delivery-build/src/integrations/gitlab.ts` gains a
@@ -390,8 +390,8 @@ are testable end-to-end; the workflow itself can be developed in parallel).
 
 ---
 
-- [ ] **[CREW-61-004] Change handoff to "In QA" and document new env vars**
-  - **Status:** Not started | **Priority:** P0 | **Estimate:** 1
+- [x] **[CREW-61-004] Change handoff to "In QA" and document new env vars**
+  - **Status:** done | **Priority:** P0 | **Estimate:** 1
   - **Epic:** CREW-61 | **Labels:** type:feature
   - **Depends on:** CREW-61-003
   - **Deliverable:** `workflow.ts` calls `transitionIssue(issueKey, "In QA")`
@@ -407,7 +407,7 @@ are testable end-to-end; the workflow itself can be developed in parallel).
       `transitionIssue(issueKey, "In QA")`.
     - WHEN the `In QA` transition succeeds, THE SYSTEM SHALL emit a
       `workflow.handoff-to-qa` info log with `issueKey` and `mrUrl`.
-    - THE SYSTEM SHALL NOT call `transitionIssue(issueKey, "In QA")` during
+    - THE SYSTEM SHALL NOT call `transitionIssue(issueKey, "In Review")` during
       a normal delivery-build workflow run.
     - WHEN `.env.example` is read, THE SYSTEM SHALL document every env var
       consumed by `crews/delivery-build`, including the new vars from CREW-60
@@ -424,7 +424,7 @@ are testable end-to-end; the workflow itself can be developed in parallel).
     Scenario: In Review transition is absent from normal flow
       Given a story that completes the full workflow without escalation
       When runStory() finishes
-      Then transitionIssue() is never called with the argument "In QA"
+      Then transitionIssue() is never called with the argument "In Review"
 
     Scenario: .env.example documents all new env vars
       Given crews/delivery-build/.env.example is read
@@ -435,8 +435,8 @@ are testable end-to-end; the workflow itself can be developed in parallel).
 
 ---
 
-- [ ] **[CREW-61-005] Wire sessionId into `state.startStep()` for agent steps**
-  - **Status:** Not started | **Priority:** P1 | **Estimate:** 1
+- [x] **[CREW-61-005] Wire sessionId into `state.startStep()` for agent steps**
+  - **Status:** done | **Priority:** P1 | **Estimate:** 1
   - **Epic:** CREW-61 | **Labels:** type:correctness, review:#1
   - **Depends on:** —
   - **Deliverable:** `workflow.ts` passes the `sessionId` from

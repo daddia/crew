@@ -230,6 +230,10 @@ describe("runStory", () => {
     );
     expect(implementCall).toBeDefined();
     expect((implementCall![0] as AgentInput).context["ticket"]).toBeNull();
+    expect(vi.mocked(log.warn)).toHaveBeenCalledWith(
+      "workflow.context-seed.failed",
+      expect.objectContaining({ issueKey: "ENG-1" }),
+    );
   });
 
   it("passes branchName to engineer during address-feedback", async () => {
