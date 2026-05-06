@@ -23,6 +23,7 @@ function makeState(): StateStore {
     getStepHistory: vi.fn().mockReturnValue([]),
     countRefactorIterations: vi.fn().mockReturnValue(0),
     checkAndRecord: vi.fn().mockReturnValue(false),
+    getInterruptedSteps: vi.fn().mockReturnValue([]),
     close: vi.fn(),
   };
 }

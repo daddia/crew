@@ -1,3 +1,4 @@
+import { unstable_v2_resumeSession } from "@anthropic-ai/claude-agent-sdk";
 import { type AgentInput } from "@daddia/crew";
 import { engineer } from "./agents/engineer/agent.js";
 import { seniorEngineer } from "./agents/senior-engineer/agent.js";
@@ -87,6 +88,20 @@ async function runStoryInner(
     ...input,
     context: { task: "assess-clarification", ticket },
   });
+
+  // Record cost and outcome for audit. SessionId is captured post-run per the
+  // established agent-step pattern; upsertStory above is the in-flight signal.
+  const assessSessionId = assessResult.artefacts["sessionId"] as string | undefined;
+  state.startStep(issueKey, "assess-clarification", assessSessionId);
+  state.finishStep(issueKey, "assess-clarification", {
+    costUsd: assessResult.costUsd,
+    verdict: assessResult.success ? "ok" : "failed",
+  });
+
+  if (!assessResult.success) {
+    await escalateToHumanReview(issueKey, "Engineer failed to assess ticket clarity", []);
+    return;
+  }
 
   if (assessResult.artefacts["questionsRequired"] === true) {
     const questions =
@@ -327,4 +342,34 @@ async function escalateToHumanReview(
 
   await commentOnIssue(issueKey, body);
   await transitionIssue(issueKey, "Needs human review");
+}
+
+const DEFAULT_RECOVERY_MODEL = "claude-opus-4-5";
+
+/**
+ * Scan for agent steps that started a session but never finished (process
+ * crash mid-run). For each interrupted row, attempt to reconnect the SDK
+ * session: if the session is still accessible, log info and restart the
+ * story workflow; if the reconnect throws, log a warning and escalate.
+ *
+ * Called once on startup, before the HTTP server and poller are initialised,
+ * so no new stories begin processing while recovery is in progress.
+ */
+export async function recoverInterruptedSteps(state: StateStore): Promise<void> {
+  const interrupted = state.getInterruptedSteps();
+
+  for (const row of interrupted) {
+    const { issueKey, step, sessionId } = row;
+
+    try {
+      unstable_v2_resumeSession(sessionId!, {
+        model: process.env["ANTHROPIC_MODEL"] ?? DEFAULT_RECOVERY_MODEL,
+      });
+      log.info("recovery.session-resumed", { issueKey, step, sessionId });
+      await runStory({ issueKey, state });
+    } catch (err) {
+      log.warn("recovery.session-failed", { issueKey, step, sessionId, err: String(err) });
+      await escalateToHumanReview(issueKey, "Crash recovery failed: " + String(err), []);
+    }
+  }
 }

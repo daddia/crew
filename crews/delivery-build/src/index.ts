@@ -5,11 +5,14 @@ import { gitlabHandler } from "./handlers/gitlab.js";
 import { log } from "./observability.js";
 import { startPoller } from "./poller.js";
 import { createStateStore } from "./state.js";
+import { recoverInterruptedSteps } from "./workflow.js";
 
 const PORT = parseInt(process.env["PORT"] ?? "3000", 10);
 const DB_PATH = process.env["DB_PATH"] ?? "./data/delivery-build.db";
 
 const state = createStateStore(DB_PATH);
+
+await recoverInterruptedSteps(state);
 
 const app = new Hono();
 

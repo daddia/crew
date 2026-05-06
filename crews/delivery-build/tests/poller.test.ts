@@ -42,6 +42,7 @@ function makeState(getStoryImpl?: (key: string) => { issueKey: string; currentSt
     finishStep: vi.fn(),
     getStepHistory: vi.fn().mockReturnValue([]),
     countRefactorIterations: vi.fn().mockReturnValue(0),
+    getInterruptedSteps: vi.fn().mockReturnValue([]),
     close: vi.fn(),
   };
 }

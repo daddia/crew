@@ -73,6 +73,8 @@ export interface StateStore {
    * Uses the same database connection as the state store — no second SQLite handle.
    */
   checkAndRecord(provider: string, eventId: string): boolean;
+  /** Returns all steps that started an agent session but never finished. */
+  getInterruptedSteps(): StepRow[];
   close(): void;
 }
 
@@ -128,6 +130,13 @@ export function createStateStore(dbPath: string): StateStore {
     `INSERT OR IGNORE INTO webhook_events (provider, event_id, received_at) VALUES (?, ?, ?)`,
   );
 
+  const getInterruptedStepsStmt = db.prepare(
+    `SELECT issue_key as issueKey, step, session_id as sessionId,
+            started_at as startedAt, finished_at as finishedAt,
+            cost_usd as costUsd, verdict
+     FROM steps WHERE finished_at IS NULL AND session_id IS NOT NULL`,
+  );
+
   return {
     upsertStory(issueKey, step) {
       upsertStoryStmt.run(issueKey, step, Date.now());
@@ -163,6 +172,10 @@ export function createStateStore(dbPath: string): StateStore {
       if (existing.cnt > 0) return true;
       insertEventStmt.run(provider, eventId, Date.now());
       return false;
+    },
+
+    getInterruptedSteps() {
+      return getInterruptedStepsStmt.all() as unknown as StepRow[];
     },
 
     close() {

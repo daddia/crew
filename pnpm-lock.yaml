@@ -26,6 +26,9 @@ importers:
 
   crews/delivery-build:
     dependencies:
+      '@anthropic-ai/claude-agent-sdk':
+        specifier: ^0.2.128
+        version: 0.2.128(zod@4.4.3)
       '@daddia/crew':
         specifier: ^0.1.0
         version: 0.1.0(zod@4.4.3)
