@@ -131,6 +131,7 @@ export async function commentOnIssue(
 }
 
 export interface JiraComment {
+  accountId: string;
   author: string;
   body: string;
   created: string;
@@ -138,8 +139,10 @@ export interface JiraComment {
 
 /**
  * Fetch comments on a Jira issue.
- * Each entry's `author` is the commenter's email address (falls back to
- * displayName when emailAddress is absent, e.g. for external accounts).
+ * Each entry's `accountId` is the commenter's Jira account ID (always
+ * present). `author` is the email address, falling back to displayName when
+ * Jira email visibility is restricted. Use `accountId` for identity checks
+ * rather than `author` to avoid mismatches when email is hidden.
  * The `body` is extracted from ADF to plain text; `created` is the ISO 8601
  * timestamp string returned by the API.
  */
@@ -147,12 +150,13 @@ export async function getComments(issueKey: string): Promise<JiraComment[]> {
   const res = await jiraFetch(`/issue/${issueKey}/comment`);
   const data = (await res.json()) as {
     comments: Array<{
-      author: { emailAddress?: string; displayName?: string };
+      author: { accountId?: string; emailAddress?: string; displayName?: string };
       body: unknown;
       created: string;
     }>;
   };
   return data.comments.map((c) => ({
+    accountId: c.author.accountId ?? "",
     author: c.author.emailAddress ?? c.author.displayName ?? "",
     body: extractAdfText(c.body) ?? "",
     created: c.created,

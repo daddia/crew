@@ -221,7 +221,7 @@ describe("getComments", () => {
         JSON.stringify({
           comments: [
             {
-              author: { emailAddress: "pm@example.com", displayName: "PM" },
+              author: { accountId: "acc-001", emailAddress: "pm@example.com", displayName: "PM" },
               body: {
                 type: "doc",
                 version: 1,
@@ -239,6 +239,7 @@ describe("getComments", () => {
 
     expect(comments).toHaveLength(1);
     expect(comments[0]).toMatchObject({
+      accountId: "acc-001",
       author: "pm@example.com",
       body: "Here is the answer.",
       created: "2026-01-01T12:00:00.000+0000",
@@ -251,7 +252,7 @@ describe("getComments", () => {
         JSON.stringify({
           comments: [
             {
-              author: { displayName: "External User" },
+              author: { accountId: "acc-ext", displayName: "External User" },
               body: null,
               created: "2026-01-01T12:00:00.000+0000",
             },
@@ -263,6 +264,7 @@ describe("getComments", () => {
 
     const comments = await getComments("ENG-1");
 
+    expect(comments[0]?.accountId).toBe("acc-ext");
     expect(comments[0]?.author).toBe("External User");
     expect(comments[0]?.body).toBe("");
   });

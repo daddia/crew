@@ -76,6 +76,7 @@ export async function pollTick(state: StateStore): Promise<void> {
   // has replied. If so, resume the workflow. If the timeout has elapsed with
   // no reply, escalate to human review and update state so we don't re-fire.
   const botEmail = process.env["ATLASSIAN_EMAIL"] ?? "";
+  const botAccountId = process.env["ATLASSIAN_ACCOUNT_ID"] ?? "";
   const timeoutHours = parseInt(process.env["CLARIFICATION_TIMEOUT_HOURS"] ?? "24", 10);
   const timeoutMs = timeoutHours * 60 * 60 * 1000;
 
@@ -101,10 +102,23 @@ export async function pollTick(state: StateStore): Promise<void> {
     // before the question was asked (e.g. pre-existing thread activity).
     const history = state.getStepHistory(issueKey);
     const pendingStep = [...history].reverse().find((s) => s.step === "clarification-pending");
-    const pendingStartedAt = pendingStep?.startedAt ?? story.startedAt;
+    if (!pendingStep) {
+      // State is inconsistent — stories table says clarification-pending but
+      // steps table has no matching row. Skip rather than falling back to an
+      // unrelated timestamp, which would misfire on old comments or timeouts.
+      log.warn("poller.clarification-step-missing", { issueKey });
+      continue;
+    }
+    const pendingStartedAt = pendingStep.startedAt;
+
+    // Identify human responses. When ATLASSIAN_ACCOUNT_ID is configured, match
+    // on accountId (reliable even when Jira email visibility is restricted).
+    // Fall back to email comparison for deployments without the account ID set.
+    const isHumanComment = (c: Awaited<ReturnType<typeof getComments>>[number]) =>
+      botAccountId ? c.accountId !== botAccountId : c.author !== botEmail;
 
     const humanResponse = comments.find(
-      (c) => c.author !== botEmail && new Date(c.created).getTime() > pendingStartedAt,
+      (c) => isHumanComment(c) && new Date(c.created).getTime() > pendingStartedAt,
     );
 
     if (humanResponse) {
@@ -122,20 +136,18 @@ export async function pollTick(state: StateStore): Promise<void> {
 
     if (Date.now() - pendingStartedAt > timeoutMs) {
       log.warn("poller.clarification-timeout", { issueKey, timeoutHours });
-      // Update state synchronously before the async Jira calls to prevent
-      // this story from being re-evaluated on the very next tick.
-      state.upsertStory(issueKey, "needs-human-review");
-      void (async () => {
-        try {
-          await commentOnIssue(
-            issueKey,
-            `*Escalated to human review.*\n\nReason: Clarification timeout — no human response received within ${timeoutHours} hours.`,
-          );
-          await transitionIssue(issueKey, "Needs human review");
-        } catch (err) {
-          log.error("poller.clarification-timeout-error", { issueKey, err: String(err) });
-        }
-      })();
+      try {
+        await commentOnIssue(
+          issueKey,
+          `*Escalated to human review.*\n\nReason: Clarification timeout — no human response received within ${timeoutHours} hours.`,
+        );
+        await transitionIssue(issueKey, "Needs human review");
+        // Update state only after both Jira calls succeed. If either call
+        // throws, state stays clarification-pending so the next tick retries.
+        state.upsertStory(issueKey, "needs-human-review");
+      } catch (err) {
+        log.error("poller.clarification-timeout-error", { issueKey, err: String(err) });
+      }
     }
   }
 }

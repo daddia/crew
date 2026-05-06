@@ -45,6 +45,7 @@ You are dispatched with a `task` field that selects exactly one skill:
 
 | `context.task` value | Skill | When invoked |
 |---|---|---|
+| `assess-clarification` | `assess-clarification` | Before a story is started — determine whether the ticket is clear enough to implement |
 | `implement-story` | `implement-story` | Initial implementation of a Ready-for-Dev story |
 | `address-feedback` | `address-feedback` | After a peer review or human comment requests changes |
 

@@ -218,7 +218,7 @@ describe("pollTick", () => {
     ]);
     vi.mocked(state.getStepHistory).mockReturnValue([makePendingStep(pendingStartedAt)]);
     mockGetComments.mockResolvedValue([
-      { author: "human@example.com", body: "Here is the answer.", created: new Date(pendingStartedAt + 500).toISOString() },
+      { accountId: "acc-human", author: "human@example.com", body: "Here is the answer.", created: new Date(pendingStartedAt + 500).toISOString() },
     ]);
     mockSearchIssues.mockResolvedValue([]);
 
@@ -236,7 +236,7 @@ describe("pollTick", () => {
     ]);
     vi.mocked(state.getStepHistory).mockReturnValue([makePendingStep(pendingStartedAt)]);
     mockGetComments.mockResolvedValue([
-      { author: "bot@example.com", body: "Questions from the engineer.", created: new Date(pendingStartedAt + 200).toISOString() },
+      { accountId: "acc-bot", author: "bot@example.com", body: "Questions from the engineer.", created: new Date(pendingStartedAt + 200).toISOString() },
     ]);
     mockSearchIssues.mockResolvedValue([]);
 
@@ -255,7 +255,7 @@ describe("pollTick", () => {
     vi.mocked(state.getStepHistory).mockReturnValue([makePendingStep(pendingStartedAt)]);
     mockGetComments.mockResolvedValue([
       // created is before pendingStartedAt
-      { author: "human@example.com", body: "Old comment.", created: new Date(pendingStartedAt - 500).toISOString() },
+      { accountId: "acc-human", author: "human@example.com", body: "Old comment.", created: new Date(pendingStartedAt - 500).toISOString() },
     ]);
     mockSearchIssues.mockResolvedValue([]);
 
@@ -279,9 +279,29 @@ describe("pollTick", () => {
     await pollTick(state);
     await new Promise((r) => setTimeout(r, 0));
 
-    expect(vi.mocked(state.upsertStory)).toHaveBeenCalledWith("CREW-P4", "needs-human-review");
     expect(mockCommentOnIssue).toHaveBeenCalledWith("CREW-P4", expect.stringContaining("Clarification timeout"));
     expect(mockTransitionIssue).toHaveBeenCalledWith("CREW-P4", "Needs human review");
+    expect(vi.mocked(state.upsertStory)).toHaveBeenCalledWith("CREW-P4", "needs-human-review");
+
+    delete process.env["CLARIFICATION_TIMEOUT_HOURS"];
+  });
+
+  it("updates state to needs-human-review only after both Jira calls succeed on timeout", async () => {
+    process.env["CLARIFICATION_TIMEOUT_HOURS"] = "24";
+    const pendingStartedAt = Date.now() - 25 * 60 * 60 * 1000;
+    const state = makeState();
+    vi.mocked(state.getStoriesAtStep).mockReturnValue([
+      { issueKey: "CREW-P4B", currentStep: "clarification-pending", startedAt: pendingStartedAt },
+    ]);
+    vi.mocked(state.getStepHistory).mockReturnValue([makePendingStep(pendingStartedAt)]);
+    mockGetComments.mockResolvedValue([]);
+    mockSearchIssues.mockResolvedValue([]);
+    // First Jira call (commentOnIssue) throws.
+    mockCommentOnIssue.mockRejectedValueOnce(new Error("Jira unavailable"));
+
+    await pollTick(state);
+
+    expect(vi.mocked(state.upsertStory)).not.toHaveBeenCalledWith("CREW-P4B", "needs-human-review");
 
     delete process.env["CLARIFICATION_TIMEOUT_HOURS"];
   });
@@ -332,7 +352,7 @@ describe("pollTick", () => {
       { issueKey: "CREW-INFLIGHT", currentStep: "clarification-pending", startedAt: pendingStartedAt },
     ]);
     mockGetComments.mockResolvedValue([
-      { author: "human@example.com", body: "Answer", created: new Date(pendingStartedAt + 500).toISOString() },
+      { accountId: "acc-human", author: "human@example.com", body: "Answer", created: new Date(pendingStartedAt + 500).toISOString() },
     ]);
     mockSearchIssues.mockResolvedValue([]);
 
@@ -340,6 +360,51 @@ describe("pollTick", () => {
     await new Promise((r) => setTimeout(r, 0));
 
     expect(mockRunStory).not.toHaveBeenCalled();
+  });
+
+  it("logs warn and skips when the clarification-pending step row is missing from history", async () => {
+    const pendingStartedAt = Date.now() - 1000;
+    const state = makeState();
+    vi.mocked(state.getStoriesAtStep).mockReturnValue([
+      { issueKey: "CREW-CORRUPT", currentStep: "clarification-pending", startedAt: pendingStartedAt },
+    ]);
+    // getStepHistory returns no clarification-pending row (corrupt state)
+    vi.mocked(state.getStepHistory).mockReturnValue([]);
+    mockGetComments.mockResolvedValue([
+      { accountId: "acc-human", author: "human@example.com", body: "Answer", created: new Date(pendingStartedAt + 500).toISOString() },
+    ]);
+    mockSearchIssues.mockResolvedValue([]);
+
+    await pollTick(state);
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(mockRunStory).not.toHaveBeenCalled();
+    expect(mockLogWarn).toHaveBeenCalledWith(
+      "poller.clarification-step-missing",
+      expect.objectContaining({ issueKey: "CREW-CORRUPT" }),
+    );
+  });
+
+  it("uses accountId for bot detection when ATLASSIAN_ACCOUNT_ID is set", async () => {
+    process.env["ATLASSIAN_ACCOUNT_ID"] = "bot-account-id";
+    const pendingStartedAt = Date.now() - 1000;
+    const state = makeState();
+    vi.mocked(state.getStoriesAtStep).mockReturnValue([
+      { issueKey: "CREW-BOTID", currentStep: "clarification-pending", startedAt: pendingStartedAt },
+    ]);
+    vi.mocked(state.getStepHistory).mockReturnValue([makePendingStep(pendingStartedAt)]);
+    // Comment has bot's accountId but a different email — email-based check would wrongly treat as human.
+    mockGetComments.mockResolvedValue([
+      { accountId: "bot-account-id", author: "some-display-name", body: "Bot reply.", created: new Date(pendingStartedAt + 200).toISOString() },
+    ]);
+    mockSearchIssues.mockResolvedValue([]);
+
+    await pollTick(state);
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(mockRunStory).not.toHaveBeenCalled();
+
+    delete process.env["ATLASSIAN_ACCOUNT_ID"];
   });
 
   it("continues checking remaining pending stories when getComments fails for one", async () => {
@@ -353,7 +418,7 @@ describe("pollTick", () => {
     mockGetComments
       .mockRejectedValueOnce(new Error("network error"))
       .mockResolvedValueOnce([
-        { author: "human@example.com", body: "Answer", created: new Date(pendingStartedAt + 500).toISOString() },
+        { accountId: "acc-human", author: "human@example.com", body: "Answer", created: new Date(pendingStartedAt + 500).toISOString() },
       ]);
     mockSearchIssues.mockResolvedValue([]);
 

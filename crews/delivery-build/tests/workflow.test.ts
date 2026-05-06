@@ -507,6 +507,39 @@ describe("runStory", () => {
     expect(finishCall![2]).toMatchObject({ verdict: "pending" });
   });
 
+  it("records startStep and finishStep for assess-clarification when ticket is clear", async () => {
+    mockEngineer.mockResolvedValue(successResult({ costUsd: 0.05, artefacts: { questionsRequired: false, branchName: "feature/ENG-1-test", title: "Test" } }));
+    mockSeniorEngineer.mockResolvedValue(successResult());
+
+    const state = makeState();
+    await runStory({ issueKey: "ENG-1", state });
+
+    expect(vi.mocked(state.startStep)).toHaveBeenCalledWith("ENG-1", "assess-clarification", undefined);
+    const finishCall = vi.mocked(state.finishStep).mock.calls.find((c) => c[1] === "assess-clarification");
+    expect(finishCall).toBeDefined();
+    expect(finishCall![2]).toMatchObject({ costUsd: 0.05, verdict: "ok" });
+  });
+
+  it("escalates to human review and returns early when assess-clarification returns success: false", async () => {
+    mockEngineer.mockResolvedValueOnce(
+      successResult({ success: false, artefacts: {} }),
+    );
+
+    const state = makeState();
+    await runStory({ issueKey: "ENG-1", state });
+
+    expect(mockTransition).not.toHaveBeenCalledWith("ENG-1", "In Progress");
+    expect(mockTransition).toHaveBeenCalledWith("ENG-1", "Needs human review");
+
+    const implementCall = mockEngineer.mock.calls.find(
+      (call) => (call[0] as AgentInput).context["task"] === "implement-story",
+    );
+    expect(implementCall).toBeUndefined();
+
+    const finishCall = vi.mocked(state.finishStep).mock.calls.find((c) => c[1] === "assess-clarification");
+    expect(finishCall).toBeDefined();
+    expect(finishCall![2]).toMatchObject({ verdict: "failed" });
+  });
   it("does not call engineer for implement when clarification is needed", async () => {
     mockEngineer
       .mockResolvedValueOnce(

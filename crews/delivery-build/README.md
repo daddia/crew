@@ -35,7 +35,7 @@ Human feedback injected as MR comments is handled by `POST /webhooks/gitlab`, wh
 | `ATLASSIAN_EMAIL` | Atlassian account email |
 | `ATLASSIAN_API_TOKEN` | Atlassian API token |
 | `ATLASSIAN_BASE_URL` | e.g. `https://yourorg.atlassian.net` |
-| `JIRA_PROJECT_KEY` | Jira project key to poll for new stories (e.g. `CREW`) |
+| `JIRA_PROJECT_KEY` | Jira project key (e.g. `CREW`) |
 | `JIRA_ASSIGNEE_ACCOUNT_ID` | Jira account ID of the engineer assigned to incoming stories |
 | `GITLAB_PERSONAL_ACCESS_TOKEN` | GitLab PAT with `api` scope |
 | `GITLAB_API_URL` | e.g. `https://gitlab.com/api/v4` |
@@ -49,6 +49,7 @@ Human feedback injected as MR comments is handled by `POST /webhooks/gitlab`, wh
 | `CI_RETRY_CAP` | Optional; max CI fix attempts before escalation, defaults to `3` |
 | `CI_POLL_INTERVAL_MS` | Optional; ms between CI pipeline polls, defaults to `30000` |
 | `CLARIFICATION_TIMEOUT_HOURS` | Optional; hours to wait for PM clarification before escalating, defaults to `24` |
+| `ATLASSIAN_ACCOUNT_ID` | Optional; Jira account ID of the bot account, used for reliable bot-vs-human comment detection (falls back to `ATLASSIAN_EMAIL` comparison when unset) |
 
 **Persistent volume** — the SQLite database must survive redeploys. In the Railway dashboard, add a volume to the service and mount it at `/data`. Then set `DB_PATH=/data/delivery-build.db`.
 
@@ -58,7 +59,7 @@ Human feedback injected as MR comments is handled by `POST /webhooks/gitlab`, wh
 
 ## Requirements
 
-**Node.js ≥ 22.5.0.** The state store uses the built-in `node:sqlite` module
+**Node.js ≥ 24.15.0.** The state store uses the built-in `node:sqlite` module
 (`DatabaseSync`), which was added as an experimental API in Node 22.5.0. An
 `ExperimentalWarning` is emitted at startup on Node 22; Node 23+ runs silently.
 
