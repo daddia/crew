@@ -111,6 +111,20 @@ describe("runStory", () => {
     );
   });
 
+  it("records verdict 'failed' on implement step when engineer returns no branchName", async () => {
+    mockEngineer.mockResolvedValue(
+      successResult({ artefacts: { title: "Test" } }), // no branchName
+    );
+
+    const state = makeState();
+    await runStory({ issueKey: "ENG-1", state });
+
+    const finishCall = vi.mocked(state.finishStep).mock.calls.find((c) => c[1] === "implement");
+    expect(finishCall).toBeDefined();
+    expect(finishCall![2]).toMatchObject({ verdict: "failed" });
+    expect(mockComment).toHaveBeenCalledWith("ENG-1", expect.stringContaining("Escalated"));
+  });
+
   it("escalates to human review when engineer fails to implement", async () => {
     mockEngineer.mockResolvedValue(successResult({ success: false }));
 
