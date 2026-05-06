@@ -134,7 +134,8 @@ export function createStateStore(dbPath: string): StateStore {
     `SELECT issue_key as issueKey, step, session_id as sessionId,
             started_at as startedAt, finished_at as finishedAt,
             cost_usd as costUsd, verdict
-     FROM steps WHERE finished_at IS NULL AND session_id IS NOT NULL`,
+     FROM steps WHERE finished_at IS NULL AND session_id IS NOT NULL
+     ORDER BY started_at ASC`,
   );
 
   return {
