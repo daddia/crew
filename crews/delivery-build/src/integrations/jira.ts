@@ -83,6 +83,8 @@ export async function getIssue(issueKey: string): Promise<JiraIssue> {
   return {
     summary: data.fields.summary,
     description: extractAdfText(data.fields.description),
+    // Populated once we know the custom-field ID for acceptance criteria in
+    // the target Jira project (typically customfield_1XXXX). Null until then.
     acceptanceCriteria: null,
   };
 }
