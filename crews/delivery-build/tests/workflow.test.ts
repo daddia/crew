@@ -166,8 +166,8 @@ describe("runStory", () => {
     const state = makeState();
     await runStory({ issueKey: "ENG-1", state });
 
-    // Engineer is called once for implement and once for address-feedback.
-    expect(mockEngineer).toHaveBeenCalledTimes(2);
+    // Engineer is called once for assess-clarification, once for implement, and once for address-feedback.
+    expect(mockEngineer).toHaveBeenCalledTimes(3);
     expect(mockSeniorEngineer).toHaveBeenCalledTimes(2);
     expect(mockCreateMr).toHaveBeenCalledTimes(1);
     expect(mockTransition).toHaveBeenCalledWith("ENG-1", "In QA");
@@ -374,6 +374,7 @@ describe("runStory", () => {
   it("passes sessionId from engineer.run() result to state.startStep() for the address-feedback step", async () => {
     let reviewCall = 0;
     mockEngineer
+      .mockResolvedValueOnce(successResult()) // assess-clarification
       .mockResolvedValueOnce(
         successResult({ artefacts: { branchName: "feature/ENG-1-test", title: "Test", sessionId: "sess_impl" } }),
       )
@@ -417,5 +418,105 @@ describe("runStory", () => {
 
     expect(mockTransition).not.toHaveBeenCalledWith("ENG-1", "In Review");
     expect(mockTransition).toHaveBeenCalledWith("ENG-1", "In QA");
+  });
+
+  // ── Clarification assessment (CREW-62-001) ────────────────────────────────
+
+  it("calls engineer with task assess-clarification before transitioning to In Progress", async () => {
+    mockEngineer.mockResolvedValue(successResult());
+    mockSeniorEngineer.mockResolvedValue(successResult());
+
+    const state = makeState();
+    await runStory({ issueKey: "ENG-1", state });
+
+    const assessCall = mockEngineer.mock.calls.find(
+      (call) => (call[0] as AgentInput).context["task"] === "assess-clarification",
+    );
+    expect(assessCall).toBeDefined();
+
+    const assessOrder = mockEngineer.mock.invocationCallOrder[
+      mockEngineer.mock.calls.indexOf(assessCall!)
+    ] as number;
+    const inProgressOrder = mockTransition.mock.invocationCallOrder[
+      mockTransition.mock.calls.findIndex((c) => c[1] === "In Progress")
+    ] as number;
+
+    expect(assessOrder).toBeLessThan(inProgressOrder);
+  });
+
+  it("passes context.ticket to engineer for the assess-clarification task", async () => {
+    mockEngineer.mockResolvedValue(successResult());
+    mockSeniorEngineer.mockResolvedValue(successResult());
+
+    const state = makeState();
+    await runStory({ issueKey: "ENG-1", state });
+
+    const assessCall = mockEngineer.mock.calls.find(
+      (call) => (call[0] as AgentInput).context["task"] === "assess-clarification",
+    );
+    expect(assessCall).toBeDefined();
+    expect((assessCall![0] as AgentInput).context["ticket"]).toMatchObject({
+      summary: "Test Story",
+      description: "Do the work.",
+    });
+  });
+
+  it("proceeds to In Progress when engineer returns questionsRequired: false", async () => {
+    mockEngineer.mockResolvedValue(
+      successResult({ artefacts: { questionsRequired: false, branchName: "feature/ENG-1-test", title: "Test" } }),
+    );
+    mockSeniorEngineer.mockResolvedValue(successResult());
+
+    const state = makeState();
+    await runStory({ issueKey: "ENG-1", state });
+
+    expect(mockComment).not.toHaveBeenCalledWith("ENG-1", expect.any(String));
+    expect(mockTransition).toHaveBeenCalledWith("ENG-1", "In Progress");
+  });
+
+  it("posts questions and transitions to Clarification Needed when questionsRequired: true", async () => {
+    const questions = "What is the expected error behaviour?";
+    mockEngineer
+      .mockResolvedValueOnce(
+        successResult({ artefacts: { questionsRequired: true, questions } }),
+      );
+
+    const state = makeState();
+    await runStory({ issueKey: "ENG-1", state });
+
+    expect(mockComment).toHaveBeenCalledWith("ENG-1", questions);
+    expect(mockTransition).toHaveBeenCalledWith("ENG-1", "Clarification Needed");
+    expect(mockTransition).not.toHaveBeenCalledWith("ENG-1", "In Progress");
+  });
+
+  it("records clarification-pending step in state store when questions are required", async () => {
+    mockEngineer
+      .mockResolvedValueOnce(
+        successResult({ artefacts: { questionsRequired: true, questions: "Is this right?" } }),
+      );
+
+    const state = makeState();
+    await runStory({ issueKey: "ENG-1", state });
+
+    expect(vi.mocked(state.upsertStory)).toHaveBeenCalledWith("ENG-1", "clarification-pending");
+    expect(vi.mocked(state.startStep)).toHaveBeenCalledWith("ENG-1", "clarification-pending");
+    const finishCall = vi.mocked(state.finishStep).mock.calls.find((c) => c[1] === "clarification-pending");
+    expect(finishCall).toBeDefined();
+    expect(finishCall![2]).toMatchObject({ verdict: "pending" });
+  });
+
+  it("does not call engineer for implement when clarification is needed", async () => {
+    mockEngineer
+      .mockResolvedValueOnce(
+        successResult({ artefacts: { questionsRequired: true, questions: "Clarify scope." } }),
+      );
+
+    const state = makeState();
+    await runStory({ issueKey: "ENG-1", state });
+
+    const implementCall = mockEngineer.mock.calls.find(
+      (call) => (call[0] as AgentInput).context["task"] === "implement-story",
+    );
+    expect(implementCall).toBeUndefined();
   });
 });

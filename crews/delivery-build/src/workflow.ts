@@ -19,6 +19,8 @@ export interface WorkflowContext {
  *
  * Sequence:
  *   → context-seed: fetch Jira ticket (non-fatal if it fails)
+ *   → assess-clarification: engineer checks ticket for ambiguity
+ *       → questions required → comment + transition to Clarification Needed + halt
  *   → engineer implements story on branch
  *   → senior-engineer peer-code-review
  *   → bounded address-feedback loop (cap: REFACTOR_LOOP_CAP)
@@ -74,7 +76,36 @@ async function runStoryInner(
 
   state.finishStep(issueKey, "context-seed", { verdict: ticket ? "ok" : "failed" });
 
-  // ── Step 2: Implement ─────────────────────────────────────────────────────
+  // ── Step 2: Assess clarification ──────────────────────────────────────────
+  // Before moving the ticket to In Progress, ask the engineer whether the
+  // ticket is clear enough to implement. If not, post questions and park the
+  // story in Clarification Needed until a human responds (CREW-62-002 resumes
+  // the workflow from this point once an answer arrives).
+  state.upsertStory(issueKey, "assess-clarification");
+
+  const assessResult = await engineer.run({
+    ...input,
+    context: { task: "assess-clarification", ticket },
+  });
+
+  if (assessResult.artefacts["questionsRequired"] === true) {
+    const questions =
+      typeof assessResult.artefacts["questions"] === "string"
+        ? assessResult.artefacts["questions"]
+        : "The engineer requires clarification before proceeding.";
+
+    await commentOnIssue(issueKey, questions);
+    await transitionIssue(issueKey, "Clarification Needed");
+
+    state.upsertStory(issueKey, "clarification-pending");
+    state.startStep(issueKey, "clarification-pending");
+    state.finishStep(issueKey, "clarification-pending", { verdict: "pending" });
+
+    log.info("workflow.clarification-needed", { issueKey });
+    return;
+  }
+
+  // ── Step 3: Implement ─────────────────────────────────────────────────────
   state.upsertStory(issueKey, "implement");
   await transitionIssue(issueKey, "In Progress");
 
@@ -110,7 +141,7 @@ async function runStoryInner(
     return;
   }
 
-  // ── Step 3: Peer review + address-feedback loop (MR not yet opened) ───────
+  // ── Step 4: Peer review + address-feedback loop (MR not yet opened) ───────
   let reviewPassed = false;
   let unresolvedItems: string[] = [];
 
@@ -170,7 +201,7 @@ async function runStoryInner(
     return;
   }
 
-  // ── Step 4: Open MR (peer review approved) ────────────────────────────────
+  // ── Step 5: Open MR (peer review approved) ────────────────────────────────
   state.upsertStory(issueKey, "open-mr");
   state.startStep(issueKey, "open-mr");
 
@@ -182,7 +213,7 @@ async function runStoryInner(
 
   state.finishStep(issueKey, "open-mr", { verdict: mrUrl });
 
-  // ── Step 5: CI monitoring loop ────────────────────────────────────────────
+  // ── Step 6: CI monitoring loop ────────────────────────────────────────────
   // Read caps inside the function so tests can override via process.env.
   const ciRetryCap = parseInt(process.env["CI_RETRY_CAP"] ?? "3", 10);
   const ciPollInterval = parseInt(process.env["CI_POLL_INTERVAL_MS"] ?? "30000", 10);
