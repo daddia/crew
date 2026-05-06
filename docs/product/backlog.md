@@ -224,40 +224,9 @@ each story is small and self-contained).
 
 ---
 
-- [ ] **[CREW-66-003] Pin MCP server versions in `mcp.json`**
-  - **Status:** Not started | **Priority:** P1 | **Estimate:** 1
+- [N/A] **[CREW-66-003] Pin MCP server versions in `mcp.json`**
+  - **Status:** Cancelled | **Priority:** P1 | **Estimate:** 1
   - **Epic:** CREW-66 | **Labels:** review:#9, type:reliability
-  - **Depends on:** —
-  - **Deliverable:** `crews/delivery-build/mcp.json` updated so each MCP
-    server package is referenced with an explicit version specifier
-    (e.g. `@anthropic-ai/mcp-server-gitlab@1.2.3`). `npx -y` no longer
-    downloads the latest version on every agent invocation, eliminating
-    version drift mid-flight and trimming agent cold-start time. A test under
-    `crews/delivery-build/tests/mcp-config.test.ts` parses `mcp.json`,
-    iterates the configured servers, and asserts every package args entry
-    contains an `@x.y.z` segment.
-  - **Acceptance (EARS):**
-    - WHEN `mcp.json` is read, THE SYSTEM SHALL reference each MCP server
-      package with an explicit version specifier of the form
-      `<package>@<semver>`.
-    - WHEN a new version of either package is published, THE SYSTEM SHALL
-      NOT automatically upgrade unless the version specifier in `mcp.json`
-      is explicitly updated.
-    - WHEN the new test suite runs, THE SYSTEM SHALL fail if any
-      `args` entry references an MCP package without a version specifier.
-  - **Acceptance (Gherkin):**
-
-    ```gherkin
-    Scenario: MCP server args include pinned version
-      Given crews/delivery-build/mcp.json
-      When the args array for mcp-server-gitlab is inspected
-      Then the package name includes a version specifier (e.g. @1.2.3)
-
-    Scenario: Test suite catches an unpinned package
-      Given mcp.json is edited to remove the version pin from atlassian
-      When the mcp-config test runs
-      Then it fails with a message naming the unpinned package
-    ```
 
 ---
 
