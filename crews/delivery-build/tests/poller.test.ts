@@ -12,23 +12,24 @@ vi.mock("../src/workflow.js", () => ({
   runStory: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("../src/observability.js", () => ({
-  log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+  log: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
 
-import { pollTick, startPoller } from "../src/poller.js";
+import { pollTick, startPoller, inFlight } from "../src/poller.js";
 import { searchIssues } from "../src/integrations/jira.js";
 import { runStory } from "../src/workflow.js";
 import { log } from "../src/observability.js";
-import type { StateStore } from "../src/state.js";
+import type { StateStore, Step } from "../src/state.js";
 
 const mockSearchIssues = vi.mocked(searchIssues);
 const mockRunStory = vi.mocked(runStory);
 const mockLogWarn = vi.mocked(log.warn);
+const mockLogDebug = vi.mocked(log.debug);
 
-function makeState(): StateStore {
+function makeState(getStoryImpl?: (key: string) => { issueKey: string; currentStep: Step; startedAt: number } | undefined): StateStore {
   return {
     upsertStory: vi.fn(),
-    getStory: vi.fn(),
+    getStory: vi.fn().mockImplementation(getStoryImpl ?? (() => undefined)),
     startStep: vi.fn(),
     finishStep: vi.fn(),
     getStepHistory: vi.fn().mockReturnValue([]),
@@ -37,11 +38,17 @@ function makeState(): StateStore {
   };
 }
 
+function makeStoryRow(issueKey: string, currentStep: Step) {
+  return { issueKey, currentStep, startedAt: Date.now() };
+}
+
 describe("pollTick", () => {
   beforeEach(() => {
+    inFlight.clear();
     mockSearchIssues.mockReset();
     mockRunStory.mockReset().mockResolvedValue(undefined);
     mockLogWarn.mockReset();
+    mockLogDebug.mockReset();
   });
 
   it("executes a JQL search for the configured project and assignee", async () => {
@@ -81,12 +88,78 @@ describe("pollTick", () => {
     );
     expect(mockRunStory).not.toHaveBeenCalled();
   });
+
+  it("skips an in-progress story and emits a debug log", async () => {
+    mockSearchIssues.mockResolvedValue([{ issueKey: "CREW-60-001" }]);
+    const state = makeState(() => makeStoryRow("CREW-60-001", "implement"));
+
+    await pollTick(state);
+
+    expect(mockRunStory).not.toHaveBeenCalled();
+    expect(mockLogDebug).toHaveBeenCalledWith(
+      "poller.skip-in-progress",
+      expect.objectContaining({ issueKey: "CREW-60-001", step: "implement" }),
+    );
+  });
+
+  it("skips a terminal story silently without calling runStory", async () => {
+    mockSearchIssues.mockResolvedValue([{ issueKey: "CREW-60-003" }]);
+    const state = makeState(() => makeStoryRow("CREW-60-003", "in-qa"));
+
+    await pollTick(state);
+
+    expect(mockRunStory).not.toHaveBeenCalled();
+    expect(mockLogDebug).not.toHaveBeenCalled();
+  });
+
+  it("also skips silently when the terminal step is needs-human-review", async () => {
+    mockSearchIssues.mockResolvedValue([{ issueKey: "CREW-60-003" }]);
+    const state = makeState(() => makeStoryRow("CREW-60-003", "needs-human-review"));
+
+    await pollTick(state);
+
+    expect(mockRunStory).not.toHaveBeenCalled();
+    expect(mockLogDebug).not.toHaveBeenCalled();
+  });
+
+  it("skips an in-flight issueKey and emits a debug log", async () => {
+    inFlight.add("CREW-60-004");
+    mockSearchIssues.mockResolvedValue([{ issueKey: "CREW-60-004" }]);
+
+    await pollTick(makeState());
+
+    expect(mockRunStory).not.toHaveBeenCalled();
+    expect(mockLogDebug).toHaveBeenCalledWith(
+      "poller.skip-in-flight",
+      expect.objectContaining({ issueKey: "CREW-60-004" }),
+    );
+  });
+
+  it("calls runStory for a new story with no state record and no in-flight lock", async () => {
+    mockSearchIssues.mockResolvedValue([{ issueKey: "CREW-60-002" }]);
+    const state = makeState(() => undefined);
+
+    await pollTick(state);
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(mockRunStory).toHaveBeenCalledWith({ issueKey: "CREW-60-002", state });
+  });
+
+  it("removes the issueKey from inFlight after runStory settles", async () => {
+    mockSearchIssues.mockResolvedValue([{ issueKey: "CREW-NEW" }]);
+
+    await pollTick(makeState());
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(inFlight.has("CREW-NEW")).toBe(false);
+  });
 });
 
 describe("startPoller", () => {
   let savedInterval: string | undefined;
 
   beforeEach(() => {
+    inFlight.clear();
     vi.useFakeTimers();
     mockSearchIssues.mockReset().mockResolvedValue([]);
     savedInterval = process.env["POLL_INTERVAL_MS"];
