@@ -4,8 +4,13 @@ import type { SDKResultMessage } from "@daddia/crew";
 import type { AgentInput } from "@daddia/crew";
 
 const DEFAULT_RESULT_JSON = JSON.stringify({
-  branchName: "feature/test-branch",
-  title: "Test title",
+  success: true,
+  summary: "Implemented on feature/test-branch.",
+  artefacts: {
+    branchName: "feature/test-branch",
+    title: "Test title",
+  },
+  costUsd: 0,
 });
 
 // Mock @daddia/crew before the module under test is imported.
@@ -272,10 +277,15 @@ describe("engineer.run()", () => {
     expect(session[Symbol.asyncDispose]).toHaveBeenCalledOnce();
   });
 
-  it("merges branchName and title into artefacts from implement-story result", async () => {
+  it("merges branchName and title into artefacts from implement-story result (envelope format)", async () => {
     const resultJson = JSON.stringify({
-      branchName: "feature/CREW-1-foo",
-      title: "Add foo",
+      success: true,
+      summary: "Implemented on feature/CREW-1-foo.",
+      artefacts: {
+        branchName: "feature/CREW-1-foo",
+        title: "Add foo",
+      },
+      costUsd: 0,
     });
     const session = makeSession([makeResultMessage({ result: resultJson })]);
     mockResolveSession.mockResolvedValue({
@@ -294,10 +304,15 @@ describe("engineer.run()", () => {
     });
   });
 
-  it("merges questionsRequired as boolean true from assess-clarification result", async () => {
+  it("merges questionsRequired as boolean true from assess-clarification result (envelope format)", async () => {
     const resultJson = JSON.stringify({
-      questionsRequired: true,
-      questions: "1. What status?\n2. Which field?",
+      success: true,
+      summary: "Two questions posted.",
+      artefacts: {
+        questionsRequired: true,
+        questions: "1. What status?\n2. Which field?",
+      },
+      costUsd: 0,
     });
     const session = makeSession([makeResultMessage({ result: resultJson })]);
     mockResolveSession.mockResolvedValue({
@@ -338,7 +353,40 @@ describe("engineer.run()", () => {
 });
 
 describe("parseEngineerArtefacts()", () => {
-  it("parses a valid implement-story JSON object", () => {
+  it("unwraps the AgentResult envelope and returns inner artefacts", () => {
+    const raw = JSON.stringify({
+      success: true,
+      summary: "Implemented on feature/CREW-1-foo.",
+      artefacts: {
+        branchName: "feature/CREW-1-foo",
+        title: "Add foo",
+      },
+      costUsd: 0,
+    });
+
+    const result = parseEngineerArtefacts(raw);
+
+    expect(result["branchName"]).toBe("feature/CREW-1-foo");
+    expect(result["title"]).toBe("Add foo");
+    expect(result["success"]).toBeUndefined();
+    expect(result["summary"]).toBeUndefined();
+  });
+
+  it("unwraps the assess-clarification envelope and returns inner artefacts", () => {
+    const raw = JSON.stringify({
+      success: true,
+      summary: "Two questions posted.",
+      artefacts: { questionsRequired: true, questions: "1. Why?" },
+      costUsd: 0,
+    });
+
+    const result = parseEngineerArtefacts(raw);
+
+    expect(result["questionsRequired"]).toBe(true);
+    expect(result["questions"]).toBe("1. Why?");
+  });
+
+  it("parses a valid implement-story JSON object (flat, no envelope)", () => {
     const raw = JSON.stringify({
       branchName: "feature/CREW-1-foo",
       title: "Add foo",
@@ -353,7 +401,7 @@ describe("parseEngineerArtefacts()", () => {
     expect(result["title"]).toBe("Add foo");
   });
 
-  it("parses a valid assess-clarification JSON object", () => {
+  it("parses a valid assess-clarification JSON object (flat, no envelope)", () => {
     const raw = JSON.stringify({ questionsRequired: false });
 
     const result = parseEngineerArtefacts(raw);

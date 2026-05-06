@@ -20,6 +20,12 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
  * Accepts any of the three shapes: assess-clarification, implement-story,
  * or address-feedback.
  *
+ * The skills instruct the model to emit a full AgentResult envelope:
+ *   { success, summary, artefacts: { ... }, costUsd }
+ * When that envelope is present this function returns the inner `artefacts`
+ * object so callers receive the flat artefact fields directly. When no
+ * envelope is detected the top-level object is returned unchanged.
+ *
  * Throws a descriptive Error on parse or structural failure so the caller
  * can produce a `success: false` result with an excerpt of the raw result.
  */
@@ -38,7 +44,16 @@ export function parseEngineerArtefacts(raw: string): Record<string, unknown> {
     throw new Error("Result is not a JSON object");
   }
 
-  return parsed as Record<string, unknown>;
+  const obj = parsed as Record<string, unknown>;
+  if (
+    typeof obj["artefacts"] === "object" &&
+    obj["artefacts"] !== null &&
+    !Array.isArray(obj["artefacts"])
+  ) {
+    return obj["artefacts"] as Record<string, unknown>;
+  }
+
+  return obj;
 }
 
 const ALLOWED_TOOLS = [

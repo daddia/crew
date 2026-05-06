@@ -29,7 +29,15 @@ function flattenComment(c: unknown, index: number): string {
 
 /**
  * Parse the structured JSON artefact emitted by the peer-code-review skill.
- * Expected shape: { verdict: "approved" | "changes-requested", comments: [...] }
+ *
+ * The skill instructs the model to emit a full AgentResult envelope:
+ *   { success, summary, artefacts: { verdict, comments, ... }, costUsd }
+ * When that envelope is present this function reads `verdict` and `comments`
+ * from the inner `artefacts` object. When no envelope is detected the
+ * top-level object is read directly for backward compatibility.
+ *
+ * Expected shape of the artefacts (or top-level object):
+ *   { verdict: "approved" | "changes-requested", comments: [...] }
  *
  * Throws a descriptive Error on any parse or validation failure so the caller
  * can produce a structured `success: false` result with an excerpt of the raw
@@ -53,7 +61,14 @@ export function parseReviewResult(raw: string): {
     throw new Error("Result is not a JSON object");
   }
 
-  const obj = parsed as Record<string, unknown>;
+  const top = parsed as Record<string, unknown>;
+  const obj: Record<string, unknown> =
+    typeof top["artefacts"] === "object" &&
+    top["artefacts"] !== null &&
+    !Array.isArray(top["artefacts"])
+      ? (top["artefacts"] as Record<string, unknown>)
+      : top;
+
   const { verdict, comments } = obj;
 
   if (verdict !== "approved" && verdict !== "changes-requested") {
