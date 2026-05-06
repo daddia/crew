@@ -15,10 +15,10 @@ The architecture has two layers:
 
 ```
 crews/
-  delivery-build/     # Build crew: implement → peer-review → address-feedback → hand off to delivery-review
+  delivery-build/     # Build crew: context-seed → implement → peer-review → address-feedback → open-mr → ci-check → in-qa
     src/
       index.ts        # Hono server entry
-      workflow.ts     # Build sequence: implement → open-mr → peer-review → address-feedback
+      workflow.ts     # Build sequence: context-seed → implement → peer-review → open-mr → ci-check → in-qa
       state.ts        # SQLite store (stories, steps, webhook_events) via node:sqlite
       memory.ts       # Project memory seeding for the engineer persona
       observability.ts
@@ -170,11 +170,17 @@ Tool allowlists are enforced at two levels: the Claude Agent SDK `allowedTools` 
 
 Each crew owns its own SQLite database (path injected via `DB_PATH` env var). The standard schema has three tables:
 
-- `stories` — one row per story, tracking `current_phase`.
-- `phases` — one row per phase execution, recording `session_id`, `started_at`, `finished_at`, `cost_usd`, `verdict`.
+- `stories` — one row per story, tracking `current_step` and `updated_at`.
+- `steps` — one row per step execution, recording `session_id`, `started_at`, `finished_at`, `cost_usd`, `verdict`.
 - `webhook_events` — deduplication log keyed on `(provider, event_id)`.
 
-Write phase state **before** calling `agent.run()`, not after. This allows crash-recovery by scanning for phases with `started_at` set and `finished_at` null.
+**Crash-recovery ordering:**
+
+Call `state.upsertStory(issueKey, step)` **before** `agent.run()`. This is the canonical in-flight signal: a `stories` row whose `current_step` has no matching finished `steps` row indicates an interrupted run.
+
+For non-agent steps (API calls, integrations), also call `state.startStep(issueKey, step)` before the work begins, so the `steps` table reflects the start time accurately.
+
+For agent steps whose `AgentResult` contains a `sessionId` artefact, call `state.startStep(issueKey, step, sessionId)` **after** `agent.run()` returns so the session ID is captured in the same row. The accepted trade-off is that `started_at` and `finished_at` for that step will be nearly identical (both timestamped at completion), and if the process crashes during the run there will be no `steps` row — but the `stories` row (written before the run) is still sufficient to detect the interrupted story. A future `recordSessionId` method could eliminate this trade-off.
 
 ## Workflow conventions
 
