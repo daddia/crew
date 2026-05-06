@@ -42,10 +42,9 @@ describe("createMr", () => {
 
     expect(url).toBe("https://gitlab.test/org/repo/-/merge_requests/7");
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining("source_branch=feature%2FCREW-66-004"),
-      expect.any(Object),
-    );
+    const lookupUrl = (fetchMock.mock.calls[0] as [string, RequestInit])[0];
+    expect(lookupUrl).toContain("source_branch=feature%2FCREW-66-004");
+    expect(lookupUrl).toContain("state=opened");
   });
 
   it("issues a POST and returns the new MR web_url when no open MR exists", async () => {
