@@ -70,6 +70,26 @@ describe("loadConfig – behaviour defaults", () => {
     expect(config.behaviour.clarificationTimeoutHours).toBe(24);
   });
 
+  it("defaults diffFileCap to 50 when DIFF_FILE_CAP is absent", () => {
+    const config = loadConfig(REQUIRED_ENV);
+    expect(config.behaviour.diffFileCap).toBe(50);
+  });
+
+  it("defaults diffSizeCapBytes to 500000 when DIFF_SIZE_CAP_BYTES is absent", () => {
+    const config = loadConfig(REQUIRED_ENV);
+    expect(config.behaviour.diffSizeCapBytes).toBe(500_000);
+  });
+
+  it("coerces DIFF_FILE_CAP and DIFF_SIZE_CAP_BYTES from numeric strings", () => {
+    const config = loadConfig({
+      ...REQUIRED_ENV,
+      DIFF_FILE_CAP: "25",
+      DIFF_SIZE_CAP_BYTES: "1000000",
+    });
+    expect(config.behaviour.diffFileCap).toBe(25);
+    expect(config.behaviour.diffSizeCapBytes).toBe(1_000_000);
+  });
+
   it("defaults infrastructure.port to 3000 when PORT is absent", () => {
     const config = loadConfig(REQUIRED_ENV);
     expect(config.infrastructure.port).toBe(3000);

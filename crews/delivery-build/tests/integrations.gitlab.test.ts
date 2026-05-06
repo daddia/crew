@@ -97,8 +97,9 @@ describe("getMrDiff", () => {
     }));
     fetchMock.mockResolvedValueOnce(mockJson(diffs));
 
+    // Numeric project ID bypasses the URL-path validation in extractMrIid.
     const smallCapClient = createGitlabClient(
-      { apiUrl: "https://gitlab.test/api/v4", projectId: "my-project" },
+      { apiUrl: "https://gitlab.test/api/v4", projectId: "99" },
       { gitlabAccessToken: "test-token" },
       { diffFileCap: 50, diffSizeCapBytes: 10_000_000 },
     );
@@ -115,7 +116,7 @@ describe("getMrDiff", () => {
     fetchMock.mockResolvedValueOnce(mockJson(diffs));
 
     const tinyCapClient = createGitlabClient(
-      { apiUrl: "https://gitlab.test/api/v4", projectId: "my-project" },
+      { apiUrl: "https://gitlab.test/api/v4", projectId: "99" },
       { gitlabAccessToken: "test-token" },
       { diffFileCap: 50, diffSizeCapBytes: 100 },
     );
@@ -127,28 +128,32 @@ describe("getMrDiff", () => {
   });
 
   it("applies file cap before byte cap when both are exceeded", async () => {
+    // 10 files; file cap = 3 removes files 3–9; the remaining ~240-char string
+    // is then cut to 50 chars by the byte cap.
     const diffs = Array.from({ length: 10 }, (_, i) => ({
       new_path: `src/f${i}.ts`,
-      diff: "x".repeat(50),
+      diff: "x".repeat(100),
     }));
     fetchMock.mockResolvedValueOnce(mockJson(diffs));
 
     const bothCapClient = createGitlabClient(
-      { apiUrl: "https://gitlab.test/api/v4", projectId: "my-project" },
+      { apiUrl: "https://gitlab.test/api/v4", projectId: "99" },
       { gitlabAccessToken: "test-token" },
-      { diffFileCap: 3, diffSizeCapBytes: 20 },
+      { diffFileCap: 3, diffSizeCapBytes: 50 },
     );
     const result = await bothCapClient.getMrDiff(MR_URL);
 
-    expect(result).toContain("[7 files omitted — diff truncated at 3]");
-    expect(result).toContain("[diff truncated at 20 bytes]");
-    const noteIndex = result.indexOf("\n[diff truncated at 20 bytes]");
-    expect(noteIndex).toBe(20);
+    // Byte cap applied: note at position 50
+    expect(result).toContain("[diff truncated at 50 bytes]");
+    expect(result.indexOf("\n[diff truncated at 50 bytes]")).toBe(50);
+    // File cap applied first: content starts with f0, and f9 was never included
+    expect(result.startsWith("--- src/f0.ts\n")).toBe(true);
+    expect(result).not.toContain("src/f9.ts");
   });
 
   it("uses default caps of 50 files and 500000 bytes when behaviour is omitted", async () => {
     const defaultClient = createGitlabClient(
-      { apiUrl: "https://gitlab.test/api/v4", projectId: "my-project" },
+      { apiUrl: "https://gitlab.test/api/v4", projectId: "99" },
       { gitlabAccessToken: "test-token" },
     );
     const diffs = Array.from({ length: 10 }, (_, i) => ({

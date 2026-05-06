@@ -64,9 +64,14 @@ export async function boot(env: NodeJS.ProcessEnv = process.env): Promise<void> 
   const jira = createJiraClient(config.identity.jira, {
     atlassianApiToken: config.secrets.atlassianApiToken,
   });
-  const gitlab = createGitlabClient(config.identity.gitlab, {
-    gitlabAccessToken: config.secrets.gitlabAccessToken,
-  });
+  const gitlab = createGitlabClient(
+    config.identity.gitlab,
+    { gitlabAccessToken: config.secrets.gitlabAccessToken },
+    {
+      diffFileCap: config.behaviour.diffFileCap,
+      diffSizeCapBytes: config.behaviour.diffSizeCapBytes,
+    },
+  );
 
   const ctxBase: WorkflowCtxBase = {
     behaviour: {
