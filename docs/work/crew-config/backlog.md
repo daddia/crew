@@ -1,9 +1,9 @@
 ---
 type: Backlog
 scope: work-package
-version: '0.1'
+version: '1.0'
 owner: daddia
-status: Draft
+status: Done
 last_updated: 2026-05-06
 related:
   - docs/product/backlog.md
@@ -54,7 +54,7 @@ tooling. See `design.md §1.2`.
 ---
 
 - [x] **[CREW-65-001] Add `zod` dependency to `packages/crew` and include `src/config` in compilation**
-  - **Status:** Not started | **Priority:** P0 | **Estimate:** 1
+  - **Status:** Done | **Priority:** P0 | **Estimate:** 1
   - **Epic:** CREW-65 | **Labels:** type:dependency
   - **Depends on:** —
   - **Deliverable:** `packages/crew/package.json` lists `zod` as a runtime
@@ -84,8 +84,8 @@ tooling. See `design.md §1.2`.
 
 ---
 
-- [ ] **[CREW-65-002] Implement `@daddia/crew/config` subpath primitives**
-  - **Status:** Not started | **Priority:** P0 | **Estimate:** 5
+- [x] **[CREW-65-002] Implement `@daddia/crew/config` subpath primitives**
+  - **Status:** Done | **Priority:** P0 | **Estimate:** 5
   - **Epic:** CREW-65 | **Labels:** type:feature
   - **Depends on:** CREW-65-001
   - **Deliverable:** Six source files added under `packages/crew/src/config/`:
@@ -155,8 +155,8 @@ tooling. See `design.md §1.2`.
 
 ---
 
-- [ ] **[CREW-65-003] Add per-crew `ConfigSchema` + `loadConfig()` to `crews/delivery-build`**
-  - **Status:** Not started | **Priority:** P0 | **Estimate:** 3
+- [x] **[CREW-65-003] Add per-crew `ConfigSchema` + `loadConfig()` to `crews/delivery-build`**
+  - **Status:** Done | **Priority:** P0 | **Estimate:** 3
   - **Epic:** CREW-65 | **Labels:** type:feature
   - **Depends on:** CREW-65-002
   - **Deliverable:** `crews/delivery-build/src/config.ts` exists containing
@@ -228,8 +228,8 @@ tooling. See `design.md §1.2`.
 
 ---
 
-- [ ] **[CREW-65-004] Thread `Config` explicitly through `crews/delivery-build`**
-  - **Status:** Not started | **Priority:** P0 | **Estimate:** 5
+- [x] **[CREW-65-004] Thread `Config` explicitly through `crews/delivery-build`**
+  - **Status:** Done | **Priority:** P0 | **Estimate:** 5
   - **Epic:** CREW-65 | **Labels:** type:refactor
   - **Depends on:** CREW-65-003
   - **Deliverable:** All eight source files listed below are refactored so
@@ -296,8 +296,8 @@ tooling. See `design.md §1.2`.
 
 ---
 
-- [ ] **[CREW-65-005] Boot-time provenance log and `config.invalid` fast-fail in `index.ts`**
-  - **Status:** Not started | **Priority:** P1 | **Estimate:** 2
+- [x] **[CREW-65-005] Boot-time provenance log and `config.invalid` fast-fail in `index.ts`**
+  - **Status:** Done | **Priority:** P1 | **Estimate:** 2
   - **Epic:** CREW-65 | **Labels:** type:observability
   - **Depends on:** CREW-65-004
   - **Deliverable:** `crews/delivery-build/src/index.ts` is updated so that
@@ -345,8 +345,8 @@ tooling. See `design.md §1.2`.
 
 ---
 
-- [ ] **[CREW-65-006] ESLint rule banning `process.env` outside `config.ts`**
-  - **Status:** Not started | **Priority:** P2 | **Estimate:** 2
+- [x] **[CREW-65-006] ESLint rule banning `process.env` outside `config.ts`**
+  - **Status:** Done | **Priority:** P2 | **Estimate:** 2
   - **Epic:** CREW-65 | **Labels:** type:quality
   - **Depends on:** CREW-65-004
   - **Deliverable:** `tooling/eslint-config/src/index.ts` (or the appropriate

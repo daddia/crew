@@ -874,6 +874,7 @@ summarises the outcome.
 | CREW-64-004 | `PROJECT_DIR` and `ANTHROPIC_MODEL` documented | Done | Listed in `.env.example` and `README.md` |
 | CREW-64-005 | Test mock cleanup | Done | No `db: {} as never` in `tests/` |
 | CREW-64-007 | Loop-bound asymmetry comment | Done | Documented in `workflow.ts` and `AGENTS.md` |
+| CREW-65 | Shared crew config primitives + delivery-build adoption | Done | `@daddia/crew/config` subpath (`loadEnv`, `loadYaml`, `Secret`, `redact`, `detectWorkspace`, errors); per-crew `ConfigSchema` + `loadConfig()` in `crews/delivery-build/src/config.ts`; `Config` threaded through integrations, poller, workflow, handlers; boot-time `config.loaded` provenance log and `config.invalid` fast-fail; ESLint rule banning `process.env` outside `config.ts`. Detail in `docs/work/crew-config/backlog.md`. |
 
 The unfinished CREW-63 and CREW-64 stories carry forward into CREW-66:
 
