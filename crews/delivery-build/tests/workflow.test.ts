@@ -339,6 +339,57 @@ describe("runStory", () => {
     );
   });
 
+  // ── sessionId wiring ──────────────────────────────────────────────────────
+
+  it("passes sessionId from engineer.run() result to state.startStep() for the implement step", async () => {
+    mockEngineer.mockResolvedValue(
+      successResult({ artefacts: { branchName: "feature/ENG-1-test", title: "Test", sessionId: "sess_abc" } }),
+    );
+    mockSeniorEngineer.mockResolvedValue(successResult());
+
+    const state = makeState();
+    await runStory({ issueKey: "ENG-1", state });
+
+    expect(vi.mocked(state.startStep)).toHaveBeenCalledWith("ENG-1", "implement", "sess_abc");
+  });
+
+  it("passes sessionId from engineer.run() result to state.startStep() for the address-feedback step", async () => {
+    let reviewCall = 0;
+    mockEngineer
+      .mockResolvedValueOnce(
+        successResult({ artefacts: { branchName: "feature/ENG-1-test", title: "Test", sessionId: "sess_impl" } }),
+      )
+      .mockResolvedValueOnce(
+        successResult({ artefacts: { branchName: "feature/ENG-1-test", title: "Test", sessionId: "sess_def" } }),
+      );
+    mockSeniorEngineer.mockImplementation(async (_input: AgentInput) => {
+      reviewCall++;
+      return successResult({ success: reviewCall > 1 });
+    });
+
+    const state = makeState();
+    await runStory({ issueKey: "ENG-1", state });
+
+    expect(vi.mocked(state.startStep)).toHaveBeenCalledWith("ENG-1", "address-feedback", "sess_def");
+  });
+
+  it("does not pass sessionId to state.startStep() for non-agent steps", async () => {
+    mockEngineer.mockResolvedValue(successResult());
+    mockSeniorEngineer.mockResolvedValue(successResult());
+
+    const state = makeState();
+    await runStory({ issueKey: "ENG-1", state });
+
+    const startStepMock = vi.mocked(state.startStep);
+    const openMrCall = startStepMock.mock.calls.find((c) => c[1] === "open-mr");
+    const reviewCall = startStepMock.mock.calls.find((c) => c[1] === "peer-code-review");
+
+    expect(openMrCall).toBeDefined();
+    expect(openMrCall![2]).toBeUndefined();
+    expect(reviewCall).toBeDefined();
+    expect(reviewCall![2]).toBeUndefined();
+  });
+
   it("never transitions to In Review in the normal workflow path", async () => {
     mockEngineer.mockResolvedValue(successResult());
     mockSeniorEngineer.mockResolvedValue(successResult());

@@ -76,7 +76,6 @@ async function runStoryInner(
 
   // ── Step 2: Implement ─────────────────────────────────────────────────────
   state.upsertStory(issueKey, "implement");
-  state.startStep(issueKey, "implement");
   await transitionIssue(issueKey, "In Progress");
 
   const implResult = await engineer.run({
@@ -84,9 +83,10 @@ async function runStoryInner(
     context: { task: "implement-story", ticket },
   });
 
-  // Carry the engineer's session ID forward so the address-feedback loop
-  // can resume the same session and preserve branch context across turns.
+  // Record the step with its sessionId now that we have it; the sessionId
+  // enables crash recovery to resume the interrupted Claude session.
   let engineerSessionId = implResult.artefacts["sessionId"] as string | undefined;
+  state.startStep(issueKey, "implement", engineerSessionId);
 
   state.finishStep(issueKey, "implement", {
     costUsd: implResult.costUsd,
@@ -136,7 +136,6 @@ async function runStoryInner(
     }
 
     state.upsertStory(issueKey, "address-feedback");
-    state.startStep(issueKey, "address-feedback");
 
     const feedbackResult = await engineer.run({
       ...input,
@@ -150,6 +149,7 @@ async function runStoryInner(
     });
 
     engineerSessionId = feedbackResult.artefacts["sessionId"] as string | undefined;
+    state.startStep(issueKey, "address-feedback", engineerSessionId);
 
     state.finishStep(issueKey, "address-feedback", {
       costUsd: feedbackResult.costUsd,
@@ -251,17 +251,14 @@ export async function addressFeedback(
     }
 
     state.upsertStory(issueKey, "address-feedback");
-    state.startStep(issueKey, "address-feedback");
 
-    // Session continuity: previousSessionId is not threaded through here
-    // because the state store does not yet persist session IDs. Until
-    // StateStore.getLastSessionId() exists, the engineer always starts a fresh
-    // session for human-posted feedback. The inline peer-review loop (runStory)
-    // carries session IDs in memory, so it is unaffected.
     const result = await engineer.run({
       issueKey,
       context: { task: "address-feedback", mrUrl, comments: [comment] },
     });
+
+    const sessionId = result.artefacts["sessionId"] as string | undefined;
+    state.startStep(issueKey, "address-feedback", sessionId);
 
     state.finishStep(issueKey, "address-feedback", {
       costUsd: result.costUsd,
