@@ -105,11 +105,7 @@ export function createStateStore(dbPath: string): StateStore {
   const finishStepStmt = db.prepare(
     `UPDATE steps
      SET finished_at = ?, cost_usd = ?, verdict = ?
-     WHERE id = (
-       SELECT id FROM steps
-       WHERE issue_key = ? AND step = ? AND finished_at IS NULL
-       ORDER BY started_at DESC LIMIT 1
-     )`,
+     WHERE issue_key = ? AND step = ? AND finished_at IS NULL`,
   );
 
   const getStepHistoryStmt = db.prepare(
