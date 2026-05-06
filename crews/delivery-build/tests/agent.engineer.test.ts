@@ -3,6 +3,11 @@ import type { SDKSession } from "@anthropic-ai/claude-agent-sdk";
 import type { SDKResultMessage } from "@daddia/crew";
 import type { AgentInput } from "@daddia/crew";
 
+const DEFAULT_RESULT_JSON = JSON.stringify({
+  branchName: "feature/test-branch",
+  title: "Test title",
+});
+
 // Mock @daddia/crew before the module under test is imported.
 vi.mock("@daddia/crew", () => ({
   resolveSession: vi.fn(),
@@ -17,7 +22,7 @@ import {
   readPromptFile,
   buildAuditHook,
 } from "@daddia/crew";
-import { engineer } from "../src/agents/engineer/agent.js";
+import { engineer, parseEngineerArtefacts } from "../src/agents/engineer/agent.js";
 
 const mockResolveSession = vi.mocked(resolveSession);
 const mockReadPromptFile = vi.mocked(readPromptFile);
@@ -33,7 +38,7 @@ function makeResultMessage(
     duration_api_ms: 800,
     is_error: false,
     num_turns: 3,
-    result: "Task completed successfully",
+    result: DEFAULT_RESULT_JSON,
     stop_reason: "end_turn",
     total_cost_usd: 0.05,
     usage: {
@@ -109,7 +114,7 @@ describe("engineer.run()", () => {
     const result = await engineer.run(baseInput);
 
     expect(result.success).toBe(true);
-    expect(result.summary).toBe("Task completed successfully");
+    expect(result.summary).toBe(DEFAULT_RESULT_JSON);
     expect(result.costUsd).toBe(0.05);
     expect(result.artefacts).toMatchObject({ sessionId: "sess-test-123" });
   });
@@ -265,5 +270,112 @@ describe("engineer.run()", () => {
     await engineer.run(baseInput);
 
     expect(session[Symbol.asyncDispose]).toHaveBeenCalledOnce();
+  });
+
+  it("merges branchName and title into artefacts from implement-story result", async () => {
+    const resultJson = JSON.stringify({
+      branchName: "feature/CREW-1-foo",
+      title: "Add foo",
+    });
+    const session = makeSession([makeResultMessage({ result: resultJson })]);
+    mockResolveSession.mockResolvedValue({
+      session,
+      sessionId: "sess-test-123",
+      isResumed: false,
+    });
+
+    const result = await engineer.run(baseInput);
+
+    expect(result.success).toBe(true);
+    expect(result.artefacts).toMatchObject({
+      branchName: "feature/CREW-1-foo",
+      title: "Add foo",
+      sessionId: "sess-test-123",
+    });
+  });
+
+  it("merges questionsRequired as boolean true from assess-clarification result", async () => {
+    const resultJson = JSON.stringify({
+      questionsRequired: true,
+      questions: "1. What status?\n2. Which field?",
+    });
+    const session = makeSession([makeResultMessage({ result: resultJson })]);
+    mockResolveSession.mockResolvedValue({
+      session,
+      sessionId: "sess-test-123",
+      isResumed: false,
+    });
+
+    const result = await engineer.run({
+      ...baseInput,
+      context: { task: "assess-clarification" },
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.artefacts?.["questionsRequired"]).toBe(true);
+    expect(result.artefacts?.["questions"]).toBe(
+      "1. What status?\n2. Which field?",
+    );
+    expect(result.artefacts).toMatchObject({ sessionId: "sess-test-123" });
+  });
+
+  it("returns success: false with parse error and raw excerpt when result is not JSON", async () => {
+    const rawResult =
+      "Here is my analysis of the code. I found several issues.";
+    const session = makeSession([makeResultMessage({ result: rawResult })]);
+    mockResolveSession.mockResolvedValue({
+      session,
+      sessionId: "sess-test-123",
+      isResumed: false,
+    });
+
+    const result = await engineer.run(baseInput);
+
+    expect(result.success).toBe(false);
+    expect(result.summary).toMatch(/parse/i);
+    expect(result.summary).toContain(rawResult.slice(0, 500));
+  });
+});
+
+describe("parseEngineerArtefacts()", () => {
+  it("parses a valid implement-story JSON object", () => {
+    const raw = JSON.stringify({
+      branchName: "feature/CREW-1-foo",
+      title: "Add foo",
+      description: "## Summary\n\nAdds foo.",
+      filesChanged: [{ path: "src/foo.ts", status: "created" }],
+      commits: ["a1b2c3d feat(foo): add foo"],
+    });
+
+    const result = parseEngineerArtefacts(raw);
+
+    expect(result["branchName"]).toBe("feature/CREW-1-foo");
+    expect(result["title"]).toBe("Add foo");
+  });
+
+  it("parses a valid assess-clarification JSON object", () => {
+    const raw = JSON.stringify({ questionsRequired: false });
+
+    const result = parseEngineerArtefacts(raw);
+
+    expect(result["questionsRequired"]).toBe(false);
+  });
+
+  it("throws on non-JSON input", () => {
+    expect(() => parseEngineerArtefacts("not json")).toThrow(/JSON parse/i);
+  });
+
+  it("throws when parsed value is not an object", () => {
+    expect(() => parseEngineerArtefacts('"just a string"')).toThrow(
+      /not a JSON object/i,
+    );
+  });
+
+  it("throws when parsed value is an array", () => {
+    expect(() => parseEngineerArtefacts("[]")).toThrow(/not a JSON object/i);
+  });
+
+  it("throws when parsed value is null", () => {
+    expect(() => parseEngineerArtefacts("null")).toThrow(/not a JSON object/i);
   });
 });

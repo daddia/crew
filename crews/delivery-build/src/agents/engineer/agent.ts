@@ -15,6 +15,32 @@ import {
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+/**
+ * Parse the structured JSON artefact emitted by the engineer skills.
+ * Accepts any of the three shapes: assess-clarification, implement-story,
+ * or address-feedback.
+ *
+ * Throws a descriptive Error on parse or structural failure so the caller
+ * can produce a `success: false` result with an excerpt of the raw result.
+ */
+export function parseEngineerArtefacts(raw: string): Record<string, unknown> {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (e) {
+    throw new Error(
+      `JSON parse failure: ${e instanceof Error ? e.message : String(e)}`,
+      { cause: e },
+    );
+  }
+
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    throw new Error("Result is not a JSON object");
+  }
+
+  return parsed as Record<string, unknown>;
+}
+
 const ALLOWED_TOOLS = [
   // GitLab MCP
   "mcp__gitlab__create_branch",
@@ -107,10 +133,24 @@ async function run(input: AgentInput): Promise<AgentResult> {
     }
 
     if (resultMsg.subtype === "success") {
+      let parsedArtefacts: Record<string, unknown>;
+      try {
+        parsedArtefacts = parseEngineerArtefacts(resultMsg.result);
+      } catch (e) {
+        const errMsg = e instanceof Error ? e.message : String(e);
+        const excerpt = resultMsg.result.slice(0, 500);
+        return {
+          success: false,
+          summary: `${errMsg} — raw result excerpt: ${excerpt}`,
+          artefacts: { sessionId },
+          costUsd: resultMsg.total_cost_usd,
+        };
+      }
+
       return {
         success: true,
         summary: resultMsg.result,
-        artefacts: { sessionId },
+        artefacts: { sessionId, ...parsedArtefacts },
         costUsd: resultMsg.total_cost_usd,
       };
     }
