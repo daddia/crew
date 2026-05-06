@@ -27,6 +27,16 @@ export const inFlight = new Set<string>();
 export async function pollTick(state: StateStore): Promise<void> {
   const projectKey = process.env["JIRA_PROJECT_KEY"] ?? "";
   const assignee = process.env["JIRA_ASSIGNEE_ACCOUNT_ID"] ?? "";
+
+  if (!projectKey || !assignee) {
+    const missing = [
+      !projectKey && "JIRA_PROJECT_KEY",
+      !assignee && "JIRA_ASSIGNEE_ACCOUNT_ID",
+    ].filter(Boolean);
+    log.warn("poller.misconfigured", { missing });
+    return;
+  }
+
   const jql = `project = "${projectKey}" AND status = "To Do" AND assignee = "${assignee}"`;
 
   let issues: Array<{ issueKey: string }>;

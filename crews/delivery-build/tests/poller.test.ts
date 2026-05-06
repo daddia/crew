@@ -51,6 +51,36 @@ describe("pollTick", () => {
     mockLogDebug.mockReset();
   });
 
+  it("logs a warn and skips the search when JIRA_PROJECT_KEY is not set", async () => {
+    const saved = process.env["JIRA_PROJECT_KEY"];
+    delete process.env["JIRA_PROJECT_KEY"];
+    try {
+      await pollTick(makeState());
+      expect(mockSearchIssues).not.toHaveBeenCalled();
+      expect(mockLogWarn).toHaveBeenCalledWith(
+        "poller.misconfigured",
+        expect.objectContaining({ missing: ["JIRA_PROJECT_KEY"] }),
+      );
+    } finally {
+      if (saved !== undefined) process.env["JIRA_PROJECT_KEY"] = saved;
+    }
+  });
+
+  it("logs a warn and skips the search when JIRA_ASSIGNEE_ACCOUNT_ID is not set", async () => {
+    const saved = process.env["JIRA_ASSIGNEE_ACCOUNT_ID"];
+    delete process.env["JIRA_ASSIGNEE_ACCOUNT_ID"];
+    try {
+      await pollTick(makeState());
+      expect(mockSearchIssues).not.toHaveBeenCalled();
+      expect(mockLogWarn).toHaveBeenCalledWith(
+        "poller.misconfigured",
+        expect.objectContaining({ missing: ["JIRA_ASSIGNEE_ACCOUNT_ID"] }),
+      );
+    } finally {
+      if (saved !== undefined) process.env["JIRA_ASSIGNEE_ACCOUNT_ID"] = saved;
+    }
+  });
+
   it("executes a JQL search for the configured project and assignee", async () => {
     mockSearchIssues.mockResolvedValue([]);
 
