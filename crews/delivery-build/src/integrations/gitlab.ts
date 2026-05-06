@@ -52,7 +52,7 @@ export class GitLabUrlError extends Error {
  * the other without an API round-trip.
  */
 export function extractMrIid(expectedProjectId: string, webUrl: string): string {
-  const match = webUrl.match(/^https?:\/\/[^/]+\/(.+)\/-\/merge_requests\/(\d+)/);
+  const match = webUrl.match(/^https?:\/\/[^/]+\/(.+?)\/-\/merge_requests\/(\d+)/);
   if (!match) {
     throw new GitLabUrlError(`Cannot extract MR IID from URL: ${webUrl}`);
   }

@@ -4,9 +4,7 @@ import { log } from "./observability.js";
 import { runStory } from "./workflow.js";
 import type { WorkflowCtxBase } from "./workflow.js";
 import type { Step, StateStore } from "./state.js";
-import { acquire, release, has, inFlight } from "./in-flight.js";
-
-export { inFlight };
+import { acquire, release, has } from "./in-flight.js";
 
 const TERMINAL_STEPS = new Set<Step>(["in-qa", "needs-human-review"]);
 
