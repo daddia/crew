@@ -85,7 +85,10 @@ pnpm test
 
 ## Environment
 
-See [.env.example](.env.example) for all required variables.
+See [`src/config.ts`](src/config.ts) for the canonical schema and validation
+rules. [`env.example`](.env.example) is a human-readable rendering of the same
+schema, grouped by the four config buckets: Identity, Behaviour,
+Infrastructure, and Secrets.
 
 ## MCP servers
 

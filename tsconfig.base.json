@@ -3,7 +3,8 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@daddia/crew/webhooks": ["./packages/crew/src/webhooks/index.ts"]
+      "@daddia/crew/webhooks": ["./packages/crew/src/webhooks/index.ts"],
+      "@daddia/crew/config": ["./packages/crew/src/config/index.ts"]
     }
   }
 }

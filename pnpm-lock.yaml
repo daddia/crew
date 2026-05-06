@@ -30,14 +30,17 @@ importers:
         specifier: ^0.2.131
         version: 0.2.131(zod@4.4.3)
       '@daddia/crew':
-        specifier: ^0.1.0
-        version: 0.1.0(zod@4.4.3)
+        specifier: workspace:*
+        version: link:../../packages/crew
       '@hono/node-server':
         specifier: ^2.0.1
         version: 2.0.1(hono@4.12.17)
       hono:
         specifier: ^4.12.17
         version: 4.12.17
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
     devDependencies:
       '@repo/typescript-config':
         specifier: workspace:*
