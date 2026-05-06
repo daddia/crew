@@ -17,7 +17,8 @@ WORKDIR /workspace
 # packages/crew/package.json is included so that pnpm can resolve the workspace
 # importer entry in pnpm-lock.yaml; @daddia/crew itself is installed from the
 # npm registry (lockfile resolution: 0.1.0, not workspace:*).
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY package.json pnpm-workspace.yaml ./
+COPY pnpm-lock.yaml ./
 COPY tooling/typescript-config/package.json ./tooling/typescript-config/
 COPY tooling/vitest-config/package.json      ./tooling/vitest-config/
 COPY packages/crew/package.json              ./packages/crew/

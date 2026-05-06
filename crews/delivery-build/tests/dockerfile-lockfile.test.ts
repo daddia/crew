@@ -28,7 +28,7 @@ describe("Dockerfile lockfile COPY", () => {
     for (const path of dockerfiles) {
       const content = readFileSync(path, "utf8");
       expect(content, path).not.toMatch(/pnpm-lock\.yaml\*/);
-      expect(content, path).toMatch(/pnpm-lock\.yaml(?:\s|$|\r|\n)/);
+      expect(content, path).toMatch(/COPY\s+pnpm-lock\.yaml\s+\.\//);
     }
   });
 });
