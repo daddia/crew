@@ -8,8 +8,10 @@ A pnpm monorepo of autonomous delivery agents. Each agent crew is a self-contain
 
 The architecture has two layers:
 
-- **`crews/`** — deployable agent crews. Each crew owns its server, workflow, state, handlers, and team of personas. Each crew depends on the **published npm version** of `@daddia/crew`, not `workspace:*`. The Docker build installs `@daddia/crew` from the registry so the image is independent of the monorepo build. To consume new `@daddia/crew` changes in a crew, bump the `@daddia/crew` package version, publish it, then update the crew's pinned dependency.
+- **`crews/`** — deployable agent crews. Each crew owns its server, workflow, state, handlers, and team of personas. Each crew depends on the **published npm version** of `@daddia/crew`, not `workspace:*`. The Docker build installs `@daddia/crew` from the registry so the image is independent of the monorepo build.
 - **`packages/`** — shared libraries. Pure TypeScript with no side effects on import. Only crews depend on packages; packages never depend on crews.
+
+> **MUST**: Crews MUST NOT import `@daddia/crew` from the workspace. `@daddia/crew` MUST be consumed as an installed npm package. Crew `package.json` files MUST pin a registry version (e.g. `"@daddia/crew": "0.2.0"`) and MUST NOT use the `workspace:` protocol for `@daddia/crew`. To consume new `@daddia/crew` changes in a crew, bump the `@daddia/crew` package version, publish it to the registry, then update the crew's pinned dependency in the same PR. CI runs against published artefacts, so unpublished changes will fail typecheck even if they pass locally.
 
 ## Repository layout
 
@@ -116,6 +118,7 @@ These rules are non-negotiable. `pnpm lint` runs dependency-cruiser and must pas
 1. `crews/*` may import from `packages/*` only. Never from another `crews/*`.
 2. `packages/*` may not import from `crews/*`.
 3. No circular dependencies within `packages/*`.
+4. `crews/*` MUST consume `@daddia/crew` as a published npm dependency. Workspace linking (`workspace:*`, `workspace:^`, `link:`) is forbidden for `@daddia/crew` in any crew `package.json`.
 
 There is no GitHub Actions workflow in this repository yet; contributors rely on local `pnpm lint`. When CI is added (see product backlog CREW-51-002), it should run the same lint, typecheck, and test commands on every push and PR.
 
@@ -209,7 +212,7 @@ Currently configured servers:
 ## Agent guidance
 
 - When adding a new persona, start with `agent.ts` and `prompt.md`. Add skills only once the persona runs correctly with a plain prompt.
-- When changing the `Agent` or `AgentResult` interface in `@daddia/crew`, update all persona `agent.ts` files in the same PR.
+- When changing the `Agent` or `AgentResult` interface in `@daddia/crew`, bump the `@daddia/crew` version, publish it, bump every crew's pinned `@daddia/crew` dependency, and update all persona `agent.ts` files — all in the same PR.
 - When changing webhook verification logic in `@daddia/crew/webhooks`, test against both Jira (HMAC) and GitLab (shared token) paths.
 - When changing `workflow.ts`, check that escalation paths (loop cap, agent failure) transition Jira correctly and do not re-enter the workflow.
 - Prefer modifying the smallest scope needed. A change to the delivery workflow should not touch shared types unless the contract truly changes.

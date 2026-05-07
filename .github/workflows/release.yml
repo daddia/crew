@@ -54,8 +54,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build
-        run: pnpm build
+      - name: Build packages
+        # Only build publishable packages. Crews are deployable services that
+        # depend on the registry version of @daddia/crew, so a broken crew
+        # build must not block a package release.
+        run: pnpm --filter './packages/*' build
 
       - name: Create Release PR or Publish
         uses: changesets/action@v1
