@@ -9,9 +9,7 @@ export type Step =
   | "peer-code-review"
   | "address-feedback"
   | "open-mr"
-  | "ci-check"
-  | "ci-fix"
-  | "in-qa"
+  | "ready-for-review"
   | "needs-human-review";
 
 export interface StoryRow {

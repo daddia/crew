@@ -2,19 +2,15 @@ import type { Context } from "hono";
 import { verifySignature } from "@daddia/crew/webhooks";
 import { log } from "../observability.js";
 import type { StateStore } from "../state.js";
-import { addressFeedback, type WorkflowCtxBase } from "../workflow.js";
-import { has, runStoryWithLock } from "../in-flight.js";
 
 export async function gitlabHandler(
   c: Context,
   state: StateStore,
   secret: string,
-  ctxBase: WorkflowCtxBase,
 ): Promise<Response> {
   const rawBody = await c.req.arrayBuffer();
   const bodyBuffer = Buffer.from(rawBody);
 
-  // 1. Verify token.
   try {
     verifySignature("gitlab", bodyBuffer, c.req.header(), secret);
   } catch (err) {
@@ -23,79 +19,21 @@ export async function gitlabHandler(
   }
 
   const body: unknown = JSON.parse(bodyBuffer.toString("utf8"));
-  if (!isGitLabNoteEvent(body)) {
-    return c.json({ ok: true, ignored: true });
-  }
 
-  // 2. Replay protection — GitLab does not include a delivery timestamp in the
-  //    request body, so checkReplayWindow() cannot be applied here (it requires
-  //    a millisecond timestamp to compare against the current time). Duplicate
-  //    delivery is instead handled by the idempotency store below, which rejects
-  //    any event whose (provider, eventId) pair has already been processed.
+  // Replay protection — deduplicate by event UUID before any further work.
   const eventId =
     (c.req.header("x-gitlab-event-uuid") as string | undefined) ??
-    String(body.object_attributes.id);
+    String((body as Record<string, unknown>)["object_attributes"]
+      ? ((body as Record<string, { id?: number }>)["object_attributes"]?.id ?? "unknown")
+      : "unknown");
 
   if (state.checkAndRecord("gitlab", eventId)) {
     log.info("gitlab.handler.duplicate", { eventId });
     return c.json({ ok: true, duplicate: true });
   }
 
-  // 3. Only act on human (non-bot) note events on open MRs.
-  if (body.object_attributes.system) {
-    return c.json({ ok: true, ignored: true });
-  }
-
-  // Extract issueKey from MR description or title — convention: "[ENG-123]" prefix.
-  const mrTitle: string = body.merge_request?.title ?? "";
-  const match = mrTitle.match(/\[([A-Z]+-\d+)\]/);
-  if (!match) {
-    log.warn("gitlab.handler.no-issue-key", { mrTitle });
-    return c.json({ ok: true, ignored: true });
-  }
-
-  const issueKey = match[1] as string;
-  const comment: string = body.object_attributes.note;
-  const mrUrl: string = body.merge_request?.url ?? "";
-
-  if (has(issueKey)) {
-    log.info("gitlab.handler.in-flight", { issueKey });
-    return c.json({ error: "workflow-in-flight", issueKey }, 429);
-  }
-
-  log.info("gitlab.handler.dispatch", { issueKey, eventId });
-
-  runStoryWithLock(
-    issueKey,
-    () => addressFeedback({ issueKey, state, ...ctxBase }, comment, mrUrl),
-    (err) => {
-      log.error("gitlab.handler.workflow-error", { issueKey, err: String(err) });
-    },
-    { deferred: true },
-  );
-
-  return c.json({ ok: true });
-}
-
-interface GitLabNoteEvent {
-  object_kind: "note";
-  object_attributes: {
-    id: number;
-    note: string;
-    system: boolean;
-  };
-  merge_request?: {
-    title?: string;
-    url?: string;
-  };
-}
-
-function isGitLabNoteEvent(v: unknown): v is GitLabNoteEvent {
-  return (
-    typeof v === "object" &&
-    v !== null &&
-    "object_kind" in v &&
-    (v as Record<string, unknown>)["object_kind"] === "note" &&
-    "object_attributes" in v
-  );
+  // MR note events (reviewer comments) are handled by the delivery-code-review
+  // crew, not this crew. Acknowledge receipt and ignore.
+  log.debug("gitlab.handler.ignored", { eventId });
+  return c.json({ ok: true, ignored: true });
 }

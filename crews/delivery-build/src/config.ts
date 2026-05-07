@@ -26,8 +26,6 @@ export const ConfigSchema = z.object({
   behaviour: z.object({
     pollIntervalMs: z.coerce.number().int().positive().default(300_000),
     refactorLoopCap: z.coerce.number().int().nonnegative().default(2),
-    ciRetryCap: z.coerce.number().int().nonnegative().default(3),
-    ciPollIntervalMs: z.coerce.number().int().positive().default(30_000),
     clarificationTimeoutHours: z.coerce.number().int().positive().default(24),
     diffFileCap: z.coerce.number().int().positive().default(50),
     diffSizeCapBytes: z.coerce.number().int().positive().default(500_000),
@@ -62,8 +60,6 @@ const ENV_MAPPING: EnvMapping = {
   "identity.gitlab.projectId":             "GITLAB_PROJECT_ID",
   "behaviour.pollIntervalMs":              "POLL_INTERVAL_MS",
   "behaviour.refactorLoopCap":             "REFACTOR_LOOP_CAP",
-  "behaviour.ciRetryCap":                  "CI_RETRY_CAP",
-  "behaviour.ciPollIntervalMs":            "CI_POLL_INTERVAL_MS",
   "behaviour.clarificationTimeoutHours":   "CLARIFICATION_TIMEOUT_HOURS",
   "behaviour.diffFileCap":                 "DIFF_FILE_CAP",
   "behaviour.diffSizeCapBytes":            "DIFF_SIZE_CAP_BYTES",

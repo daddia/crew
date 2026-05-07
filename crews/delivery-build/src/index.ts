@@ -76,8 +76,6 @@ export async function boot(env: NodeJS.ProcessEnv = process.env): Promise<void> 
   const ctxBase: WorkflowCtxBase = {
     behaviour: {
       refactorLoopCap: config.behaviour.refactorLoopCap,
-      ciRetryCap: config.behaviour.ciRetryCap,
-      ciPollIntervalMs: config.behaviour.ciPollIntervalMs,
       anthropicModel: config.behaviour.anthropicModel,
     },
     jira,
@@ -95,7 +93,7 @@ export async function boot(env: NodeJS.ProcessEnv = process.env): Promise<void> 
     jiraHandler(c, state, config.secrets.jiraWebhookSecret, ctxBase),
   );
   app.post("/webhooks/gitlab", (c) =>
-    gitlabHandler(c, state, config.secrets.gitlabWebhookSecret, ctxBase),
+    gitlabHandler(c, state, config.secrets.gitlabWebhookSecret),
   );
 
   app.get("/healthz", (c) => c.json({ ok: true }));

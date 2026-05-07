@@ -18,6 +18,8 @@ export interface JiraIssue {
   summary: string;
   description: string | null;
   acceptanceCriteria: string | null;
+  /** Parent issue key (Epic or Story parent), if present on the ticket. */
+  parentKey?: string;
 }
 
 export interface JiraComment {
@@ -84,9 +86,13 @@ export function createJiraClient(
     },
 
     async getIssue(issueKey) {
-      const res = await jiraFetch(`/issue/${issueKey}`);
+      const res = await jiraFetch(`/issue/${issueKey}?fields=summary,description,parent`);
       const data = (await res.json()) as {
-        fields: { summary: string; description: unknown };
+        fields: {
+          summary: string;
+          description: unknown;
+          parent?: { key: string };
+        };
       };
       return {
         summary: data.fields.summary,
@@ -94,6 +100,7 @@ export function createJiraClient(
         // Populated once we know the custom-field ID for acceptance criteria in
         // the target Jira project (typically customfield_1XXXX). Null until then.
         acceptanceCriteria: null,
+        parentKey: data.fields.parent?.key,
       };
     },
 

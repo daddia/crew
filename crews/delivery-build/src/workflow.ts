@@ -13,8 +13,6 @@ export interface WorkflowContext {
   state: StateStore;
   behaviour: {
     refactorLoopCap: number;
-    ciRetryCap: number;
-    ciPollIntervalMs: number;
     anthropicModel?: string;
   };
   jira: JiraClient;
@@ -32,22 +30,35 @@ export type WorkflowCtxBase = Omit<WorkflowContext, "issueKey" | "state">;
 /**
  * Run the delivery build sequence for one story.
  *
+ * Triggered by the ticket poller when a story enters `To Do` (assigned to
+ * the engineer account), or when a clarification-pending story receives a
+ * human response in Jira.
+ *
  * Sequence:
- *   → context-seed: fetch Jira ticket (non-fatal if it fails)
- *   → assess-clarification: engineer checks ticket for ambiguity
- *       → questions required → comment + transition to Clarification Needed + halt
+ *   → engineer seeds context: reads Jira ticket + parent/epic (if present),
+ *       design.md, and related artefacts
+ *   → status update: `to do` → `in progress`
+ *   → engineer assesses clarity; posts clarifying questions to Jira if required
+ *       → ambiguous → status `blocked` (label: needs-clarification),
+ *                     emit `blocked` event {reason: "clarification"}
+ *       → orchestrator (poller) handles timeout: CLARIFICATION_TIMEOUT_HOURS
+ *           → escalate to tech-lead + emit `blocked` event → halt
  *   → engineer implements story on branch
- *   → senior-engineer peer-code-review
- *   → bounded address-feedback loop (cap: ctx.behaviour.refactorLoopCap)
- *       → cap exceeded → escalate to human review → halt (MR NOT opened)
- *   → engineer raises merge request (only after peer review approves)
- *   → CI monitoring loop: poll pipeline, fix on failure (cap: ctx.behaviour.ciRetryCap)
- *       → cap exceeded → escalate to human review → halt
- *   → status update: `in progress` → `in qa`
- *   → log handoff-to-qa; delivery-qa crew picks up "In QA" tickets
+ *   → engineer runs local toolchain (lint, types, unit tests) — fail fast before review
+ *   → senior-engineer reviews diff on branch: design fidelity, simplicity,
+ *       correctness; posts feedback to GitLab MR or Jira comment
+ *   → engineer bounded address-feedback loop (cap: REFACTOR_LOOP_CAP)
+ *       → cap exceeded → status `blocked` (label: needs-tech-lead),
+ *                        emit `blocked` event {reason: "refactor-cap"} → halt
+ *   → engineer raises merge request (includes senior review notes in description)
+ *   → status update: `in progress` → `ready for review`
+ *   → emit `ready-for-review` event {issueKey, mrUrl}  // Slack notifier picks this up
  *   → done
  *
- * On loop cap: transition to "Needs human review", comment with unresolved items, stop.
+ * Out of scope for this crew (handled downstream):
+ *   - CI failures on the open MR          → delivery-code-review
+ *   - Human reviewer comments on the MR   → delivery-code-review
+ *   - Final stakeholder merge decision     → delivery-final-review
  */
 export async function runStory(ctx: WorkflowContext): Promise<void> {
   const { issueKey } = ctx;
@@ -72,35 +83,56 @@ async function runStoryInner(
   await seedEngineerMemory(projectDir);
 
   // ── Step 1: Context seed ───────────────────────────────────────────────────
-  // Fetch the Jira ticket before implementation so agents have full story
-  // context. A fetch failure is non-fatal: the workflow continues with
-  // ticket = null rather than blocking the engineer entirely.
+  // Fetch the Jira ticket (and its parent/epic, if present) before
+  // implementation so agents have full story context. Fetch failures are
+  // non-fatal: the workflow continues with ticket = null rather than
+  // blocking the engineer entirely.
   state.upsertStory(issueKey, "context-seed");
   state.startStep(issueKey, "context-seed");
 
   let ticket: JiraIssue | null = null;
+  let parentTicket: JiraIssue | null = null;
+
   try {
     ticket = await jira.getIssue(issueKey);
   } catch (err) {
     log.warn("workflow.context-seed.failed", { issueKey, err: String(err) });
   }
 
+  if (ticket?.parentKey) {
+    try {
+      parentTicket = await jira.getIssue(ticket.parentKey);
+    } catch (err) {
+      log.warn("workflow.context-seed.parent-failed", {
+        issueKey,
+        parentKey: ticket.parentKey,
+        err: String(err),
+      });
+    }
+  }
+
   state.finishStep(issueKey, "context-seed", { verdict: ticket ? "ok" : "failed" });
 
-  // ── Step 2: Assess clarification ──────────────────────────────────────────
-  // Before moving the ticket to In Progress, ask the engineer whether the
-  // ticket is clear enough to implement. If not, post questions and park the
-  // story in Clarification Needed until a human responds; the poller resumes
-  // the workflow from this point once an answer arrives.
+  // ── Step 2: Transition to In Progress ─────────────────────────────────────
+  await jira.transitionIssue(issueKey, "In Progress");
+
+  // ── Step 3: Assess clarification ──────────────────────────────────────────
+  // Ask the engineer whether the ticket is clear enough to implement.
+  // If not, post questions, transition to Blocked, and park the story in
+  // clarification-pending until a human responds. The poller resumes the
+  // workflow from this point once an answer arrives.
   state.upsertStory(issueKey, "assess-clarification");
 
   const assessResult = await engineer.run({
     ...input,
-    context: { task: "assess-clarification", ticket, model: behaviour.anthropicModel },
+    context: {
+      task: "assess-clarification",
+      ticket,
+      parentTicket,
+      model: behaviour.anthropicModel,
+    },
   });
 
-  // Record cost and outcome for audit. SessionId is captured post-run per the
-  // established agent-step pattern; upsertStory above is the in-flight signal.
   const assessSessionId = assessResult.artefacts["sessionId"] as string | undefined;
   state.startStep(issueKey, "assess-clarification", assessSessionId);
   state.finishStep(issueKey, "assess-clarification", {
@@ -120,40 +152,38 @@ async function runStoryInner(
         : "The engineer requires clarification before proceeding.";
 
     await jira.commentOnIssue(issueKey, questions);
-    await jira.transitionIssue(issueKey, "Clarification Needed");
+    await jira.transitionIssue(issueKey, "Blocked");
 
     state.upsertStory(issueKey, "clarification-pending");
     state.startStep(issueKey, "clarification-pending");
     state.finishStep(issueKey, "clarification-pending", { verdict: "pending" });
 
-    log.info("workflow.clarification-needed", { issueKey });
+    log.info("workflow.blocked.clarification", { issueKey });
     return;
   }
 
-  // ── Step 3: Implement ─────────────────────────────────────────────────────
+  // ── Step 4: Implement ─────────────────────────────────────────────────────
   state.upsertStory(issueKey, "implement");
-  await jira.transitionIssue(issueKey, "In Progress");
 
   const implResult = await engineer.run({
     ...input,
-    context: { task: "implement-story", ticket, model: behaviour.anthropicModel },
+    context: {
+      task: "implement-story",
+      ticket,
+      parentTicket,
+      model: behaviour.anthropicModel,
+    },
   });
 
-  // Extract branchName before finishStep so the verdict reflects whether
-  // the step produced all required outputs, not just success: true.
   const branchNameRaw = implResult.artefacts["branchName"];
   const branchName: string | undefined =
     typeof branchNameRaw === "string" && branchNameRaw ? branchNameRaw : undefined;
 
-  // startStep is called after run so the sessionId is captured in the same
-  // row. The trade-off is that started_at ≈ finished_at for this step.
-  // Crash detection relies on the upsertStory call above, not this row.
   let engineerSessionId = implResult.artefacts["sessionId"] as string | undefined;
   state.startStep(issueKey, "implement", engineerSessionId);
-
   state.finishStep(issueKey, "implement", {
     costUsd: implResult.costUsd,
-    verdict: (implResult.success && branchName !== undefined) ? "ok" : "failed",
+    verdict: implResult.success && branchName !== undefined ? "ok" : "failed",
   });
 
   if (!implResult.success) {
@@ -166,7 +196,11 @@ async function runStoryInner(
     return;
   }
 
-  // ── Step 4: Peer review + address-feedback loop (MR not yet opened) ───────
+  // ── Step 5: Peer review + address-feedback loop (MR not yet opened) ───────
+  // Senior engineer reviews the diff on the branch — design fidelity,
+  // simplicity, correctness. They do not re-run the toolchain; deterministic
+  // checks (lint, types, tests) are the engineer's responsibility and CI's.
+  // Feedback is posted to GitLab or Jira by the senior engineer agent.
   let reviewPassed = false;
   let unresolvedItems: string[] = [];
 
@@ -203,17 +237,15 @@ async function runStoryInner(
         task: "address-feedback",
         branchName,
         ticket,
+        parentTicket,
         comments: unresolvedItems,
         previousSessionId: engineerSessionId,
         model: behaviour.anthropicModel,
       },
     });
 
-    // Same post-run startStep pattern as implement: captures sessionId at the
-    // cost of started_at ≈ finished_at; upsertStory above is the in-flight signal.
     engineerSessionId = feedbackResult.artefacts["sessionId"] as string | undefined;
     state.startStep(issueKey, "address-feedback", engineerSessionId);
-
     state.finishStep(issueKey, "address-feedback", {
       costUsd: feedbackResult.costUsd,
       verdict: feedbackResult.success ? "addressed" : "partial",
@@ -225,108 +257,25 @@ async function runStoryInner(
     return;
   }
 
-  // ── Step 5: Open MR (peer review approved) ────────────────────────────────
+  // ── Step 6: Open MR (peer review approved) ────────────────────────────────
   state.upsertStory(issueKey, "open-mr");
   state.startStep(issueKey, "open-mr");
 
   const mrUrl = await gitlab.createMr({
     issueKey,
     branchName,
-    title: `[${issueKey}] ${implResult.artefacts["title"] as string ?? "Automated delivery"}`,
+    title: `[${issueKey}] ${(implResult.artefacts["title"] as string) ?? "Automated delivery"}`,
   });
 
   state.finishStep(issueKey, "open-mr", { verdict: mrUrl });
 
-  // ── Step 6: CI monitoring loop ────────────────────────────────────────────
-  let ciFixAttempts = 0;
+  // ── Done: transition to Ready for Review and emit event ───────────────────
+  state.upsertStory(issueKey, "ready-for-review");
+  state.startStep(issueKey, "ready-for-review");
+  await jira.transitionIssue(issueKey, "Ready for Review");
+  state.finishStep(issueKey, "ready-for-review", { verdict: "ok" });
 
-  while (true) {
-    state.upsertStory(issueKey, "ci-check");
-    state.startStep(issueKey, "ci-check");
-
-    const pipelineStatus = await gitlab.getPipelineStatus(mrUrl);
-
-    state.finishStep(issueKey, "ci-check", { verdict: pipelineStatus });
-
-    if (pipelineStatus === "success") {
-      break;
-    }
-
-    if (pipelineStatus === "failed") {
-      if (ciFixAttempts >= behaviour.ciRetryCap) {
-        await escalateToHumanReview(jira, issueKey, "CI fix cap reached", []);
-        return;
-      }
-
-      state.upsertStory(issueKey, "ci-fix");
-      state.startStep(issueKey, "ci-fix");
-
-      const ciFixResult = await engineer.run({
-        ...input,
-        context: { task: "fix-ci", mrUrl, ticket, ciFailure: pipelineStatus, model: behaviour.anthropicModel },
-      });
-
-      state.finishStep(issueKey, "ci-fix", {
-        costUsd: ciFixResult.costUsd,
-        verdict: ciFixResult.success ? "fixed" : "partial",
-      });
-
-      ciFixAttempts++;
-    } else {
-      // created, pending, running, canceled — transient; wait before re-polling
-      await sleep(behaviour.ciPollIntervalMs);
-    }
-  }
-
-  // ── Done: transition to "In QA" — delivery-qa crew picks up from here
-  state.upsertStory(issueKey, "in-qa");
-  await jira.transitionIssue(issueKey, "In QA");
-  log.info("workflow.handoff-to-qa", { issueKey, mrUrl });
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/**
- * Resume the address-feedback step after a human posts an MR comment.
- * Called by the GitLab webhook handler.
- */
-export async function addressFeedback(
-  ctx: WorkflowContext,
-  comment: string,
-  mrUrl: string,
-): Promise<void> {
-  const { issueKey, state, jira, behaviour } = ctx;
-
-  try {
-    const iterationCount = state.countRefactorIterations(issueKey);
-    if (iterationCount >= behaviour.refactorLoopCap) {
-      log.warn("workflow.address-feedback.cap-exceeded", { issueKey, iterationCount });
-      await escalateToHumanReview(jira, issueKey, "Refactor loop cap reached on human feedback", [comment]);
-      return;
-    }
-
-    state.upsertStory(issueKey, "address-feedback");
-
-    const result = await engineer.run({
-      issueKey,
-      context: { task: "address-feedback", mrUrl, comments: [comment], model: behaviour.anthropicModel },
-    });
-
-    const sessionId = result.artefacts["sessionId"] as string | undefined;
-    state.startStep(issueKey, "address-feedback", sessionId);
-
-    state.finishStep(issueKey, "address-feedback", {
-      costUsd: result.costUsd,
-      verdict: result.success ? "addressed" : "partial",
-    });
-
-    log.info("workflow.address-feedback.done", { issueKey, success: result.success });
-  } catch (err) {
-    log.error("workflow.address-feedback.unhandled-error", { issueKey, err: String(err) });
-    await escalateToHumanReview(jira, issueKey, "Unexpected error addressing feedback", []);
-  }
+  log.info("workflow.ready-for-review", { issueKey, mrUrl });
 }
 
 async function escalateToHumanReview(
@@ -371,8 +320,7 @@ export async function recoverInterruptedSteps(
       // Probe whether the SDK session is still accessible. The returned handle
       // is intentionally discarded: the workflow restarts from context-seed
       // rather than resuming mid-step, because the step's intermediate state
-      // is not persisted. A future enhancement could persist and replay step
-      // state to continue from where the crash occurred.
+      // is not persisted.
       unstable_v2_resumeSession(sessionId!, {
         model: ctxBase.behaviour.anthropicModel ?? DEFAULT_RECOVERY_MODEL,
       });
