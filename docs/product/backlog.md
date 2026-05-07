@@ -76,7 +76,7 @@ remote cache, shared cross-persona memory. See section 13 (Future backlog).
 
 | Epic | Title | Phase | Priority | Deps | Points | WP path | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| CREW-66 | Functional and hardening completion | Now | P0 | — | 16 | `crews/delivery-build` | Not started |
+| CREW-66 | Functional and hardening completion | Now | P0 | — | 16 | `crews/delivery-build` | Done |
 | CREW-67 | End-to-end validation and operations | Now | P0 | CREW-66 | 12 | `crews/delivery-build` | Not started |
 | **Total** | | | | | **28** | | |
 
@@ -105,15 +105,17 @@ byte size; `extractMrIid()` validates the URL's project path against
 **Dependencies.** None. CREW-66-001 and CREW-66-002 are critical-path; the
 other five stories are independently mergeable.
 
-**Status.** Not started.
+**Status.** Done. CREW-66-003 (pin MCP server versions) was cancelled by the
+product owner; the remaining six stories ship with full code coverage and
+221/221 unit tests green. Validated 2026-05-06.
 
 **Work-package path.** `crews/delivery-build` (no separate WP design doc;
 each story is small and self-contained).
 
 ---
 
-- [ ] **[CREW-66-001] Engineer extracts structured artefacts from SDK result**
-  - **Status:** Not started | **Priority:** P0 | **Estimate:** 3
+- [x] **[CREW-66-001] Engineer extracts structured artefacts from SDK result**
+  - **Status:** Done | **Priority:** P0 | **Estimate:** 3
   - **Epic:** CREW-66 | **Labels:** type:correctness, e2e-blocker
   - **Depends on:** —
   - **Deliverable:** `crews/delivery-build/src/agents/engineer/agent.ts` parses
@@ -170,8 +172,8 @@ each story is small and self-contained).
 
 ---
 
-- [ ] **[CREW-66-002] Senior-engineer extracts structured artefacts from SDK result**
-  - **Status:** Not started | **Priority:** P0 | **Estimate:** 2
+- [x] **[CREW-66-002] Senior-engineer extracts structured artefacts from SDK result**
+  - **Status:** Done | **Priority:** P0 | **Estimate:** 2
   - **Epic:** CREW-66 | **Labels:** type:correctness, e2e-blocker
   - **Depends on:** —
   - **Deliverable:**
@@ -230,8 +232,8 @@ each story is small and self-contained).
 
 ---
 
-- [ ] **[CREW-66-004] Add idempotency guard to `createMr()`**
-  - **Status:** Not started | **Priority:** P1 | **Estimate:** 3
+- [x] **[CREW-66-004] Add idempotency guard to `createMr()`**
+  - **Status:** Done | **Priority:** P1 | **Estimate:** 3
   - **Epic:** CREW-66 | **Labels:** review:#10, type:correctness
   - **Depends on:** —
   - **Deliverable:**
@@ -277,8 +279,8 @@ each story is small and self-contained).
 
 ---
 
-- [ ] **[CREW-66-005] Webhook handlers return 429 when issueKey is in flight**
-  - **Status:** Not started | **Priority:** P1 | **Estimate:** 3
+- [x] **[CREW-66-005] Webhook handlers return 429 when issueKey is in flight**
+  - **Status:** Done | **Priority:** P1 | **Estimate:** 3
   - **Epic:** CREW-66 | **Labels:** review:#20, type:reliability
   - **Depends on:** —
   - **Deliverable:** The poller already maintains an in-process
@@ -326,8 +328,8 @@ each story is small and self-contained).
 
 ---
 
-- [ ] **[CREW-66-006] Cap `getMrDiff()` by file count and byte size**
-  - **Status:** Not started | **Priority:** P1 | **Estimate:** 3
+- [x] **[CREW-66-006] Cap `getMrDiff()` by file count and byte size**
+  - **Status:** Done | **Priority:** P1 | **Estimate:** 3
   - **Epic:** CREW-66 | **Labels:** review:#25, type:reliability
   - **Depends on:** —
   - **Deliverable:**
@@ -375,8 +377,8 @@ each story is small and self-contained).
 
 ---
 
-- [ ] **[CREW-66-007] Validate `extractMrIid()` URL project path**
-  - **Status:** Not started | **Priority:** P2 | **Estimate:** 1
+- [x] **[CREW-66-007] Validate `extractMrIid()` URL project path**
+  - **Status:** Done | **Priority:** P2 | **Estimate:** 1
   - **Epic:** CREW-66 | **Labels:** review:#18, type:correctness
   - **Depends on:** —
   - **Deliverable:**
