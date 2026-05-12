@@ -9,6 +9,8 @@ export type Step =
   | "peer-code-review"
   | "address-feedback"
   | "open-mr"
+  | "ci-check"
+  | "in-qa"
   | "ready-for-review"
   | "needs-human-review";
 

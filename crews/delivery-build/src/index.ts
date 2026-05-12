@@ -11,7 +11,6 @@ import { createStateStore } from "./state.js";
 import { recoverInterruptedSteps } from "./workflow.js";
 import { loadConfig, CONFIG_SCHEMA_VERSION, type Config } from "./config.js";
 import { SchemaValidationError, ConfigNotFoundError, redact } from "@daddia/crew/config";
-import { initTracing } from "@daddia/crew";
 import type { WorkflowCtxBase } from "./workflow.js";
 
 /**
@@ -46,10 +45,16 @@ export async function boot(env: NodeJS.ProcessEnv = process.env): Promise<void> 
     throw err;
   }
 
-  initTracing({
-    serviceName: "delivery-build",
-    honeycombApiKey: config.secrets.honeycombApiKey,
-  });
+  // initTracing is not exported by all published builds of @daddia/crew.
+  // Skip gracefully when absent rather than crashing at boot.
+  const crewPkg = await import("@daddia/crew") as Record<string, unknown>;
+  const initTracing = crewPkg["initTracing"];
+  if (typeof initTracing === "function") {
+    (initTracing as (o: { serviceName: string; honeycombApiKey?: unknown }) => void)({
+      serviceName: "delivery-build",
+      honeycombApiKey: config.secrets.honeycombApiKey,
+    });
+  }
 
   const gitSha =
     env.RAILWAY_GIT_COMMIT_SHA ?? env.GIT_SHA ?? "unknown";
@@ -76,6 +81,8 @@ export async function boot(env: NodeJS.ProcessEnv = process.env): Promise<void> 
   const ctxBase: WorkflowCtxBase = {
     behaviour: {
       refactorLoopCap: config.behaviour.refactorLoopCap,
+      ciRetryCap: config.behaviour.ciRetryCap,
+      ciPollIntervalMs: config.behaviour.ciPollIntervalMs,
       anthropicModel: config.behaviour.anthropicModel,
     },
     jira,
@@ -93,7 +100,7 @@ export async function boot(env: NodeJS.ProcessEnv = process.env): Promise<void> 
     jiraHandler(c, state, config.secrets.jiraWebhookSecret, ctxBase),
   );
   app.post("/webhooks/gitlab", (c) =>
-    gitlabHandler(c, state, config.secrets.gitlabWebhookSecret),
+    gitlabHandler(c, state, config.secrets.gitlabWebhookSecret, ctxBase),
   );
 
   app.get("/healthz", (c) => c.json({ ok: true }));

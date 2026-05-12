@@ -6,7 +6,7 @@ import type { WorkflowCtxBase } from "./workflow.js";
 import type { Step, StateStore } from "./state.js";
 import { has, runStoryWithLock } from "./in-flight.js";
 
-const TERMINAL_STEPS = new Set<Step>(["ready-for-review", "needs-human-review"]);
+const TERMINAL_STEPS = new Set<Step>(["in-qa", "needs-human-review"]);
 
 /**
  * Dependencies for the poller — all values are injected at construction time
@@ -25,6 +25,8 @@ export interface PollerDeps {
     pollIntervalMs: number;
     clarificationTimeoutHours: number;
     refactorLoopCap: number;
+    ciRetryCap: number;
+    ciPollIntervalMs: number;
     anthropicModel?: string;
   };
   jira: JiraClient;
@@ -67,6 +69,8 @@ export async function pollTick(deps: PollerDeps, state: StateStore): Promise<voi
   const ctxBase: WorkflowCtxBase = {
     behaviour: {
       refactorLoopCap: deps.behaviour.refactorLoopCap,
+      ciRetryCap: deps.behaviour.ciRetryCap,
+      ciPollIntervalMs: deps.behaviour.ciPollIntervalMs,
       anthropicModel: deps.behaviour.anthropicModel,
     },
     jira: deps.jira,
