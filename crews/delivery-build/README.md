@@ -53,7 +53,15 @@ Human feedback injected as MR comments is handled by `POST /webhooks/gitlab`, wh
 | `DIFF_FILE_CAP` | Optional; maximum number of files included in a MR diff sent to the agent, defaults to `50` |
 | `DIFF_SIZE_CAP_BYTES` | Optional; maximum byte size of a MR diff sent to the agent, defaults to `500000` |
 
-**Persistent volume** — the SQLite database must survive redeploys. In the Railway dashboard, add a volume to the service and mount it at `/data`. Then set `DB_PATH=/data/delivery-build.db`.
+**Persistent volume** — the SQLite database must survive redeploys. Railway does not support volume configuration in `railway.json`; provision the volume once via the CLI or dashboard before first deploy:
+
+```sh
+# One-time setup — run after `railway link` has associated the CLI with the service.
+railway volume add --mount-path /data
+railway variables set DB_PATH=/data/delivery-build.db
+```
+
+Or via the Railway dashboard: add a volume to the service, set the mount path to `/data`, then set `DB_PATH=/data/delivery-build.db` in the service variables.
 
 **Webhook URLs** — after deploying, register the public URLs with Jira and GitLab:
 - Jira: `https://<railway-domain>/webhooks/jira` — trigger on issue transition to "Ready for Dev"

@@ -115,9 +115,21 @@ validation rules for each variable, see the env var table in
 
 ### 2.3 Persistent volume
 
-Add a Railway volume mounted at `/data` and set `DB_PATH=/data/delivery-build.db`.
-Without persistence, the SQLite state is wiped on every redeploy — the
-crash-recovery scan becomes a no-op and deduplication is lost.
+Railway does not support volume configuration in `railway.json`. Provision the
+volume once via the CLI after linking the service, then it persists across all
+future redeploys:
+
+```sh
+# One-time setup — run after `railway link` has associated the CLI with the service.
+railway volume add --mount-path /data
+railway variables set DB_PATH=/data/delivery-build.db
+```
+
+Alternatively, use the Railway dashboard: add a volume, set the mount path to
+`/data`, and set `DB_PATH=/data/delivery-build.db` in the service variables.
+
+Without a persistent volume the SQLite state is wiped on every redeploy — the
+crash-recovery scan becomes a no-op and story deduplication is lost.
 
 ### 2.4 Webhook registration
 
