@@ -20,9 +20,7 @@ documented in [`docs/crew-flows/delivery-build.md`](../crew-flows/delivery-build
 
 ## 1. Pre-deploy checklist
 
-Before every deploy or configuration change, run `pnpm diagnose` against the
-target environment to confirm all six integrations are reachable and correctly
-configured.
+Before every deploy or configuration change, run `pnpm diagnose` against the target environment to confirm all six integrations are reachable and correctly configured.
 
 ### 1.1 Set environment variables in the shell
 
