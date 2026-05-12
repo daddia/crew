@@ -15,6 +15,7 @@ vi.mock("../src/state.js", () => ({
   createStateStore: vi.fn().mockReturnValue({
     close: vi.fn(),
     getInterruptedSteps: vi.fn().mockReturnValue([]),
+    ping: vi.fn(),
     upsertStory: vi.fn(),
     getStory: vi.fn(),
     getStoriesAtStep: vi.fn().mockReturnValue([]),

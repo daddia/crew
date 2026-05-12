@@ -5,6 +5,7 @@ import { runStory } from "./workflow.js";
 import type { WorkflowCtxBase } from "./workflow.js";
 import type { Step, StateStore } from "./state.js";
 import { has, runStoryWithLock } from "./in-flight.js";
+import { recordTick } from "./poller-state.js";
 
 const TERMINAL_STEPS = new Set<Step>(["in-qa", "needs-human-review"]);
 
@@ -186,6 +187,11 @@ export async function pollTick(deps: PollerDeps, state: StateStore): Promise<voi
 export function startPoller(deps: PollerDeps, state: StateStore): ReturnType<typeof setInterval> {
   log.info("poller.start", { intervalMs: deps.behaviour.pollIntervalMs });
   return setInterval(() => {
-    void pollTick(deps, state);
+    void pollTick(deps, state)
+      .then(() => { recordTick("ok"); })
+      .catch((err: unknown) => {
+        recordTick("error");
+        log.error("poller.unhandled-error", { err: String(err) });
+      });
   }, deps.behaviour.pollIntervalMs);
 }

@@ -81,6 +81,7 @@ function makeState(refactorCount = 0): StateStore {
     getStepHistory: vi.fn().mockReturnValue([]),
     countRefactorIterations: vi.fn().mockReturnValue(refactorCount),
     getInterruptedSteps: vi.fn().mockReturnValue([]),
+    ping: vi.fn(),
     close: vi.fn(),
   };
 }

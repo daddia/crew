@@ -3,6 +3,7 @@ import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { jiraHandler } from "./handlers/jira.js";
 import { gitlabHandler } from "./handlers/gitlab.js";
+import { healthzHandler } from "./handlers/healthz.js";
 import { createJiraClient } from "./integrations/jira.js";
 import { createGitlabClient } from "./integrations/gitlab.js";
 import { log } from "./observability.js";
@@ -103,7 +104,7 @@ export async function boot(env: NodeJS.ProcessEnv = process.env): Promise<void> 
     gitlabHandler(c, state, config.secrets.gitlabWebhookSecret, ctxBase),
   );
 
-  app.get("/healthz", (c) => c.json({ ok: true }));
+  app.get("/healthz", (c) => healthzHandler(c, state, config.infrastructure.dbPath));
 
   const server = serve(
     { fetch: app.fetch, port: config.infrastructure.port },

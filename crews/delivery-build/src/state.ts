@@ -75,6 +75,12 @@ export interface StateStore {
   checkAndRecord(provider: string, eventId: string): boolean;
   /** Returns all steps that started an agent session but never finished. */
   getInterruptedSteps(): StepRow[];
+  /**
+   * Runs a lightweight `SELECT 1` probe. Throws if the database connection
+   * is unavailable. Used by /healthz to surface DB health without exposing
+   * the raw SQLite handle.
+   */
+  ping(): void;
   close(): void;
 }
 
@@ -177,6 +183,10 @@ export function createStateStore(dbPath: string): StateStore {
 
     getInterruptedSteps() {
       return getInterruptedStepsStmt.all() as unknown as StepRow[];
+    },
+
+    ping() {
+      db.prepare("SELECT 1").get();
     },
 
     close() {
