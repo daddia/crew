@@ -217,3 +217,43 @@ Currently configured servers:
 - When changing `workflow.ts`, check that escalation paths (loop cap, agent failure) transition Jira correctly and do not re-enter the workflow.
 - Prefer modifying the smallest scope needed. A change to the delivery workflow should not touch shared types unless the contract truly changes.
 - Run `pnpm lint` before pushing. Boundary violations must not merge.
+
+---
+
+## Code style
+
+**Types:** `interface` for object contracts (agents, stores, clients); `type` for string unions, aliases, and utility derivations. No `enum` — use string union types throughout.
+
+**Imports:** Use `import type` for type-only imports. Relative imports must include the `.js` extension (`"./state.js"`) — `moduleResolution` is `NodeNext`. Named exports only; no `export default` in `src/**`.
+
+**Null safety:** `strict` and `noUncheckedIndexedAccess` are on. Do not use `!` non-null assertions without a comment explaining the invariant. Prefer narrowing or early returns.
+
+**Env vars:** All `process.env` reads go through `loadConfig(env)` in `config.ts`. ESLint bans direct reads elsewhere in `src/**`. Wrap credential fields in `Secret()` so they are redacted from logs. `boot()` accepts `env` as a parameter so tests can inject without touching `process.env`.
+
+**Logging:** Import `log` from `./observability.js` — never call `createLogger` in individual modules. Always include `issueKey` on story-scoped lines. Serialise errors as `String(err)`. Use dot-namespaced messages for structured events (`"workflow.complete"`). Never log tokens, secrets, or unvalidated request bodies.
+
+**Naming:** Files `kebab-case.ts`; types `PascalCase`; variables/functions `camelCase`; compile-time sentinels `SCREAMING_SNAKE_CASE`. SQL columns `snake_case`, bridged to camelCase via `SELECT col AS camelName`. `Step` values and persona names use `kebab-case` and must correspond 1-to-1 with Jira transition names.
+
+**Error handling by layer:**
+
+| Layer | Pattern |
+|---|---|
+| `agent.ts` | Return `AgentResult { success: false }`. Do not throw to the workflow. |
+| `integrations/` | Throw typed subclasses (`JiraApiError`, `GitLabApiError`). |
+| `config.ts` | Zod + `SchemaValidationError`. Fail fast at boot. |
+| `workflow.ts` | `try/catch` every step; on catch call `escalateToHumanReview` and return. |
+| `handlers/` | Structured JSON errors only. No stack traces or internal details in bodies. |
+
+**Testing:** `vi.mock` calls go at the top of the file before imports; re-import the subject after. Use `satisfies` on factory helpers for type-safe mocks. Test handlers via `app.request()`. New workflow branches (escalation, loop cap, deduplication) require unit tests; agent integration tests are not required per PR.
+
+## Pre-merge checklist
+
+- `pnpm typecheck` passes.
+- `pnpm test` passes.
+- `pnpm lint` passes (dependency-cruiser + ESLint — no boundary violations, no `process.env` leaks).
+- `upsertStory` called before `agent.run()` on every agent step.
+- Every failure branch calls `escalateToHumanReview` and returns; none rethrow to the HTTP layer.
+- `verifySignature` is the first operation in every webhook handler.
+- No hardcoded credentials, tokens, or secrets anywhere in source.
+- Agent `context` is built from trusted integration outputs, not raw webhook payloads.
+- If `@daddia/crew` was bumped: published to registry and all crew pinned deps updated in the same PR.
