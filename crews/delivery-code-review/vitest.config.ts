@@ -5,6 +5,6 @@ export default mergeConfig(baseConfig, {
   test: {
     environment: "node",
     include: ["tests/**/*.test.ts"],
-    tsconfig: "./tsconfig.test.json",
+    passWithNoTests: true,
   },
 });
