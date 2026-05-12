@@ -6,6 +6,11 @@ version: '4.0'
 owner: daddia
 status: Active
 last_updated: 2026-05-12
+validation_log:
+  - date: 2026-05-12
+    epic: CREW-67
+    stories: [CREW-67-001, CREW-67-002, CREW-67-003, CREW-67-004]
+    result: pass
 related:
   - docs/crew-flows/delivery-build.md
   - docs/product/product.md
@@ -74,7 +79,7 @@ remote cache, shared cross-persona memory. See section 13 (Future backlog).
 | Epic | Title | Phase | Priority | Deps | Points | WP path | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | CREW-66 | Functional and hardening completion | Now | P0 | — | 16 | `crews/delivery-build` | Done |
-| CREW-67 | End-to-end validation and operations | Now | P0 | CREW-66 | 12 | `crews/delivery-build` | Not started |
+| CREW-67 | End-to-end validation and operations | Now | P0 | CREW-66 | 12 | `crews/delivery-build` | In progress (4/5) |
 | **Total** | | | | | **28** | | |
 
 ---
@@ -104,15 +109,16 @@ prerequisites for the smoke test (CREW-67-005). CREW-67-003 depends on
 CREW-66-005 (shipped). CREW-67-004 depends on CREW-67-001, CREW-67-002, and
 CREW-67-003. All five stories within this epic are otherwise independent.
 
-**Status.** Not started.
+**Status.** In progress — CREW-67-001 through CREW-67-004 validated and
+landed on `main` (2026-05-12). CREW-67-005 (e2e gate) outstanding.
 
 **Work-package path.** `crews/delivery-build` (operational and validation
 work; no separate WP design doc).
 
 ---
 
-- [ ] **[CREW-67-001] Pre-flight diagnostics command**
-  - **Status:** Not started | **Priority:** P1 | **Estimate:** 3
+- [x] **[CREW-67-001] Pre-flight diagnostics command**
+  - **Status:** Done | **Priority:** P1 | **Estimate:** 3
   - **Epic:** CREW-67 | **Labels:** type:feature, type:operations
   - **Depends on:** —
   - **Deliverable:** New `crews/delivery-build/src/diagnostics.ts` exporting
@@ -166,8 +172,8 @@ work; no separate WP design doc).
 
 ---
 
-- [ ] **[CREW-67-002] Per-story cost summary log on workflow completion**
-  - **Status:** Not started | **Priority:** P1 | **Estimate:** 2
+- [x] **[CREW-67-002] Per-story cost summary log on workflow completion**
+  - **Status:** Done | **Priority:** P1 | **Estimate:** 2
   - **Epic:** CREW-67 | **Labels:** type:observability
   - **Depends on:** —
   - **Deliverable:** `crews/delivery-build/src/workflow.ts` emits a single
@@ -220,8 +226,8 @@ work; no separate WP design doc).
 
 ---
 
-- [ ] **[CREW-67-003] Health endpoint exposes poller state and in-flight count**
-  - **Status:** Not started | **Priority:** P2 | **Estimate:** 2
+- [x] **[CREW-67-003] Health endpoint exposes poller state and in-flight count**
+  - **Status:** Done | **Priority:** P2 | **Estimate:** 2
   - **Epic:** CREW-67 | **Labels:** type:observability
   - **Depends on:** CREW-66-005 (shipped)
   - **Deliverable:** `crews/delivery-build/src/index.ts` `/healthz` endpoint
@@ -267,8 +273,8 @@ work; no separate WP design doc).
 
 ---
 
-- [ ] **[CREW-67-004] Operations runbook for delivery-build**
-  - **Status:** Not started | **Priority:** P2 | **Estimate:** 2
+- [x] **[CREW-67-004] Operations runbook for delivery-build**
+  - **Status:** Done | **Priority:** P2 | **Estimate:** 2
   - **Epic:** CREW-67 | **Labels:** type:docs
   - **Depends on:** CREW-67-001, CREW-67-002, CREW-67-003
   - **Deliverable:** New `docs/runbook/delivery-build.md` covering: (1)
