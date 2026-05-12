@@ -6,7 +6,7 @@ import type { GitlabClient } from "./integrations/gitlab.js";
 import type { JiraClient, JiraIssue } from "./integrations/jira.js";
 import { seedEngineerMemory } from "./memory.js";
 import { log } from "./observability.js";
-import type { StateStore } from "./state.js";
+import type { StateStore, Step } from "./state.js";
 
 export interface WorkflowContext {
   issueKey: string;
@@ -28,6 +28,45 @@ export interface WorkflowContext {
  * WorkflowContext at call time.
  */
 export type WorkflowCtxBase = Omit<WorkflowContext, "issueKey" | "state">;
+
+/**
+ * Aggregate the step history into a cost summary and emit a single
+ * `workflow.complete` log line. Called at every terminal exit point so
+ * operators have a consistent record regardless of path taken.
+ *
+ * Wrapped in a try-catch so a DB error on `getStepHistory` never silences
+ * the upstream Jira/GitLab outcome log.
+ */
+function emitWorkflowComplete(
+  issueKey: string,
+  state: StateStore,
+  terminalStep: Step,
+  success: boolean,
+  mrUrl?: string,
+): void {
+  try {
+    const history = state.getStepHistory(issueKey);
+    const totalCostUsd = history.reduce((sum, r) => sum + (r.costUsd ?? 0), 0);
+    const agentSteps = history
+      .filter((r) => r.sessionId !== null)
+      .map((r) => ({ step: r.step, sessionId: r.sessionId!, costUsd: r.costUsd ?? 0 }));
+    const firstStartedAt = history[0]?.startedAt ?? Date.now();
+    const durationMs = Date.now() - firstStartedAt;
+
+    log.info("workflow.complete", {
+      issueKey,
+      terminalStep,
+      success,
+      totalCostUsd,
+      stepCount: history.length,
+      agentSteps,
+      durationMs,
+      ...(mrUrl !== undefined ? { mrUrl } : {}),
+    });
+  } catch (err) {
+    log.warn("workflow.complete.failed", { issueKey, err: String(err) });
+  }
+}
 
 /**
  * Run the delivery build sequence for one story.
@@ -54,7 +93,7 @@ export async function runStory(ctx: WorkflowContext): Promise<void> {
     await runStoryInner(ctx, input);
   } catch (err) {
     log.error("workflow.unhandled-error", { issueKey, err: String(err) });
-    await escalateToHumanReview(ctx.jira, issueKey, "Unexpected workflow error", []);
+    await escalateToHumanReview(ctx.jira, issueKey, "Unexpected workflow error", [], ctx.state);
   }
 }
 
@@ -116,7 +155,7 @@ async function runStoryInner(
   });
 
   if (!assessResult.success) {
-    await escalateToHumanReview(jira, issueKey, "Engineer failed to assess ticket clarity", []);
+    await escalateToHumanReview(jira, issueKey, "Engineer failed to assess ticket clarity", [], state);
     return;
   }
 
@@ -134,6 +173,7 @@ async function runStoryInner(
     state.finishStep(issueKey, "clarification-pending", { verdict: "pending" });
 
     log.info("workflow.blocked.clarification", { issueKey });
+    emitWorkflowComplete(issueKey, state, "clarification-pending", false);
     return;
   }
 
@@ -165,12 +205,12 @@ async function runStoryInner(
   });
 
   if (!implResult.success) {
-    await escalateToHumanReview(jira, issueKey, "Engineer failed to implement story", []);
+    await escalateToHumanReview(jira, issueKey, "Engineer failed to implement story", [], state);
     return;
   }
 
   if (!branchName) {
-    await escalateToHumanReview(jira, issueKey, "Engineer did not produce a branch name", []);
+    await escalateToHumanReview(jira, issueKey, "Engineer did not produce a branch name", [], state);
     return;
   }
 
@@ -227,7 +267,7 @@ async function runStoryInner(
   }
 
   if (!reviewPassed) {
-    await escalateToHumanReview(jira, issueKey, "Refactor loop cap reached", unresolvedItems);
+    await escalateToHumanReview(jira, issueKey, "Refactor loop cap reached", unresolvedItems, state);
     return;
   }
 
@@ -277,17 +317,18 @@ async function runStoryInner(
   }
 
   if (!ciPassed) {
-    await escalateToHumanReview(jira, issueKey, "CI fix cap reached", []);
+    await escalateToHumanReview(jira, issueKey, "CI fix cap reached", [], state, mrUrl);
     return;
   }
 
-  // ── Done: transition to In QA and emit event ──────────────────────────────
+  // ── Done: transition to In QA ─────────────────────────────────────────────
   state.upsertStory(issueKey, "in-qa");
   state.startStep(issueKey, "in-qa");
   await jira.transitionIssue(issueKey, "In QA");
   state.finishStep(issueKey, "in-qa", { verdict: "ok" });
 
   log.info("workflow.handoff-to-qa", { issueKey, mrUrl });
+  emitWorkflowComplete(issueKey, state, "in-qa", true, mrUrl);
 }
 
 async function escalateToHumanReview(
@@ -295,6 +336,8 @@ async function escalateToHumanReview(
   issueKey: string,
   reason: string,
   unresolvedItems: string[],
+  state?: StateStore,
+  mrUrl?: string,
 ): Promise<void> {
   log.warn("workflow.escalate", { issueKey, reason });
   const body =
@@ -306,6 +349,10 @@ async function escalateToHumanReview(
 
   await jira.commentOnIssue(issueKey, body);
   await jira.transitionIssue(issueKey, "Needs human review");
+
+  if (state) {
+    emitWorkflowComplete(issueKey, state, "needs-human-review", false, mrUrl);
+  }
 }
 
 const DEFAULT_RECOVERY_MODEL = "claude-opus-4-5";
