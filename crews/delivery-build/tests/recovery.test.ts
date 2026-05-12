@@ -221,6 +221,25 @@ describe("recoverInterruptedSteps", () => {
     );
   });
 
+  it("emits workflow.complete with success: false when crash recovery escalates", async () => {
+    const ctxBase = makeCtxBase();
+    mockResumeSession.mockImplementation(() => {
+      throw new Error("session not found");
+    });
+    const state = makeState([
+      makeInterruptedRow({ issueKey: "CREW-63-001", sessionId: "sess_gone" }),
+    ]);
+
+    await recoverInterruptedSteps(state, ctxBase);
+
+    const completeCall = mockLogInfo.mock.calls.find((c) => c[0] === "workflow.complete");
+    expect(completeCall).toBeDefined();
+    const payload = completeCall![1] as Record<string, unknown>;
+    expect(payload["success"]).toBe(false);
+    expect(payload["terminalStep"]).toBe("needs-human-review");
+    expect(payload["issueKey"]).toBe("CREW-63-001");
+  });
+
   it("continues to the next row when escalation itself throws", async () => {
     const ctxBase = makeCtxBase();
     mockResumeSession

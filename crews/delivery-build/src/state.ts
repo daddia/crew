@@ -144,6 +144,8 @@ export function createStateStore(dbPath: string): StateStore {
      ORDER BY started_at ASC`,
   );
 
+  const pingStmt = db.prepare("SELECT 1");
+
   return {
     upsertStory(issueKey, step) {
       upsertStoryStmt.run(issueKey, step, Date.now());
@@ -186,7 +188,7 @@ export function createStateStore(dbPath: string): StateStore {
     },
 
     ping() {
-      db.prepare("SELECT 1").get();
+      pingStmt.get();
     },
 
     close() {

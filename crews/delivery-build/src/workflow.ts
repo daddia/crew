@@ -384,7 +384,7 @@ export async function recoverInterruptedSteps(
     } catch (err) {
       log.warn("recovery.session-failed", { issueKey, step, sessionId, err: String(err) });
       try {
-        await escalateToHumanReview(ctxBase.jira, issueKey, "Crash recovery failed: " + String(err), []);
+        await escalateToHumanReview(ctxBase.jira, issueKey, "Crash recovery failed: " + String(err), [], state);
       } catch (escalateErr) {
         log.error("recovery.escalation-failed", { issueKey, err: String(escalateErr) });
       }
@@ -427,10 +427,10 @@ export async function addressFeedback(
     });
 
     if (!result.success) {
-      await escalateToHumanReview(jira, issueKey, "Engineer failed to address feedback", [comment]);
+      await escalateToHumanReview(jira, issueKey, "Engineer failed to address feedback", [comment], state, mrUrl);
     }
   } catch (err) {
     log.error("workflow.address-feedback.error", { issueKey, err: String(err) });
-    await escalateToHumanReview(jira, issueKey, "Unexpected error during address-feedback", []);
+    await escalateToHumanReview(jira, issueKey, "Unexpected error during address-feedback", [], state, mrUrl);
   }
 }

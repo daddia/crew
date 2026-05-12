@@ -22,7 +22,7 @@ vi.mock("../src/agents/senior-engineer/agent.js", () => ({
   seniorEngineer: { name: "senior-engineer", run: vi.fn() },
 }));
 
-import { runStory } from "../src/workflow.js";
+import { runStory, addressFeedback } from "../src/workflow.js";
 import type { WorkflowCtxBase } from "../src/workflow.js";
 import { log } from "../src/observability.js";
 import { engineer } from "../src/agents/engineer/agent.js";
@@ -386,5 +386,44 @@ describe("workflow.complete — issueKey and payload shape", () => {
 
     const [, payload] = findCompleteCall()!;
     expect(payload["totalCostUsd"]).toBe(0);
+  });
+});
+
+describe("workflow.complete — addressFeedback escalation paths", () => {
+  beforeEach(() => { vi.clearAllMocks(); });
+
+  it("emits workflow.complete with success: false when engineer fails to address MR feedback", async () => {
+    const ctxBase = makeCtxBase();
+    mockEngineer.mockResolvedValue(successResult({ success: false }));
+
+    await addressFeedback(
+      { issueKey: "ENG-1", state: makeState(), ...ctxBase },
+      "Please fix the type error",
+      "https://gitlab.example.com/mr/1",
+    );
+
+    const call = findCompleteCall();
+    expect(call).toBeDefined();
+    const [, payload] = call!;
+    expect(payload["success"]).toBe(false);
+    expect(payload["terminalStep"]).toBe("needs-human-review");
+    expect(payload["mrUrl"]).toBe("https://gitlab.example.com/mr/1");
+  });
+
+  it("emits workflow.complete with success: false when addressFeedback throws unexpectedly", async () => {
+    const ctxBase = makeCtxBase();
+    mockEngineer.mockRejectedValue(new Error("SDK unavailable"));
+
+    await addressFeedback(
+      { issueKey: "ENG-1", state: makeState(), ...ctxBase },
+      "Please fix the type error",
+      "https://gitlab.example.com/mr/2",
+    );
+
+    const call = findCompleteCall();
+    expect(call).toBeDefined();
+    const [, payload] = call!;
+    expect(payload["success"]).toBe(false);
+    expect(payload["mrUrl"]).toBe("https://gitlab.example.com/mr/2");
   });
 });

@@ -64,6 +64,7 @@ export async function pollTick(deps: PollerDeps, state: StateStore): Promise<voi
     issues = await deps.jira.searchIssues(jql);
   } catch (err) {
     log.warn("poller.search-error", { err: String(err) });
+    recordTick("error");
     return;
   }
 
@@ -178,6 +179,8 @@ export async function pollTick(deps: PollerDeps, state: StateStore): Promise<voi
       }
     }
   }
+
+  recordTick("ok");
 }
 
 /**
@@ -187,11 +190,11 @@ export async function pollTick(deps: PollerDeps, state: StateStore): Promise<voi
 export function startPoller(deps: PollerDeps, state: StateStore): ReturnType<typeof setInterval> {
   log.info("poller.start", { intervalMs: deps.behaviour.pollIntervalMs });
   return setInterval(() => {
-    void pollTick(deps, state)
-      .then(() => { recordTick("ok"); })
-      .catch((err: unknown) => {
-        recordTick("error");
-        log.error("poller.unhandled-error", { err: String(err) });
-      });
+    // pollTick records "ok"/"error" at its own exit points. The .catch here
+    // guards against any exception that escapes pollTick's internal handling.
+    void pollTick(deps, state).catch((err: unknown) => {
+      recordTick("error");
+      log.error("poller.unhandled-error", { err: String(err) });
+    });
   }, deps.behaviour.pollIntervalMs);
 }
