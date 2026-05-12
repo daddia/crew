@@ -6,3 +6,4 @@ allowBuilds:
   '@anthropic-ai/claude-code': true
   better-sqlite3: true
   esbuild: true
+  protobufjs: true
