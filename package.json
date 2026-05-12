@@ -4,12 +4,14 @@
   "version": "0.0.0",
   "packageManager": "pnpm@10.33.2",
   "scripts": {
+    "dev": "turbo dev",
     "build": "turbo build",
     "typecheck": "turbo typecheck",
     "test": "turbo test",
-    "lint": "dependency-cruiser --config .dependency-cruiser.cjs crews packages && turbo lint",
+    "lint": "turbo lint",
+    "lint:dependencies": "dependency-cruiser --config .dependency-cruiser.cjs crews packages",
+    "lint:fix": "turbo lint:fix",
     "clean": "turbo clean",
-    "dev": "turbo dev",
     "release": "changeset publish"
   },
   "devDependencies": {
