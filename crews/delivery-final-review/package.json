@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@daddia/crew": "^0.3.0",
-    "@hono/node-server": "^2.0.2",
+    "@hono/node-server": "^2.0.3",
     "hono": "^4.12.18"
   },
   "devDependencies": {
