@@ -313,18 +313,19 @@ Currently configured servers:
 
 ## Documentation
 
-Product and delivery artefacts live in `docs/`. Start with [`docs/README.md`](docs/README.md).
+Start with [`docs/README.md`](docs/README.md).
 
 | Area | Path |
 |------|------|
-| Product strategy, roadmap, backlog | `docs/product/` |
+| Product strategy | `docs/product/product.md` |
+| Product roadmap | `docs/product/roadmap.md` |
 | Solution architecture | `architecture/solution.md` |
 | ADRs | `architecture/decisions/` |
-| Crew flow contracts | `docs/crew-flows/` |
-| Work-package designs | `docs/work/{wp}/` |
-| Research and ideas | [Confluence CREW space](https://carinyaparc.atlassian.net/wiki/spaces/CREW/pages/753668/03+Research) (`docs/research/README.md` redirect) |
-| Delivery conventions | `docs/conventions/` |
+| Crew flow contracts | `docs/design/crew-flows/` |
+| Contributor guides | `contributing/` |
+| Delivery approach | `docs/delivery/approach.md` |
 | Runbooks | `docs/runbook/` |
+| Research and ideas | [Confluence CREW space](https://carinyaparc.atlassian.net/wiki/spaces/CREW/pages/753668/03+Research) |
 
 The former `crew-space` repository is **decommissioned**; do not add new artefacts there.
 

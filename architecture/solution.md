@@ -12,9 +12,9 @@ related:
 
 # Solution Architecture -- Crew
 
-Architecture for the Crew platform across the **Now / Next / Later / Future** phases in [`product.md`](../product/product.md). The thesis (per `product.md` §3, §8): a shared runtime hosts a growing **catalogue** of deployable crews; each crew is independently operable and composable into pipelines; the platform compounds value **above the model** through memory, evidence, evaluation, and orchestration that no single foundation-model call can match. The delivery vertical (build → QA → review) is the first proof of the runtime contract, not the limit of the architecture.
+Architecture for the Crew platform across the **Now / Next / Later / Future** phases in [`product.md`](../docs/product/product.md). The thesis (per `product.md` §3, §8): a shared runtime hosts a growing **catalogue** of deployable crews; each crew is independently operable and composable into pipelines; the platform compounds value **above the model** through memory, evidence, evaluation, and orchestration that no single foundation-model call can match. The delivery vertical (build → QA → review) is the first proof of the runtime contract, not the limit of the architecture.
 
-Two further constraints flow from `product.md` v2.0 and shape this document:
+Two further constraints flow from the product narrative and shape this document:
 
 1. **Compounding surface.** Memory, evidence, evaluation policy, model routing, and orchestration are first-class platform concerns — not afterthoughts. The Pro-tier managed control plane (shipped in `@daddia/crew` v0.4.0) is where these compound across runs and crews.
 2. **Legible to agents.** Crew is extended by AI agents, including Crew itself. Building blocks, contracts, and conventions must be reasonable over by an agent, not only by a human — names are explicit, side effects are local, and module boundaries match the words an agent would search for.
@@ -115,7 +115,7 @@ Two layers sit *above* the individual crew. Together they encode the "compound a
 
 1. **Auditability.** Every crew action is reconstructible from the per-crew
    audit trail without consulting the operator. The audit trail is the
-   product (see [`product.md`](../product/product.md) §8).
+   product (see `product.md` §8).
 2. **Bounded operation.** Every loop has a cap, every external call a
    timeout, every run a cost ceiling. Unbounded automation is unbounded
    spend.

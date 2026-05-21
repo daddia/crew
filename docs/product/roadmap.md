@@ -14,7 +14,7 @@ related:
 
 Phases follow [`product.md`](product.md) §2. Calendar dates are not committed; a phase opens when the previous phase exits cleanly.
 
-**Active delivery work** is tracked in [`backlog.md`](backlog.md) (delivery-build slice, CREW-67). **Historical epic backlog** from the prior planning model lives in [`archive/epic-backlog-2026-05.md`](archive/epic-backlog-2026-05.md) — superseded by the multi-crew platform design; retained for traceability only.
+Active delivery work is tracked in Jira. Research and commercial detail: [Confluence CREW space](https://carinyaparc.atlassian.net/wiki/spaces/CREW/overview).
 
 ## Now — prove delivery on the platform
 
@@ -28,7 +28,7 @@ Phases follow [`product.md`](product.md) §2. Calendar dates are not committed; 
 | `delivery-build` crew | `crews/delivery-build` — engineer + senior-engineer; Jira poll + GitLab webhooks |
 | `delivery-qa` / `delivery-review` | Scaffolded; fast-follow after build slice validates |
 | Solution architecture | [`architecture/solution.md`](../../architecture/solution.md) |
-| Build flow contract | [`docs/crew-flows/delivery-build.md`](../crew-flows/delivery-build.md) |
+| Build flow contract | [`docs/design/crew-flows/delivery-build.md`](../design/crew-flows/delivery-build.md) |
 
 **Exit criteria.**
 
@@ -46,13 +46,13 @@ Phases follow [`product.md`](product.md) §2. Calendar dates are not committed; 
 - Structured cost-per-run logging and alerting on failure rate.
 - `delivery-qa` and `delivery-review` crews operational; handoff events (`ready-for-review`, etc.) wired.
 - OTel tracing (if prioritised) across crews.
-- Commercial foundations: licence gating, control-plane API sketch (see [IDEA-015 Phase 2 Architecture](https://carinyaparc.atlassian.net/wiki/spaces/CREW/pages/622617/IDEA-015+Phase+2+Architecture+Evolution+Managed+Control+Plane) in Confluence Research).
+- Commercial foundations: licence gating, control-plane API sketch (see [IDEA-015 in Confluence Research](https://carinyaparc.atlassian.net/wiki/spaces/CREW/pages/622617/IDEA-015+Phase+2+Architecture+Evolution+Managed+Control+Plane)).
 
 **Exit criteria.**
 
 1. Overnight run completes without operator intervention; morning report shows autonomy rate and cost per story.
 2. Downstream crews pick up handoffs without manual re-trigger.
-3. CrewBench baseline row populated (see [`proof.md`](proof.md)).
+3. CrewBench baseline row populated (Confluence Proof / CrewBench pages).
 
 ## Later — new crews and Discovery track
 
@@ -62,7 +62,7 @@ Phases follow [`product.md`](product.md) §2. Calendar dates are not committed; 
 
 - Second vertical crew (e.g. code review CLI or docs crew).
 - Discovery workflows on the shared `WorkflowEngine` / plan model.
-- Persona cadence for full squad — [`persona-cadence.md`](persona-cadence.md) (Discovery/Refine sections apply here).
+- Full-squad persona model (Discovery/Refine) — Confluence Research if needed.
 
 ## Future — cross-crew orchestration
 
@@ -72,7 +72,7 @@ See [`product.md`](product.md) §2 Future and [`architecture/solution.md`](../..
 
 ## Commercial release gate (Next → market)
 
-From [`commercial.md`](commercial.md) and [`proof.md`](proof.md):
+From Confluence (Commercial Model, Proof / CrewBench):
 
 - Pro tier purchasable; licence module validated.
 - CrewBench proof pack with documented wins and at least one documented loss.
@@ -80,6 +80,6 @@ From [`commercial.md`](commercial.md) and [`proof.md`](proof.md):
 
 ## Review cadence
 
-- **Per sprint:** [`backlog.md`](backlog.md) against Now exit criteria.
+- **Per sprint:** Jira backlog against Now exit criteria.
 - **Per phase gate:** update this document with evidence links.
 - **Quarterly:** re-sequence Later/Future if platform thesis shifts.

@@ -50,7 +50,7 @@ pnpm test       # Vitest suite
 
 ## Documentation
 
-Product strategy, roadmap, active backlog, architecture, crew flows, and research live in [`docs/`](docs/) and [`architecture/`](architecture/). See [`docs/README.md`](docs/README.md).
+Product strategy and roadmap live in [`docs/product/`](docs/product/); supporting docs, architecture, and runbooks in [`docs/`](docs/) and [`architecture/`](architecture/). See [`docs/README.md`](docs/README.md).
 
 ## Contributing
 

@@ -48,4 +48,4 @@ cp architecture/decisions/adr-template.md architecture/decisions/ADR-{####}-{sho
 1. Set status to `Proposed`. Open a PR for discussion.
 2. On acceptance: update status to `Accepted`, add a row above.
 
-**Placement rule:** Runtime and crew-specific decisions live in this repo (`architecture/decisions/`). Product strategy and delivery backlog live in `docs/product/`.
+**Placement rule:** Runtime and crew-specific decisions live in this repo (`architecture/decisions/`). Product strategy and roadmap live in `docs/product/`; active backlog in Jira.

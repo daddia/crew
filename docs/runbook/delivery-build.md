@@ -5,7 +5,7 @@ status: Active
 last_updated: 2026-05-12
 related:
   - crews/delivery-build/README.md
-  - docs/crew-flows/delivery-build.md
+  - docs/design/crew-flows/delivery-build.md
   - docs/runbook/container.md
 ---
 
@@ -14,7 +14,7 @@ related:
 The `delivery-build` crew picks up assigned Jira stories, implements them via
 the `engineer` and `senior-engineer` personas, opens a GitLab MR, monitors CI,
 and transitions the ticket to "In QA". The canonical delivery sequence is
-documented in [`docs/crew-flows/delivery-build.md`](../crew-flows/delivery-build.md).
+documented in [`docs/design/crew-flows/delivery-build.md`](../design/crew-flows/delivery-build.md).
 
 ---
 

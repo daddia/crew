@@ -1,45 +1,22 @@
-# Crew documentation
+# Crew docs
 
-Authoritative product, delivery, and research docs for the Crew monorepo. Migrated from `crew-space` (2026-05-21); `crew-space` is decommissioned.
+## Product strategy, architecture, and roadmap
 
-## Product
-
-| Document | Purpose |
-|---|---|
-| [product.md](product/product.md) | Product strategy and platform thesis |
-| [roadmap.md](product/roadmap.md) | Now / Next / Later / Future phases |
-| [backlog.md](product/backlog.md) | **Active** delivery-build backlog (CREW-67) |
-| [commercial.md](product/commercial.md) | Tiers and licensing |
-| [proof.md](product/proof.md) | CrewBench and adoption metrics |
-| [persona-cadence.md](product/persona-cadence.md) | Dual-track persona model (full squad; see platform note) |
-| [archive/epic-backlog-2026-05.md](product/archive/epic-backlog-2026-05.md) | Superseded epic backlog (historical) |
-
-## Architecture
+These three documents are the authoritative chain. Read in order when onboarding.
 
 | Document | Purpose |
-|---|---|
-| [architecture/principles.md](../architecture/principles.md) | Guiding principles (process + crew design) |
-| [architecture/solution.md](../architecture/solution.md) | Platform solution architecture |
-| [architecture/decisions/](../architecture/decisions/) | ADR register and template |
+|----------|---------|
+| [Product strategy](product/product.md) | What Crew is, why, for whom |
+| [Solution architecture](../architecture/solution.md) | How Crew is built and operated technically |
+| [Product roadmap](product/roadmap.md) | Phases (Now / Next / Later / Future) and exit criteria |
 
-## Delivery
+## Supporting docs
 
-| Document | Purpose |
-|---|---|
-| [crew-flows/](crew-flows/) | Per-crew flow contracts (`delivery-build`, etc.) |
-| [delivery/approach.md](delivery/approach.md) | Five-track delivery approach |
-| [conventions/](conventions/) | Definition of ready / done |
-| [runbook/](runbook/) | Operations runbooks |
-| [work/](work/) | Work-package designs and backlogs |
-
-## Research
-
-Research lives in Confluence, not in git. See [research/README.md](research/README.md).
-
-| Document | Purpose |
-|---|---|
-| [03 Research (Confluence)](https://carinyaparc.atlassian.net/wiki/spaces/CREW/pages/753668/03+Research) | Ideas register, CrewBench, CrewDocs, CrewFlow |
-
-## Archived work packages
-
-Pre-platform migration designs: [`work/archive/crew-space/`](work/archive/crew-space/).
+| Area | Path | Supports |
+|------|------|----------|
+| Guiding principles | [`../architecture/principles.md`](../architecture/principles.md) | Constraints for crew and delivery design |
+| Delivery approach | [delivery/approach.md](delivery/approach.md) | How artefact-led delivery maps to crews |
+| Flow contracts | [design/crew-flows/](design/crew-flows/) | Per-crew sequences |
+| Contributing | [contributing/](../contributing/) | Authoring crews and personas in code |
+| Runbooks | [runbook/](runbook/) | Operating deployed crews |
+| Research | [Confluence → 03 Research](https://carinyaparc.atlassian.net/wiki/spaces/CREW/pages/753668/03+Research) | Ideas, CrewBench (not in git) |

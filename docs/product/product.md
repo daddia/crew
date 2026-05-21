@@ -22,7 +22,7 @@ Autonomous AI agents are everywhere in demos. Reliable, deployable agent teams t
 
 ## 2. Appetite
 
-Four phases. A phase opens when the previous phase exits cleanly; calendar dates are not committed.
+Four phases. A phase opens when the previous phase exits cleanly; calendar dates are not committed. Sequencing and exit criteria: [`roadmap.md`](roadmap.md).
 
 **Now — prove the pattern with software delivery.** Ship the build slice of the delivery vertical end-to-end on real stories: pickup, clarification, implementation, peer review, MR, CI handoff to QA. This is both useful product and the proof point for the platform — the most demanding crew first, so everything after is easier.
 
@@ -76,7 +76,7 @@ In the future phase, individual crews become composable steps in longer pipeline
 
 ## 7. Outcome metrics
 
-Crew is evaluated on three levels. This document names the outcomes; numeric thresholds, baselines, and alert conditions live downstream.
+Crew is evaluated on three levels. This document names the outcomes; numeric thresholds and benchmark methodology live in Confluence (CrewBench).
 
 **Platform level (applies to every crew).**
 
@@ -95,8 +95,6 @@ Crew is evaluated on three levels. This document names the outcomes; numeric thr
 
 - **Cost-and-recall trajectory.** Cost per accepted artefact trending down and recall trending up after compaction, memory, and routing land. The proof that the platform improves with use, independently of any single model release.
 - **Catalogue breadth.** Number of independently deployable crews running real workloads. The signal that the substrate has earned its name.
-
-Targets, conditions, and benchmark methodology (CrewBench) are owned downstream.
 
 ## 8. Product principles
 
