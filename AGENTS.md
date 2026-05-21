@@ -47,7 +47,18 @@ crews/
     package.json      # @daddia/crew-delivery-review
 
 packages/
-  crew/               # @daddia/crew — shared library (main entry + ./webhooks subpath)
+  crew/               # @daddia/crew — shared library (main + ./webhooks + ./config + ./state + ./workflow)
+    src/
+      index.ts        # Main entry: Agent, AgentCrew, resolveSession, hooks, observability, memory, Orchestrator
+      agent.ts        # Agent, AgentInput, AgentResult, AgentDefinition, PersonaName
+      unit.ts         # AgentCrew interface
+      session.ts      # resolveSession, SessionOptions, ActiveSession
+      hooks.ts        # buildAuditHook, toSDKHookCallback, boundedIterGuard, IterationCapReached
+      orchestrator.ts # Orchestrator, OrchestratorRequest, AgentRegistry
+      state/          # ./state subpath: StateStore interface + SQLite implementation
+      workflow/       # ./workflow subpath: WorkflowEngine, WorkflowPlan, FailurePolicy
+      webhooks/       # ./webhooks subpath: verifySignature, idempotency, replay
+      config/         # ./config subpath: loadEnv, loadYaml, Secret, redact
 
 tooling/
   typescript-config/  # @repo/typescript-config — shared TypeScript base configs
@@ -69,15 +80,31 @@ Shared types and Claude Agent SDK helpers. Every persona module implements `Agen
 | `AgentDefinition` | Configuration passed to `resolveSession()` to boot a Claude session |
 | `PersonaName`     | `"tech-lead" \| "engineer" \| "senior-engineer" \| "code-quality"`  |
 
-| Export                | Purpose                                                                 |
-| --------------------- | ----------------------------------------------------------------------- |
-| `resolveSession()`    | Decide whether to create a new session or resume an existing one        |
-| `readPromptFile()`    | Load a persona's `prompt.md`                                            |
-| `readSkillsDir()`     | Discover `SKILL.md` files under a `.claude/skills/` tree                |
-| `readSubagentsDir()`  | Discover subagent `.md` files under a `.claude/agents/` directory       |
-| `buildAuditHook()`    | `PostToolUse` hook that enforces allowed-tools and logs every tool call |
-| `boundedIterGuard()`  | Guard that throws `IterationCapReached` when loop cap is hit            |
-| `IterationCapReached` | Error class for iteration cap exhaustion                                |
+| Export                    | Purpose                                                                      |
+| ------------------------- | ---------------------------------------------------------------------------- |
+| `resolveSession()`        | Decide whether to create a new session or resume an existing one             |
+| `readPromptFile()`        | Load a persona's `prompt.md`                                                 |
+| `readSkillsDir()`         | Discover `SKILL.md` files under a `.claude/skills/` tree                     |
+| `readSubagentsDir()`      | Discover subagent `.md` files under a `.claude/agents/` directory            |
+| `buildAuditHook()`        | `PostToolUse` hook that enforces allowed-tools and logs every tool call      |
+| `toSDKHookCallback()`     | Convert a `PostToolUseHandler` into the SDK's native hook callback format    |
+| `boundedIterGuard()`      | Guard that throws `IterationCapReached` when loop cap is hit                 |
+| `IterationCapReached`     | Error class for iteration cap exhaustion                                     |
+| `seedProjectMemory()`     | Seed project-level memory files into a persona's working context             |
+| `createLogger()`          | Create a structured `Logger` instance scoped to a crew or module             |
+| `initTracing()`           | Bootstrap OpenTelemetry tracing (call once at process start)                 |
+| `createTracer()`          | Obtain a scoped `Tracer` for a crew or module                                |
+| `SessionOptions`          | Options passed to `resolveSession()`                                         |
+| `ActiveSession`           | Return type of `resolveSession()`                                            |
+| `SDKMessage`              | Re-exported SDK message union type                                           |
+| `SDKResultMessage`        | Re-exported SDK result message type                                          |
+| `ToolUseEvent`            | Payload passed to every `PostToolUseHandler`                                 |
+| `PostToolUseHandler`      | Handler signature for post-tool-use hooks                                    |
+| `Logger` / `LogLevel`     | Structured logging types                                                     |
+| `TracingOptions` / `Tracer` | OTel tracing types                                                         |
+| `Orchestrator`            | Interface for dynamic workflow planners (deterministic or Claude-assisted)   |
+| `OrchestratorRequest`     | `{ issueKey, context }` passed to `Orchestrator.plan()`                      |
+| `AgentRegistry`           | `Readonly<Record<string, Agent>>` — named agent lookup for orchestrators     |
 
 ### `@daddia/crew/webhooks` (subpath)
 
@@ -90,6 +117,31 @@ Security primitives for inbound webhook handlers. Import only from this subpath 
 | `createIdempotencyStore()` | SQLite-backed deduplication keyed on `(provider, eventId)` |
 | `SignatureError`           | Thrown on signature mismatch                               |
 | `ReplayError`              | Thrown on replay detection                                 |
+
+### `@daddia/crew/state` (subpath)
+
+Persistent state management for server-shaped crews. Provides the `StateStore` interface and a ready-to-use SQLite implementation. Import from this subpath instead of rolling your own SQLite layer — the schema, WAL configuration, and crash-recovery conventions are provided out of the box.
+
+| Export                       | Purpose                                                                                          |
+| ---------------------------- | ------------------------------------------------------------------------------------------------ |
+| `StateStore`                 | Interface every state store implementation must satisfy                                          |
+| `StoryRow`                   | Row type for the `stories` table (`issueKey`, `currentStep`, `startedAt`)                        |
+| `StepRow`                    | Row type for the `steps` table (execution record with timing and cost)                           |
+| `StepResult`                 | `{ costUsd?, verdict? }` passed to `finishStep()`                                                |
+| `createSqliteStateStore(dbPath)` | Returns a `StateStore` backed by SQLite with WAL mode, prepared statements, and the three-table schema |
+
+### `@daddia/crew/workflow` (subpath)
+
+Structured execution engine for multi-step workflows. Wire up a `WorkflowPlan` and let the engine handle step sequencing, context accumulation, retry logic, and failure escalation. Use this instead of hand-rolling the run loop in `workflow.ts`.
+
+| Export                    | Purpose                                                                                            |
+| ------------------------- | -------------------------------------------------------------------------------------------------- |
+| `WorkflowPlan`            | `{ issueKey, steps }` — the complete execution plan for one story                                 |
+| `WorkflowStep`            | `{ name, agent, maxRetries?, onFailure? }` — one step in the plan                                 |
+| `FailurePolicy`           | `'escalate' \| 'continue' \| 'stop'` — what to do when a step fails after retries                 |
+| `WorkflowEngine`          | Interface returned by `createWorkflowEngine()` — has a single `run(plan, context?)` method        |
+| `WorkflowEngineOptions`   | `{ store, onEscalate, logger? }` — configuration passed to `createWorkflowEngine()`               |
+| `createWorkflowEngine(options)` | Returns a `WorkflowEngine` that writes state, accumulates context, and calls `onEscalate` on failure |
 
 ## Development commands
 
@@ -120,7 +172,7 @@ These rules are non-negotiable. `pnpm lint` runs dependency-cruiser and must pas
 3. No circular dependencies within `packages/*`.
 4. `crews/*` MUST consume `@daddia/crew` as a published npm dependency. Workspace linking (`workspace:*`, `workspace:^`, `link:`) is forbidden for `@daddia/crew` in any crew `package.json`.
 
-There is no GitHub Actions workflow in this repository yet; contributors rely on local `pnpm lint`. When CI is added (see product backlog CREW-51-002), it should run the same lint, typecheck, and test commands on every push and PR.
+CI runs on every push and PR (`.github/workflows/ci.yml`): format check, lint, typecheck, dependency audit, and tests must all pass before a PR can merge.
 
 ## Agent crew conventions
 
@@ -172,11 +224,15 @@ Tool allowlists are enforced at two levels: the Claude Agent SDK `allowedTools` 
 
 ## State store conventions
 
-Each crew owns its own SQLite database (path injected via `DB_PATH` env var). The standard schema has three tables:
+Each crew owns its own SQLite database (path injected via `DB_PATH` env var). Use `createSqliteStateStore(dbPath)` from `@daddia/crew/state` rather than rolling a bespoke SQLite layer — it provisions the standard schema and enforces the conventions below automatically.
 
-- `stories` — one row per story, tracking `current_step` and `updated_at`.
+The standard schema has three tables:
+
+- `stories` — one row per story, tracking `current_step` and `started_at`.
 - `steps` — one row per step execution, recording `session_id`, `started_at`, `finished_at`, `cost_usd`, `verdict`.
 - `webhook_events` — deduplication log keyed on `(provider, event_id)`.
+
+Each crew's `state.ts` should initialise the store and export a singleton — do not share the database file or store instance across crews.
 
 **Crash-recovery ordering:**
 
@@ -184,11 +240,15 @@ Call `state.upsertStory(issueKey, step)` **before** `agent.run()`. This is the c
 
 For non-agent steps (API calls, integrations), also call `state.startStep(issueKey, step)` before the work begins, so the `steps` table reflects the start time accurately.
 
-For agent steps whose `AgentResult` contains a `sessionId` artefact, call `state.startStep(issueKey, step, sessionId)` **after** `agent.run()` returns so the session ID is captured in the same row. The accepted trade-off is that `started_at` and `finished_at` for that step will be nearly identical (both timestamped at completion), and if the process crashes during the run there will be no `steps` row — but the `stories` row (written before the run) is still sufficient to detect the interrupted story. A future `recordSessionId` method could eliminate this trade-off.
+For agent steps whose `AgentResult` contains a `sessionId` artefact, call `state.startStep(issueKey, step, sessionId)` **after** `agent.run()` returns so the session ID is captured in the same row. The accepted trade-off is that `started_at` and `finished_at` for that step will be nearly identical (both timestamped at completion), and if the process crashes during the run there will be no `steps` row — but the `stories` row (written before the run) is still sufficient to detect the interrupted story.
 
 ## Workflow conventions
 
 `workflow.ts` is the only file that knows the delivery sequence. It imports personas directly from the local `agents/` folder. It never imports from another crew.
+
+For new server-shaped crews, prefer `createWorkflowEngine()` from `@daddia/crew/workflow`. Pass it a `WorkflowPlan` (list of `WorkflowStep` objects with `name`, `agent`, optional `maxRetries`, and optional `onFailure` policy). The engine writes crash-recovery markers via the `StateStore`, accumulates step artefacts into a shared context, handles retries, and calls your `onEscalate` callback on unrecoverable failure. Each step's `onFailure` can be `'escalate'` (default), `'continue'`, or `'stop'`.
+
+Hand-rolled `workflow.ts` files (as in `delivery-build`) remain valid — they follow the same sequencing rules. The engine is a convenience layer, not a requirement.
 
 Escalation on failure or loop cap: call `commentOnIssue` + `transitionIssue("Needs human review")` and return. Never let the workflow throw to the caller.
 
@@ -216,8 +276,10 @@ Currently configured servers:
 
 - When adding a new persona, start with `agent.ts` and `prompt.md`. Add skills only once the persona runs correctly with a plain prompt.
 - When changing the `Agent` or `AgentResult` interface in `@daddia/crew`, bump the `@daddia/crew` version, publish it, bump every crew's pinned `@daddia/crew` dependency, and update all persona `agent.ts` files — all in the same PR.
+- When changing `StateStore` or `WorkflowEngine` interfaces in `@daddia/crew`, bump the version, publish, and update every crew that uses those subpaths in the same PR.
 - When changing webhook verification logic in `@daddia/crew/webhooks`, test against both Jira (HMAC) and GitLab (shared token) paths.
 - When changing `workflow.ts`, check that escalation paths (loop cap, agent failure) transition Jira correctly and do not re-enter the workflow.
+- When implementing a new `Orchestrator`, return a `WorkflowPlan` with the exact step names the crew's `StateStore` expects — step names are stored in SQLite and used for crash-recovery lookups.
 - Prefer modifying the smallest scope needed. A change to the delivery workflow should not touch shared types unless the contract truly changes.
 - Run `pnpm lint` before pushing. Boundary violations must not merge.
 
