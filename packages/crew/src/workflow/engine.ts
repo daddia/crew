@@ -57,7 +57,12 @@ export function createWorkflowEngine(options: WorkflowEngineOptions): WorkflowEn
             result = await step.agent.run({ issueKey, context: { ...accumulated } });
           } catch (err) {
             const reason = err instanceof Error ? err.message : String(err);
-            logger?.warn('workflow.step.threw', { issueKey, step: step.name, attempt, err: reason });
+            logger?.warn('workflow.step.threw', {
+              issueKey,
+              step: step.name,
+              attempt,
+              err: reason,
+            });
             store.startStep(issueKey, step.name);
             store.finishStep(issueKey, step.name, { verdict: 'threw' });
             if (attempt + 1 < maxAttempts) continue;
@@ -76,7 +81,11 @@ export function createWorkflowEngine(options: WorkflowEngineOptions): WorkflowEn
 
           if (result.success) {
             Object.assign(accumulated, result.artefacts);
-            logger?.info('workflow.step.ok', { issueKey, step: step.name, costUsd: result.costUsd });
+            logger?.info('workflow.step.ok', {
+              issueKey,
+              step: step.name,
+              costUsd: result.costUsd,
+            });
             advanced = true;
             break;
           }
