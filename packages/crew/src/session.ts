@@ -1,13 +1,13 @@
-import { access } from "node:fs/promises";
-import { dirname } from "node:path";
+import { access } from 'node:fs/promises';
+import { dirname } from 'node:path';
 import {
   unstable_v2_createSession,
   unstable_v2_resumeSession,
   type SDKSession,
   type SettingSource,
-} from "@anthropic-ai/claude-agent-sdk";
-import type { AgentDefinition, AgentInput } from "./agent.js";
-import { toSDKHookCallback, type PostToolUseHandler } from "./hooks.js";
+} from '@anthropic-ai/claude-agent-sdk';
+import type { AgentDefinition, AgentInput } from './agent.js';
+import { toSDKHookCallback, type PostToolUseHandler } from './hooks.js';
 
 export interface SessionOptions {
   definition: AgentDefinition;
@@ -79,8 +79,7 @@ export async function resolveSession(
   // Note: SDKSessionOptions.cwd was silently ignored in SDK <0.2.77 (issue
   // anthropics/claude-code#39731). Verify with a smoke test after upgrading.
   const cwd = dirname(definition.promptPath);
-  const settingSources: SettingSource[] =
-    validSubagentPaths.length > 0 ? ["project"] : [];
+  const settingSources: SettingSource[] = validSubagentPaths.length > 0 ? ['project'] : [];
 
   const sdkOptions = {
     model,

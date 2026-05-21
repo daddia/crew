@@ -18,7 +18,7 @@ allowed-tools:
   - Bash
   - Glob
   - Grep
-argument-hint: "[branch-or-file-or-review-output]"
+argument-hint: '[branch-or-file-or-review-output]'
 arguments:
   - target
 artefact: code

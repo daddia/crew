@@ -7,7 +7,7 @@ allowed-tools:
   - Write
   - Glob
   - Grep
-argument-hint: "<scope: portfolio|product|domain|work-package> <name> [--depth full]"
+argument-hint: '<scope: portfolio|product|domain|work-package> <name> [--depth full]'
 ---
 
 # Write Backlog

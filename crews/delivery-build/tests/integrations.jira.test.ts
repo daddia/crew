@@ -1,13 +1,13 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { createJiraClient, JiraApiError } from "../src/integrations/jira.js";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createJiraClient, JiraApiError } from '../src/integrations/jira.js';
 
-const BASE_URL = "https://test.atlassian.net";
+const BASE_URL = 'https://test.atlassian.net';
 const fetchMock = vi.fn();
-vi.stubGlobal("fetch", fetchMock);
+vi.stubGlobal('fetch', fetchMock);
 
 const client = createJiraClient(
-  { baseUrl: BASE_URL, email: "bot@example.com" },
-  { atlassianApiToken: "token" },
+  { baseUrl: BASE_URL, email: 'bot@example.com' },
+  { atlassianApiToken: 'token' },
 );
 
 function mockTransitionsResponse(
@@ -15,7 +15,7 @@ function mockTransitionsResponse(
 ): Response {
   return new Response(JSON.stringify({ transitions }), {
     status: 200,
-    headers: { "Content-Type": "application/json" },
+    headers: { 'Content-Type': 'application/json' },
   });
 }
 
@@ -23,134 +23,130 @@ function mockOk(): Response {
   return new Response(null, { status: 204 });
 }
 
-describe("transitionIssue", () => {
+describe('transitionIssue', () => {
   beforeEach(() => fetchMock.mockReset());
 
-  it("applies the matching transition by name", async () => {
+  it('applies the matching transition by name', async () => {
     fetchMock
       .mockResolvedValueOnce(
         mockTransitionsResponse([
-          { id: "11", name: "Ready for Dev", to: { name: "Ready for Dev" } },
-          { id: "21", name: "In Progress", to: { name: "In Progress" } },
+          { id: '11', name: 'Ready for Dev', to: { name: 'Ready for Dev' } },
+          { id: '21', name: 'In Progress', to: { name: 'In Progress' } },
         ]),
       )
       .mockResolvedValueOnce(mockOk());
 
-    await client.transitionIssue("ENG-1", "In Progress");
+    await client.transitionIssue('ENG-1', 'In Progress');
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     const [, postCall] = fetchMock.mock.calls as [unknown[], unknown[]][];
-    const postBody = JSON.parse((postCall?.[1] as { body: string })?.body ?? "{}") as {
+    const postBody = JSON.parse((postCall?.[1] as { body: string })?.body ?? '{}') as {
       transition: { id: string };
     };
-    expect(postBody.transition.id).toBe("21");
+    expect(postBody.transition.id).toBe('21');
   });
 
-  it("does nothing when the transition is not available", async () => {
+  it('does nothing when the transition is not available', async () => {
     fetchMock.mockResolvedValueOnce(
-      mockTransitionsResponse([
-        { id: "11", name: "Ready for Dev", to: { name: "Ready for Dev" } },
-      ]),
+      mockTransitionsResponse([{ id: '11', name: 'Ready for Dev', to: { name: 'Ready for Dev' } }]),
     );
 
-    await client.transitionIssue("ENG-1", "Done");
+    await client.transitionIssue('ENG-1', 'Done');
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
 
-describe("getIssue", () => {
+describe('getIssue', () => {
   beforeEach(() => fetchMock.mockReset());
 
-  it("returns summary and description extracted from an ADF document", async () => {
+  it('returns summary and description extracted from an ADF document', async () => {
     fetchMock.mockResolvedValueOnce(
       new Response(
         JSON.stringify({
           fields: {
-            summary: "Build the feature",
+            summary: 'Build the feature',
             description: {
-              type: "doc",
+              type: 'doc',
               version: 1,
-              content: [
-                { type: "paragraph", content: [{ type: "text", text: "Do this work." }] },
-              ],
+              content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Do this work.' }] }],
             },
           },
         }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
       ),
     );
 
-    const issue = await client.getIssue("ENG-1");
+    const issue = await client.getIssue('ENG-1');
 
-    expect(issue.summary).toBe("Build the feature");
-    expect(issue.description).toBe("Do this work.");
+    expect(issue.summary).toBe('Build the feature');
+    expect(issue.description).toBe('Do this work.');
     expect(issue.acceptanceCriteria).toBeNull();
   });
 
-  it("returns null description when the ADF field is absent", async () => {
+  it('returns null description when the ADF field is absent', async () => {
     fetchMock.mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({ fields: { summary: "My Story", description: null } }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      ),
+      new Response(JSON.stringify({ fields: { summary: 'My Story', description: null } }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
     );
 
-    const issue = await client.getIssue("ENG-1");
+    const issue = await client.getIssue('ENG-1');
     expect(issue.description).toBeNull();
   });
 
-  it("concatenates text from nested ADF nodes with newlines", async () => {
+  it('concatenates text from nested ADF nodes with newlines', async () => {
     fetchMock.mockResolvedValueOnce(
       new Response(
         JSON.stringify({
           fields: {
-            summary: "Multi-paragraph",
+            summary: 'Multi-paragraph',
             description: {
-              type: "doc",
+              type: 'doc',
               content: [
-                { type: "paragraph", content: [{ type: "text", text: "Line one." }] },
-                { type: "paragraph", content: [{ type: "text", text: "Line two." }] },
+                { type: 'paragraph', content: [{ type: 'text', text: 'Line one.' }] },
+                { type: 'paragraph', content: [{ type: 'text', text: 'Line two.' }] },
               ],
             },
           },
         }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
       ),
     );
 
-    const issue = await client.getIssue("ENG-1");
-    expect(issue.description).toBe("Line one.\nLine two.");
+    const issue = await client.getIssue('ENG-1');
+    expect(issue.description).toBe('Line one.\nLine two.');
   });
 
-  it("throws JiraApiError when the API returns a non-2xx status", async () => {
-    fetchMock.mockResolvedValueOnce(new Response("Not Found", { status: 404 }));
+  it('throws JiraApiError when the API returns a non-2xx status', async () => {
+    fetchMock.mockResolvedValueOnce(new Response('Not Found', { status: 404 }));
 
-    await expect(client.getIssue("ENG-999")).rejects.toThrow(JiraApiError);
+    await expect(client.getIssue('ENG-999')).rejects.toThrow(JiraApiError);
   });
 });
 
-describe("searchIssues", () => {
+describe('searchIssues', () => {
   beforeEach(() => fetchMock.mockReset());
 
-  it("returns an array of issueKey objects from the search response", async () => {
+  it('returns an array of issueKey objects from the search response', async () => {
     fetchMock.mockResolvedValueOnce(
-      new Response(
-        JSON.stringify({ issues: [{ key: "CREW-1" }, { key: "CREW-2" }] }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      ),
+      new Response(JSON.stringify({ issues: [{ key: 'CREW-1' }, { key: 'CREW-2' }] }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
     );
 
     const results = await client.searchIssues('project = "CREW" AND status = "To Do"');
 
-    expect(results).toEqual([{ issueKey: "CREW-1" }, { issueKey: "CREW-2" }]);
+    expect(results).toEqual([{ issueKey: 'CREW-1' }, { issueKey: 'CREW-2' }]);
   });
 
-  it("passes the JQL as a query parameter and targets the search endpoint", async () => {
+  it('passes the JQL as a query parameter and targets the search endpoint', async () => {
     fetchMock.mockResolvedValueOnce(
       new Response(JSON.stringify({ issues: [] }), {
         status: 200,
-        headers: { "Content-Type": "application/json" },
+        headers: { 'Content-Type': 'application/json' },
       }),
     );
 
@@ -159,15 +155,15 @@ describe("searchIssues", () => {
 
     const [rawUrl] = fetchMock.mock.calls[0] as [string];
     const url = new URL(rawUrl);
-    expect(url.pathname).toContain("/issue/search");
-    expect(url.searchParams.get("jql")).toBe(jql);
+    expect(url.pathname).toContain('/issue/search');
+    expect(url.searchParams.get('jql')).toBe(jql);
   });
 
-  it("returns an empty array when no issues match", async () => {
+  it('returns an empty array when no issues match', async () => {
     fetchMock.mockResolvedValueOnce(
       new Response(JSON.stringify({ issues: [] }), {
         status: 200,
-        headers: { "Content-Type": "application/json" },
+        headers: { 'Content-Type': 'application/json' },
       }),
     );
 
@@ -175,136 +171,136 @@ describe("searchIssues", () => {
     expect(results).toEqual([]);
   });
 
-  it("throws JiraApiError when the API returns a non-2xx status", async () => {
-    fetchMock.mockResolvedValueOnce(new Response("Internal Server Error", { status: 500 }));
+  it('throws JiraApiError when the API returns a non-2xx status', async () => {
+    fetchMock.mockResolvedValueOnce(new Response('Internal Server Error', { status: 500 }));
 
-    await expect(
-      client.searchIssues('project = "CREW" AND status = "To Do"'),
-    ).rejects.toThrow(JiraApiError);
+    await expect(client.searchIssues('project = "CREW" AND status = "To Do"')).rejects.toThrow(
+      JiraApiError,
+    );
   });
 });
 
-describe("commentOnIssue", () => {
+describe('commentOnIssue', () => {
   beforeEach(() => fetchMock.mockReset());
 
-  it("posts a comment with the correct ADF structure", async () => {
+  it('posts a comment with the correct ADF structure', async () => {
     fetchMock.mockResolvedValueOnce(mockOk());
 
-    await client.commentOnIssue("ENG-1", "hello world");
+    await client.commentOnIssue('ENG-1', 'hello world');
 
     const [call] = fetchMock.mock.calls as [unknown[], unknown[]][];
-    const body = JSON.parse((call?.[1] as { body: string })?.body ?? "{}") as {
+    const body = JSON.parse((call?.[1] as { body: string })?.body ?? '{}') as {
       body: { content: Array<{ content: Array<{ text: string }> }> };
     };
-    expect(body.body.content[0]?.content[0]?.text).toBe("hello world");
+    expect(body.body.content[0]?.content[0]?.text).toBe('hello world');
   });
 });
 
-describe("getComments", () => {
+describe('getComments', () => {
   beforeEach(() => fetchMock.mockReset());
 
-  it("returns author email, plain-text body, and created for each comment", async () => {
+  it('returns author email, plain-text body, and created for each comment', async () => {
     fetchMock.mockResolvedValueOnce(
       new Response(
         JSON.stringify({
           comments: [
             {
-              author: { accountId: "acc-001", emailAddress: "pm@example.com", displayName: "PM" },
+              author: { accountId: 'acc-001', emailAddress: 'pm@example.com', displayName: 'PM' },
               body: {
-                type: "doc",
+                type: 'doc',
                 version: 1,
-                content: [{ type: "paragraph", content: [{ type: "text", text: "Here is the answer." }] }],
+                content: [
+                  { type: 'paragraph', content: [{ type: 'text', text: 'Here is the answer.' }] },
+                ],
               },
-              created: "2026-01-01T12:00:00.000+0000",
+              created: '2026-01-01T12:00:00.000+0000',
             },
           ],
         }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
       ),
     );
 
-    const comments = await client.getComments("ENG-1");
+    const comments = await client.getComments('ENG-1');
 
     expect(comments).toHaveLength(1);
     expect(comments[0]).toMatchObject({
-      accountId: "acc-001",
-      author: "pm@example.com",
-      body: "Here is the answer.",
-      created: "2026-01-01T12:00:00.000+0000",
+      accountId: 'acc-001',
+      author: 'pm@example.com',
+      body: 'Here is the answer.',
+      created: '2026-01-01T12:00:00.000+0000',
     });
   });
 
-  it("falls back to displayName when emailAddress is absent", async () => {
+  it('falls back to displayName when emailAddress is absent', async () => {
     fetchMock.mockResolvedValueOnce(
       new Response(
         JSON.stringify({
           comments: [
             {
-              author: { accountId: "acc-ext", displayName: "External User" },
+              author: { accountId: 'acc-ext', displayName: 'External User' },
               body: null,
-              created: "2026-01-01T12:00:00.000+0000",
+              created: '2026-01-01T12:00:00.000+0000',
             },
           ],
         }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
       ),
     );
 
-    const comments = await client.getComments("ENG-1");
+    const comments = await client.getComments('ENG-1');
 
-    expect(comments[0]?.accountId).toBe("acc-ext");
-    expect(comments[0]?.author).toBe("External User");
-    expect(comments[0]?.body).toBe("");
+    expect(comments[0]?.accountId).toBe('acc-ext');
+    expect(comments[0]?.author).toBe('External User');
+    expect(comments[0]?.body).toBe('');
   });
 
-  it("returns an empty array when there are no comments", async () => {
+  it('returns an empty array when there are no comments', async () => {
     fetchMock.mockResolvedValueOnce(
       new Response(JSON.stringify({ comments: [] }), {
         status: 200,
-        headers: { "Content-Type": "application/json" },
+        headers: { 'Content-Type': 'application/json' },
       }),
     );
 
-    const comments = await client.getComments("ENG-1");
+    const comments = await client.getComments('ENG-1');
     expect(comments).toEqual([]);
   });
 
-  it("calls the correct Jira API endpoint", async () => {
+  it('calls the correct Jira API endpoint', async () => {
     fetchMock.mockResolvedValueOnce(
       new Response(JSON.stringify({ comments: [] }), {
         status: 200,
-        headers: { "Content-Type": "application/json" },
+        headers: { 'Content-Type': 'application/json' },
       }),
     );
 
-    await client.getComments("ENG-42");
+    await client.getComments('ENG-42');
 
     const [url] = fetchMock.mock.calls[0] as [string];
-    expect(url).toContain("/issue/ENG-42/comment");
+    expect(url).toContain('/issue/ENG-42/comment');
   });
 
-  it("throws JiraApiError when the API returns a non-2xx status", async () => {
-    fetchMock.mockResolvedValueOnce(new Response("Not Found", { status: 404 }));
+  it('throws JiraApiError when the API returns a non-2xx status', async () => {
+    fetchMock.mockResolvedValueOnce(new Response('Not Found', { status: 404 }));
 
-    await expect(client.getComments("ENG-999")).rejects.toThrow(JiraApiError);
+    await expect(client.getComments('ENG-999')).rejects.toThrow(JiraApiError);
   });
 });
 
-describe("createJiraClient — uses the supplied base URL", () => {
-  it("targets the provided base URL, not any environment variable", async () => {
+describe('createJiraClient — uses the supplied base URL', () => {
+  it('targets the provided base URL, not any environment variable', async () => {
     fetchMock.mockReset();
     const customClient = createJiraClient(
-      { baseUrl: "https://custom.atlassian.net", email: "user@example.com" },
-      { atlassianApiToken: "custom-token" },
+      { baseUrl: 'https://custom.atlassian.net', email: 'user@example.com' },
+      { atlassianApiToken: 'custom-token' },
     );
-    fetchMock.mockResolvedValueOnce(
-      new Response(JSON.stringify({ issues: [] }), { status: 200 }),
-    );
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ issues: [] }), { status: 200 }));
 
-    await customClient.searchIssues("project = X");
+    await customClient.searchIssues('project = X');
 
     const [url] = fetchMock.mock.calls[0] as [string];
-    expect(url).toContain("custom.atlassian.net");
-    expect(url).not.toContain("test.atlassian.net");
+    expect(url).toContain('custom.atlassian.net');
+    expect(url).not.toContain('test.atlassian.net');
   });
 });

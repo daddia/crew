@@ -69,16 +69,16 @@ check fails. Do not deploy while any check is failing.
 
 ### 1.3 Diagnosing failures
 
-| Check | Failure detail | Likely fix |
-| --- | --- | --- |
-| Jira API reachability | `HTTP 401` | Verify `ATLASSIAN_API_TOKEN` and `ATLASSIAN_EMAIL` |
-| Jira API reachability | `HTTP 403` or DNS error | Confirm `ATLASSIAN_BASE_URL` is correct and reachable |
-| Jira project key | `HTTP 404` | Confirm `JIRA_PROJECT_KEY` matches the board key |
-| Jira transitions | `missing transitions: ...` | Add the missing transitions in the Jira board workflow editor |
-| GitLab API reachability | `HTTP 401` | Confirm `GITLAB_PERSONAL_ACCESS_TOKEN` has `api` scope |
-| GitLab API reachability | `HTTP 404` | Confirm `GITLAB_PROJECT_ID` is the numeric ID, not the path |
-| MCP servers boot | `timed out waiting for MCP handshake` | Ensure `npx` is on PATH; check `ATLASSIAN_*` and `GITLAB_*` values |
-| DB_PATH directory writable | `... is not writable` | Confirm the parent directory exists and is writable |
+| Check                      | Failure detail                        | Likely fix                                                         |
+| -------------------------- | ------------------------------------- | ------------------------------------------------------------------ |
+| Jira API reachability      | `HTTP 401`                            | Verify `ATLASSIAN_API_TOKEN` and `ATLASSIAN_EMAIL`                 |
+| Jira API reachability      | `HTTP 403` or DNS error               | Confirm `ATLASSIAN_BASE_URL` is correct and reachable              |
+| Jira project key           | `HTTP 404`                            | Confirm `JIRA_PROJECT_KEY` matches the board key                   |
+| Jira transitions           | `missing transitions: ...`            | Add the missing transitions in the Jira board workflow editor      |
+| GitLab API reachability    | `HTTP 401`                            | Confirm `GITLAB_PERSONAL_ACCESS_TOKEN` has `api` scope             |
+| GitLab API reachability    | `HTTP 404`                            | Confirm `GITLAB_PROJECT_ID` is the numeric ID, not the path        |
+| MCP servers boot           | `timed out waiting for MCP handshake` | Ensure `npx` is on PATH; check `ATLASSIAN_*` and `GITLAB_*` values |
+| DB_PATH directory writable | `... is not writable`                 | Confirm the parent directory exists and is writable                |
 
 The four required Jira transitions are: `In Progress`, `Clarification Needed`,
 `In QA`, `Needs human review`. If any are missing, add them in the Jira board
@@ -93,10 +93,10 @@ so the Docker build context must be the **repository root**.
 
 ### 2.1 Railway service configuration
 
-| Dashboard field | Value |
-| --- | --- |
-| Root Directory | *(leave blank — defaults to repo root)* |
-| Config File Path | `crews/delivery-build/railway.json` |
+| Dashboard field  | Value                                   |
+| ---------------- | --------------------------------------- |
+| Root Directory   | _(leave blank — defaults to repo root)_ |
+| Config File Path | `crews/delivery-build/railway.json`     |
 
 ### 2.2 Environment variables
 
@@ -135,10 +135,10 @@ crash-recovery scan becomes a no-op and story deduplication is lost.
 
 After the service is live, register the Railway public URL with both providers:
 
-| Provider | URL | Trigger |
-| --- | --- | --- |
-| Jira | `https://<railway-domain>/webhooks/jira` | Issue transitioned to "Ready for Dev" |
-| GitLab | `https://<railway-domain>/webhooks/gitlab` | MR note (comment) events |
+| Provider | URL                                        | Trigger                               |
+| -------- | ------------------------------------------ | ------------------------------------- |
+| Jira     | `https://<railway-domain>/webhooks/jira`   | Issue transitioned to "Ready for Dev" |
+| GitLab   | `https://<railway-domain>/webhooks/gitlab` | MR note (comment) events              |
 
 ---
 
@@ -171,12 +171,12 @@ Expected response:
 }
 ```
 
-| Field | Healthy value | Degraded signal |
-| --- | --- | --- |
-| `ok` | `true` | `false` — service is up but degraded |
-| `poller.lastTickAt` | Epoch ms within the last `POLL_INTERVAL_MS` | `null` — poller has not ticked yet (normal on first boot until the interval fires) |
-| `poller.lastTickStatus` | `"ok"` | `"error"` — Jira search failed on the last tick |
-| `db.ok` | `true` | `false` — SQLite connection is broken; check volume mount |
+| Field                   | Healthy value                               | Degraded signal                                                                    |
+| ----------------------- | ------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `ok`                    | `true`                                      | `false` — service is up but degraded                                               |
+| `poller.lastTickAt`     | Epoch ms within the last `POLL_INTERVAL_MS` | `null` — poller has not ticked yet (normal on first boot until the interval fires) |
+| `poller.lastTickStatus` | `"ok"`                                      | `"error"` — Jira search failed on the last tick                                    |
+| `db.ok`                 | `true`                                      | `false` — SQLite connection is broken; check volume mount                          |
 
 The endpoint always returns HTTP 200 — read the body fields to detect
 degraded state.
@@ -196,45 +196,45 @@ stream for a `poller.search-error` event and verify the `ATLASSIAN_*` credential
 
 ### 4.1 Log events to alert on
 
-| Event | Level | Meaning | Recommended action |
-| --- | --- | --- | --- |
-| `workflow.escalate` | warn | A story was escalated to human review | Check `reason`; review the Jira ticket for the escalation comment |
-| `poller.search-error` | warn | Jira API unreachable during a poll tick | Verify `ATLASSIAN_*` credentials and Jira status; check `/healthz` `poller.lastTickStatus` |
-| `recovery.session-failed` | warn | Boot-time crash recovery could not reconnect an SDK session | The story has been escalated automatically; review the Jira ticket |
-| `workflow.complete` with `success: false` | info | Story reached a terminal step without landing in QA | Check `terminalStep`; `needs-human-review` means escalation; `clarification-pending` means waiting for PM |
-| `config.invalid` | error | Config schema validation failed at boot | Service will exit; fix the bad env var and redeploy |
-| `poller.misconfigured` | warn | `JIRA_PROJECT_KEY` or `JIRA_ASSIGNEE_ACCOUNT_ID` is blank | Fix the Railway env var; no stories will be picked up until corrected |
-| `poller.clarification-timeout` | warn | A story timed out waiting for PM clarification | Review the Jira ticket; story has been escalated to "Needs human review" |
+| Event                                     | Level | Meaning                                                     | Recommended action                                                                                        |
+| ----------------------------------------- | ----- | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `workflow.escalate`                       | warn  | A story was escalated to human review                       | Check `reason`; review the Jira ticket for the escalation comment                                         |
+| `poller.search-error`                     | warn  | Jira API unreachable during a poll tick                     | Verify `ATLASSIAN_*` credentials and Jira status; check `/healthz` `poller.lastTickStatus`                |
+| `recovery.session-failed`                 | warn  | Boot-time crash recovery could not reconnect an SDK session | The story has been escalated automatically; review the Jira ticket                                        |
+| `workflow.complete` with `success: false` | info  | Story reached a terminal step without landing in QA         | Check `terminalStep`; `needs-human-review` means escalation; `clarification-pending` means waiting for PM |
+| `config.invalid`                          | error | Config schema validation failed at boot                     | Service will exit; fix the bad env var and redeploy                                                       |
+| `poller.misconfigured`                    | warn  | `JIRA_PROJECT_KEY` or `JIRA_ASSIGNEE_ACCOUNT_ID` is blank   | Fix the Railway env var; no stories will be picked up until corrected                                     |
+| `poller.clarification-timeout`            | warn  | A story timed out waiting for PM clarification              | Review the Jira ticket; story has been escalated to "Needs human review"                                  |
 
 ### 4.2 Normal steady-state events
 
 These events appear during healthy operation and do not require action:
 
-| Event | Level | Meaning |
-| --- | --- | --- |
-| `server.start` | info | HTTP server is listening |
-| `config.loaded` | info | Config validated and loaded at boot |
-| `poller.start` | info | Poller interval registered |
-| `workflow.start` | info | A story entered the workflow |
-| `workflow.handoff-to-qa` | info | Story successfully reached "In QA" |
-| `workflow.complete` with `success: true` | info | Story completed; `totalCostUsd` and `durationMs` are available |
-| `workflow.blocked.clarification` | info | Story parked; engineer posted clarifying questions to Jira |
+| Event                                    | Level | Meaning                                                        |
+| ---------------------------------------- | ----- | -------------------------------------------------------------- |
+| `server.start`                           | info  | HTTP server is listening                                       |
+| `config.loaded`                          | info  | Config validated and loaded at boot                            |
+| `poller.start`                           | info  | Poller interval registered                                     |
+| `workflow.start`                         | info  | A story entered the workflow                                   |
+| `workflow.handoff-to-qa`                 | info  | Story successfully reached "In QA"                             |
+| `workflow.complete` with `success: true` | info  | Story completed; `totalCostUsd` and `durationMs` are available |
+| `workflow.blocked.clarification`         | info  | Story parked; engineer posted clarifying questions to Jira     |
 
 ### 4.3 `workflow.complete` payload
 
 Emitted at every terminal exit point (`in-qa`, `needs-human-review`,
 `clarification-pending`). Key fields:
 
-| Field | Type | Notes |
-| --- | --- | --- |
-| `issueKey` | string | Jira issue key |
-| `terminalStep` | string | `in-qa`, `needs-human-review`, or `clarification-pending` |
-| `success` | boolean | `true` only when `terminalStep` is `in-qa` |
-| `totalCostUsd` | number | Aggregate cost across all agent steps |
-| `stepCount` | number | Total steps including non-agent steps |
-| `agentSteps` | array | Per-agent-step: `{ step, sessionId, costUsd }` |
-| `durationMs` | number | Wall time from first step to terminal step |
-| `mrUrl` | string | Present when an MR was opened |
+| Field          | Type    | Notes                                                     |
+| -------------- | ------- | --------------------------------------------------------- |
+| `issueKey`     | string  | Jira issue key                                            |
+| `terminalStep` | string  | `in-qa`, `needs-human-review`, or `clarification-pending` |
+| `success`      | boolean | `true` only when `terminalStep` is `in-qa`                |
+| `totalCostUsd` | number  | Aggregate cost across all agent steps                     |
+| `stepCount`    | number  | Total steps including non-agent steps                     |
+| `agentSteps`   | array   | Per-agent-step: `{ step, sessionId, costUsd }`            |
+| `durationMs`   | number  | Wall time from first step to terminal step                |
+| `mrUrl`        | string  | Present when an MR was opened                             |
 
 ---
 

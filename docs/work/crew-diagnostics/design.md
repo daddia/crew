@@ -27,14 +27,14 @@ TDD-mode design for the `crew-diagnostics` work package. There is no parent
 
 ### 1.1 In scope
 
-| Capability | Story |
-| --- | --- |
-| New `@daddia/crew/diagnostics` subpath exporting `DiagnosticCheck`, `CheckFn`, and `DiagnosticsConfig` types | CREW-68-001 |
+| Capability                                                                                                                                                              | Story       |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| New `@daddia/crew/diagnostics` subpath exporting `DiagnosticCheck`, `CheckFn`, and `DiagnosticsConfig` types                                                            | CREW-68-001 |
 | Built-in check builders: `jiraReachabilityCheck`, `jiraProjectKeyCheck`, `jiraTransitionsCheck`, `gitlabReachabilityCheck`, `mcpServersBootCheck`, `dbDirWritableCheck` | CREW-68-002 |
-| `runDiagnosticsChecks(checks)` runner: pure — collects results, no `process.exit`, no output side effects | CREW-68-001 |
-| Version bump `@daddia/crew` to `0.3.0`; update pinned dep in `crews/delivery-build/package.json` | CREW-68-003 |
-| Migrate `crews/delivery-build/src/diagnostics.ts` to use the package-level check builders; thin remaining `diagnose.config.ts` wires crew-specific config | CREW-68-004 |
-| Unit tests for all built-in check builders in `packages/crew` | CREW-68-002 |
+| `runDiagnosticsChecks(checks)` runner: pure — collects results, no `process.exit`, no output side effects                                                               | CREW-68-001 |
+| Version bump `@daddia/crew` to `0.3.0`; update pinned dep in `crews/delivery-build/package.json`                                                                        | CREW-68-003 |
+| Migrate `crews/delivery-build/src/diagnostics.ts` to use the package-level check builders; thin remaining `diagnose.config.ts` wires crew-specific config               | CREW-68-004 |
+| Unit tests for all built-in check builders in `packages/crew`                                                                                                           | CREW-68-002 |
 
 ### 1.2 Out of scope
 
@@ -56,11 +56,11 @@ TDD-mode design for the `crew-diagnostics` work package. There is no parent
 This work package adds a fourth subpath export to `@daddia/crew`, following
 the same pattern as `./config`, `./webhooks`, and the main entry:
 
-| Concern | Where it lives | Source |
-| --- | --- | --- |
-| Subpath export convention | `packages/crew/package.json` `exports` map | [`AGENTS.md` "Key packages"](../../../AGENTS.md) |
-| `packages/*` never imports from `crews/*` | `.dependency-cruiser.cjs` | [`AGENTS.md` "Dependency rules"](../../../AGENTS.md) |
-| Crew consumes `@daddia/crew` as a published registry dep | `crews/*/package.json` | [`AGENTS.md` "MUST"](../../../AGENTS.md) |
+| Concern                                                  | Where it lives                             | Source                                               |
+| -------------------------------------------------------- | ------------------------------------------ | ---------------------------------------------------- |
+| Subpath export convention                                | `packages/crew/package.json` `exports` map | [`AGENTS.md` "Key packages"](../../../AGENTS.md)     |
+| `packages/*` never imports from `crews/*`                | `.dependency-cruiser.cjs`                  | [`AGENTS.md` "Dependency rules"](../../../AGENTS.md) |
+| Crew consumes `@daddia/crew` as a published registry dep | `crews/*/package.json`                     | [`AGENTS.md` "MUST"](../../../AGENTS.md)             |
 
 The mental model mirrors the config split from `crew-config`: **`@daddia/crew/diagnostics` owns the mechanism (how to check); each crew's `diagnose.config.ts` owns the policy (what to check and with which parameters).** The runner receives check functions; the check functions receive whatever crew-local context they need at construction time.
 
@@ -151,9 +151,7 @@ export interface DiagnosticsConfig {
  * Never throws; each check catches its own errors and returns ok: false
  * with the error message as detail.
  */
-export async function runDiagnosticsChecks(
-  checks: CheckFn[],
-): Promise<DiagnosticCheck[]>;
+export async function runDiagnosticsChecks(checks: CheckFn[]): Promise<DiagnosticCheck[]>;
 ```
 
 ### 4.3 Built-in Jira check builders
@@ -230,7 +228,7 @@ export interface McpDiagnosticsOptions {
   /** Current process.env for ${VAR} interpolation in mcp.json env values. */
   env: NodeJS.ProcessEnv;
   /** Override spawn for unit testing. */
-  spawnFn?: typeof import("node:child_process").spawn;
+  spawnFn?: typeof import('node:child_process').spawn;
   /** Per-server handshake timeout in ms. Default: 10 000. */
   timeoutMs?: number;
 }
@@ -264,38 +262,31 @@ import {
   mcpServersBootCheck,
   dbDirWritableCheck,
   type DiagnosticsConfig,
-} from "@daddia/crew/diagnostics";
-import { loadConfig } from "./config.js";
-import { fileURLToPath } from "node:url";
-import { resolve, dirname } from "node:path";
+} from '@daddia/crew/diagnostics';
+import { loadConfig } from './config.js';
+import { fileURLToPath } from 'node:url';
+import { resolve, dirname } from 'node:path';
 
 const config = loadConfig();
 
-const REQUIRED_TRANSITIONS = [
-  "In Progress",
-  "Clarification Needed",
-  "In QA",
-  "Needs human review",
-];
+const REQUIRED_TRANSITIONS = ['In Progress', 'Clarification Needed', 'In QA', 'Needs human review'];
 
 const issueKeyRef = { current: undefined as string | undefined };
 
 const jiraCtx = {
-  baseUrl:            config.identity.jira.baseUrl,
-  email:              config.identity.jira.email,
-  atlassianApiToken:  String(config.secrets.atlassianApiToken),
-  projectKey:         config.identity.jira.projectKey,
+  baseUrl: config.identity.jira.baseUrl,
+  email: config.identity.jira.email,
+  atlassianApiToken: String(config.secrets.atlassianApiToken),
+  projectKey: config.identity.jira.projectKey,
 };
 
 const gitlabCtx = {
-  apiUrl:             config.identity.gitlab.apiUrl,
-  projectId:          config.identity.gitlab.projectId,
-  gitlabAccessToken:  String(config.secrets.gitlabAccessToken),
+  apiUrl: config.identity.gitlab.apiUrl,
+  projectId: config.identity.gitlab.projectId,
+  gitlabAccessToken: String(config.secrets.gitlabAccessToken),
 };
 
-const mcpConfigPath = resolve(
-  dirname(fileURLToPath(import.meta.url)), "..", "mcp.json",
-);
+const mcpConfigPath = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'mcp.json');
 
 export default {
   checks: [
@@ -339,22 +330,23 @@ export default {
 ### 5.4 Check builder captures context at construction time
 
 Each builder closes over its context object. The returned `CheckFn` is a zero-argument closure. This means:
+
 - The caller constructs all builders (and captures the issueKeyRef) once, then passes the array to `runDiagnosticsChecks`.
 - The runner does not need to know anything about credentials, URLs, or the issueKeyRef mechanism.
 - Tests can construct check functions with stub contexts without mocking globals.
 
 ## 7. Error paths
 
-| Trigger | Check result |
-| --- | --- |
-| Jira API returns non-2xx | `{ ok: false, detail: "GET /... returned HTTP {status}" }` |
-| Jira API network error (DNS failure, timeout) | `{ ok: false, detail: String(err) }` |
-| GitLab API returns 401 | `{ ok: false, detail: "GET /projects/... returned HTTP 401" }` |
-| `mcp.json` not found at `mcpConfigPath` | `{ ok: false, detail: "mcp.json not found at {path}" }` |
-| MCP server process exits before handshake | `{ ok: false, detail: "{name}: process exited with code {n} before handshake" }` |
-| MCP server handshake timeout | `{ ok: false, detail: "{name}: timed out waiting for MCP handshake" }` |
-| DB directory not writable | `{ ok: false, detail: "{dir} is not writable" }` |
-| Any check throws unexpectedly | Runner catches and returns `{ ok: false, detail: String(err) }` — the runner itself never throws |
+| Trigger                                       | Check result                                                                                     |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Jira API returns non-2xx                      | `{ ok: false, detail: "GET /... returned HTTP {status}" }`                                       |
+| Jira API network error (DNS failure, timeout) | `{ ok: false, detail: String(err) }`                                                             |
+| GitLab API returns 401                        | `{ ok: false, detail: "GET /projects/... returned HTTP 401" }`                                   |
+| `mcp.json` not found at `mcpConfigPath`       | `{ ok: false, detail: "mcp.json not found at {path}" }`                                          |
+| MCP server process exits before handshake     | `{ ok: false, detail: "{name}: process exited with code {n} before handshake" }`                 |
+| MCP server handshake timeout                  | `{ ok: false, detail: "{name}: timed out waiting for MCP handshake" }`                           |
+| DB directory not writable                     | `{ ok: false, detail: "{dir} is not writable" }`                                                 |
+| Any check throws unexpectedly                 | Runner catches and returns `{ ok: false, detail: String(err) }` — the runner itself never throws |
 
 ## 8. Observability
 
@@ -365,16 +357,16 @@ to stdout.
 
 ## 9. Testing strategy
 
-| Layer | Path | Scope | Target |
-| --- | --- | --- | --- |
-| Unit (runner) | `packages/crew/test/diagnostics/runner.test.ts` | All pass; partial fail; check that throws — runner wraps it; empty checks array returns `[]` | 100% line coverage of `runner.ts` |
-| Unit (Jira checks) | `packages/crew/test/diagnostics/checks.jira.test.ts` | Reachability: 200 ok, 500 fail, network error; project: 200 ok, 404 fail; transitions: all present, one missing, multiple missing, no issueKey available | All builder + EARS paths exercised; fetch mocked via `vi.stubGlobal` |
-| Unit (GitLab check) | `packages/crew/test/diagnostics/checks.gitlab.test.ts` | 200 ok, 401 fail, network error | All paths |
-| Unit (MCP check) | `packages/crew/test/diagnostics/checks.mcp.test.ts` | `spawnFn` injection: immediate JSON-RPC response, timeout, process exits before response, spawn error, `mcp.json` not found, empty `mcpServers` | All paths without spawning real processes |
-| Unit (FS check) | `packages/crew/test/diagnostics/checks.fs.test.ts` | Writable dir (mocked `fs.access`), non-writable dir, non-existent parent dir | All three paths |
-| Unit (crew wiring) | `crews/delivery-build/tests/diagnose.config.test.ts` | `diagnose.config.ts` exports a `DiagnosticsConfig` with `checks` array of length 6; each check is a function; `loadConfig` is called at module load time | Type safety + smoke shape assertion |
-| Boundary | `pnpm lint` | `packages/crew/src/diagnostics/**` does not import from `crews/*`; `crews/delivery-build/src/diagnose.config.ts` imports only from `@daddia/crew/diagnostics` | exit 0 |
-| Type | `pnpm typecheck` | `@daddia/crew/diagnostics` resolves; `DiagnosticsConfig` satisfies the type in `diagnose.config.ts` | exit 0 |
+| Layer               | Path                                                   | Scope                                                                                                                                                         | Target                                                               |
+| ------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| Unit (runner)       | `packages/crew/test/diagnostics/runner.test.ts`        | All pass; partial fail; check that throws — runner wraps it; empty checks array returns `[]`                                                                  | 100% line coverage of `runner.ts`                                    |
+| Unit (Jira checks)  | `packages/crew/test/diagnostics/checks.jira.test.ts`   | Reachability: 200 ok, 500 fail, network error; project: 200 ok, 404 fail; transitions: all present, one missing, multiple missing, no issueKey available      | All builder + EARS paths exercised; fetch mocked via `vi.stubGlobal` |
+| Unit (GitLab check) | `packages/crew/test/diagnostics/checks.gitlab.test.ts` | 200 ok, 401 fail, network error                                                                                                                               | All paths                                                            |
+| Unit (MCP check)    | `packages/crew/test/diagnostics/checks.mcp.test.ts`    | `spawnFn` injection: immediate JSON-RPC response, timeout, process exits before response, spawn error, `mcp.json` not found, empty `mcpServers`               | All paths without spawning real processes                            |
+| Unit (FS check)     | `packages/crew/test/diagnostics/checks.fs.test.ts`     | Writable dir (mocked `fs.access`), non-writable dir, non-existent parent dir                                                                                  | All three paths                                                      |
+| Unit (crew wiring)  | `crews/delivery-build/tests/diagnose.config.test.ts`   | `diagnose.config.ts` exports a `DiagnosticsConfig` with `checks` array of length 6; each check is a function; `loadConfig` is called at module load time      | Type safety + smoke shape assertion                                  |
+| Boundary            | `pnpm lint`                                            | `packages/crew/src/diagnostics/**` does not import from `crews/*`; `crews/delivery-build/src/diagnose.config.ts` imports only from `@daddia/crew/diagnostics` | exit 0                                                               |
+| Type                | `pnpm typecheck`                                       | `@daddia/crew/diagnostics` resolves; `DiagnosticsConfig` satisfies the type in `diagnose.config.ts`                                                           | exit 0                                                               |
 
 All built-in check builders are tested in `packages/crew/test/diagnostics/` —
 not in `crews/delivery-build/tests/`. The in-crew `diagnostics.ts` tests that

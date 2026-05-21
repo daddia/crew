@@ -7,7 +7,7 @@ allowed-tools:
   - Write
   - Glob
   - Grep
-argument-hint: "<scope: portfolio|product|domain> [<name>]"
+argument-hint: '<scope: portfolio|product|domain> [<name>]'
 ---
 
 # Write Delivery Roadmap

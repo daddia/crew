@@ -33,8 +33,7 @@ export const libraryConfig = [
       'no-restricted-syntax': [
         'error',
         {
-          selector:
-            "MemberExpression[object.object.name='process'][object.property.name='env']",
+          selector: "MemberExpression[object.object.name='process'][object.property.name='env']",
           message:
             'Direct process.env key access is banned outside config.ts. ' +
             'Add the variable to src/config.ts and consume it through the ' +

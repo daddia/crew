@@ -1,12 +1,12 @@
-import { unstable_v2_resumeSession } from "@anthropic-ai/claude-agent-sdk";
-import { type AgentInput } from "@daddia/crew";
-import { engineer } from "./agents/engineer/agent.js";
-import { seniorEngineer } from "./agents/senior-engineer/agent.js";
-import type { GitlabClient } from "./integrations/gitlab.js";
-import type { JiraClient, JiraIssue } from "./integrations/jira.js";
-import { seedEngineerMemory } from "./memory.js";
-import { log } from "./observability.js";
-import type { StateStore, Step } from "./state.js";
+import { unstable_v2_resumeSession } from '@anthropic-ai/claude-agent-sdk';
+import { type AgentInput } from '@daddia/crew';
+import { engineer } from './agents/engineer/agent.js';
+import { seniorEngineer } from './agents/senior-engineer/agent.js';
+import type { GitlabClient } from './integrations/gitlab.js';
+import type { JiraClient, JiraIssue } from './integrations/jira.js';
+import { seedEngineerMemory } from './memory.js';
+import { log } from './observability.js';
+import type { StateStore, Step } from './state.js';
 
 export interface WorkflowContext {
   issueKey: string;
@@ -27,7 +27,7 @@ export interface WorkflowContext {
  * except issueKey and state. Handlers and recovery use this to build a full
  * WorkflowContext at call time.
  */
-export type WorkflowCtxBase = Omit<WorkflowContext, "issueKey" | "state">;
+export type WorkflowCtxBase = Omit<WorkflowContext, 'issueKey' | 'state'>;
 
 /**
  * Aggregate the step history into a cost summary and emit a single
@@ -53,7 +53,7 @@ function emitWorkflowComplete(
     const firstStartedAt = history[0]?.startedAt ?? Date.now();
     const durationMs = Date.now() - firstStartedAt;
 
-    log.info("workflow.complete", {
+    log.info('workflow.complete', {
       issueKey,
       terminalStep,
       success,
@@ -64,7 +64,7 @@ function emitWorkflowComplete(
       ...(mrUrl !== undefined ? { mrUrl } : {}),
     });
   } catch (err) {
-    log.warn("workflow.complete.failed", { issueKey, err: String(err) });
+    log.warn('workflow.complete.failed', { issueKey, err: String(err) });
   }
 }
 
@@ -87,27 +87,24 @@ export async function runStory(ctx: WorkflowContext): Promise<void> {
   const { issueKey } = ctx;
   const input: AgentInput = { issueKey, context: {} };
 
-  log.info("workflow.start", { issueKey });
+  log.info('workflow.start', { issueKey });
 
   try {
     await runStoryInner(ctx, input);
   } catch (err) {
-    log.error("workflow.unhandled-error", { issueKey, err: String(err) });
-    await escalateToHumanReview(ctx.jira, issueKey, "Unexpected workflow error", [], ctx.state);
+    log.error('workflow.unhandled-error', { issueKey, err: String(err) });
+    await escalateToHumanReview(ctx.jira, issueKey, 'Unexpected workflow error', [], ctx.state);
   }
 }
 
-async function runStoryInner(
-  ctx: WorkflowContext,
-  input: AgentInput,
-): Promise<void> {
+async function runStoryInner(ctx: WorkflowContext, input: AgentInput): Promise<void> {
   const { issueKey, state, jira, gitlab, behaviour, projectDir } = ctx;
 
   await seedEngineerMemory(projectDir);
 
   // ── Step 1: Context seed ───────────────────────────────────────────────────
-  state.upsertStory(issueKey, "context-seed");
-  state.startStep(issueKey, "context-seed");
+  state.upsertStory(issueKey, 'context-seed');
+  state.startStep(issueKey, 'context-seed');
 
   let ticket: JiraIssue | null = null;
   let parentTicket: JiraIssue | null = null;
@@ -115,14 +112,14 @@ async function runStoryInner(
   try {
     ticket = await jira.getIssue(issueKey);
   } catch (err) {
-    log.warn("workflow.context-seed.failed", { issueKey, err: String(err) });
+    log.warn('workflow.context-seed.failed', { issueKey, err: String(err) });
   }
 
   if (ticket?.parentKey) {
     try {
       parentTicket = await jira.getIssue(ticket.parentKey);
     } catch (err) {
-      log.warn("workflow.context-seed.parent-failed", {
+      log.warn('workflow.context-seed.parent-failed', {
         issueKey,
         parentKey: ticket.parentKey,
         err: String(err),
@@ -130,87 +127,99 @@ async function runStoryInner(
     }
   }
 
-  state.finishStep(issueKey, "context-seed", { verdict: ticket ? "ok" : "failed" });
+  state.finishStep(issueKey, 'context-seed', { verdict: ticket ? 'ok' : 'failed' });
 
   // ── Step 2: Assess clarification ──────────────────────────────────────────
   // Run before transitioning to In Progress so that an ambiguous ticket never
   // touches the board until the engineer is ready to commit to it.
-  state.upsertStory(issueKey, "assess-clarification");
+  state.upsertStory(issueKey, 'assess-clarification');
 
   const assessResult = await engineer.run({
     ...input,
     context: {
-      task: "assess-clarification",
+      task: 'assess-clarification',
       ticket,
       parentTicket,
       model: behaviour.anthropicModel,
     },
   });
 
-  const assessSessionId = assessResult.artefacts["sessionId"] as string | undefined;
-  state.startStep(issueKey, "assess-clarification", assessSessionId);
-  state.finishStep(issueKey, "assess-clarification", {
+  const assessSessionId = assessResult.artefacts['sessionId'] as string | undefined;
+  state.startStep(issueKey, 'assess-clarification', assessSessionId);
+  state.finishStep(issueKey, 'assess-clarification', {
     costUsd: assessResult.costUsd,
-    verdict: assessResult.success ? "ok" : "failed",
+    verdict: assessResult.success ? 'ok' : 'failed',
   });
 
   if (!assessResult.success) {
-    await escalateToHumanReview(jira, issueKey, "Engineer failed to assess ticket clarity", [], state);
+    await escalateToHumanReview(
+      jira,
+      issueKey,
+      'Engineer failed to assess ticket clarity',
+      [],
+      state,
+    );
     return;
   }
 
-  if (assessResult.artefacts["questionsRequired"] === true) {
+  if (assessResult.artefacts['questionsRequired'] === true) {
     const questions =
-      typeof assessResult.artefacts["questions"] === "string"
-        ? assessResult.artefacts["questions"]
-        : "The engineer requires clarification before proceeding.";
+      typeof assessResult.artefacts['questions'] === 'string'
+        ? assessResult.artefacts['questions']
+        : 'The engineer requires clarification before proceeding.';
 
     await jira.commentOnIssue(issueKey, questions);
-    await jira.transitionIssue(issueKey, "Clarification Needed");
+    await jira.transitionIssue(issueKey, 'Clarification Needed');
 
-    state.upsertStory(issueKey, "clarification-pending");
-    state.startStep(issueKey, "clarification-pending");
-    state.finishStep(issueKey, "clarification-pending", { verdict: "pending" });
+    state.upsertStory(issueKey, 'clarification-pending');
+    state.startStep(issueKey, 'clarification-pending');
+    state.finishStep(issueKey, 'clarification-pending', { verdict: 'pending' });
 
-    log.info("workflow.blocked.clarification", { issueKey });
-    emitWorkflowComplete(issueKey, state, "clarification-pending", false);
+    log.info('workflow.blocked.clarification', { issueKey });
+    emitWorkflowComplete(issueKey, state, 'clarification-pending', false);
     return;
   }
 
   // ── Step 3: Transition to In Progress ─────────────────────────────────────
-  await jira.transitionIssue(issueKey, "In Progress");
+  await jira.transitionIssue(issueKey, 'In Progress');
 
   // ── Step 4: Implement ─────────────────────────────────────────────────────
-  state.upsertStory(issueKey, "implement");
+  state.upsertStory(issueKey, 'implement');
 
   const implResult = await engineer.run({
     ...input,
     context: {
-      task: "implement-story",
+      task: 'implement-story',
       ticket,
       parentTicket,
       model: behaviour.anthropicModel,
     },
   });
 
-  const branchNameRaw = implResult.artefacts["branchName"];
+  const branchNameRaw = implResult.artefacts['branchName'];
   const branchName: string | undefined =
-    typeof branchNameRaw === "string" && branchNameRaw ? branchNameRaw : undefined;
+    typeof branchNameRaw === 'string' && branchNameRaw ? branchNameRaw : undefined;
 
-  let engineerSessionId = implResult.artefacts["sessionId"] as string | undefined;
-  state.startStep(issueKey, "implement", engineerSessionId);
-  state.finishStep(issueKey, "implement", {
+  let engineerSessionId = implResult.artefacts['sessionId'] as string | undefined;
+  state.startStep(issueKey, 'implement', engineerSessionId);
+  state.finishStep(issueKey, 'implement', {
     costUsd: implResult.costUsd,
-    verdict: implResult.success && branchName !== undefined ? "ok" : "failed",
+    verdict: implResult.success && branchName !== undefined ? 'ok' : 'failed',
   });
 
   if (!implResult.success) {
-    await escalateToHumanReview(jira, issueKey, "Engineer failed to implement story", [], state);
+    await escalateToHumanReview(jira, issueKey, 'Engineer failed to implement story', [], state);
     return;
   }
 
   if (!branchName) {
-    await escalateToHumanReview(jira, issueKey, "Engineer did not produce a branch name", [], state);
+    await escalateToHumanReview(
+      jira,
+      issueKey,
+      'Engineer did not produce a branch name',
+      [],
+      state,
+    );
     return;
   }
 
@@ -219,17 +228,17 @@ async function runStoryInner(
   let unresolvedItems: string[] = [];
 
   for (let iteration = 0; iteration < behaviour.refactorLoopCap + 1; iteration++) {
-    state.upsertStory(issueKey, "peer-code-review");
-    state.startStep(issueKey, "peer-code-review");
+    state.upsertStory(issueKey, 'peer-code-review');
+    state.startStep(issueKey, 'peer-code-review');
 
     const reviewResult = await seniorEngineer.run({
       ...input,
-      context: { task: "peer-code-review", branchName, model: behaviour.anthropicModel },
+      context: { task: 'peer-code-review', branchName, model: behaviour.anthropicModel },
     });
 
-    state.finishStep(issueKey, "peer-code-review", {
+    state.finishStep(issueKey, 'peer-code-review', {
       costUsd: reviewResult.costUsd,
-      verdict: reviewResult.success ? "approved" : "changes-requested",
+      verdict: reviewResult.success ? 'approved' : 'changes-requested',
     });
 
     if (reviewResult.success) {
@@ -237,18 +246,18 @@ async function runStoryInner(
       break;
     }
 
-    unresolvedItems = (reviewResult.artefacts["comments"] as string[]) ?? [];
+    unresolvedItems = (reviewResult.artefacts['comments'] as string[]) ?? [];
 
     if (iteration >= behaviour.refactorLoopCap) {
       break;
     }
 
-    state.upsertStory(issueKey, "address-feedback");
+    state.upsertStory(issueKey, 'address-feedback');
 
     const feedbackResult = await engineer.run({
       ...input,
       context: {
-        task: "address-feedback",
+        task: 'address-feedback',
         branchName,
         ticket,
         parentTicket,
@@ -258,30 +267,36 @@ async function runStoryInner(
       },
     });
 
-    engineerSessionId = feedbackResult.artefacts["sessionId"] as string | undefined;
-    state.startStep(issueKey, "address-feedback", engineerSessionId);
-    state.finishStep(issueKey, "address-feedback", {
+    engineerSessionId = feedbackResult.artefacts['sessionId'] as string | undefined;
+    state.startStep(issueKey, 'address-feedback', engineerSessionId);
+    state.finishStep(issueKey, 'address-feedback', {
       costUsd: feedbackResult.costUsd,
-      verdict: feedbackResult.success ? "addressed" : "partial",
+      verdict: feedbackResult.success ? 'addressed' : 'partial',
     });
   }
 
   if (!reviewPassed) {
-    await escalateToHumanReview(jira, issueKey, "Refactor loop cap reached", unresolvedItems, state);
+    await escalateToHumanReview(
+      jira,
+      issueKey,
+      'Refactor loop cap reached',
+      unresolvedItems,
+      state,
+    );
     return;
   }
 
   // ── Step 6: Open MR ───────────────────────────────────────────────────────
-  state.upsertStory(issueKey, "open-mr");
-  state.startStep(issueKey, "open-mr");
+  state.upsertStory(issueKey, 'open-mr');
+  state.startStep(issueKey, 'open-mr');
 
   const mrUrl = await gitlab.createMr({
     issueKey,
     branchName,
-    title: `[${issueKey}] ${(implResult.artefacts["title"] as string) ?? "Automated delivery"}`,
+    title: `[${issueKey}] ${(implResult.artefacts['title'] as string) ?? 'Automated delivery'}`,
   });
 
-  state.finishStep(issueKey, "open-mr", { verdict: mrUrl });
+  state.finishStep(issueKey, 'open-mr', { verdict: mrUrl });
 
   // ── Step 7: CI monitoring loop ────────────────────────────────────────────
   let ciPassed = false;
@@ -294,9 +309,9 @@ async function runStoryInner(
         await new Promise<void>((res) => setTimeout(res, behaviour.ciPollIntervalMs));
       }
       status = await gitlab.getPipelineStatus(mrUrl);
-    } while (status === "running");
+    } while (status === 'running');
 
-    if (status === "success") {
+    if (status === 'success') {
       ciPassed = true;
       break;
     }
@@ -305,7 +320,7 @@ async function runStoryInner(
     const ciFixResult = await engineer.run({
       ...input,
       context: {
-        task: "fix-ci",
+        task: 'fix-ci',
         mrUrl,
         model: behaviour.anthropicModel,
       },
@@ -317,18 +332,18 @@ async function runStoryInner(
   }
 
   if (!ciPassed) {
-    await escalateToHumanReview(jira, issueKey, "CI fix cap reached", [], state, mrUrl);
+    await escalateToHumanReview(jira, issueKey, 'CI fix cap reached', [], state, mrUrl);
     return;
   }
 
   // ── Done: transition to In QA ─────────────────────────────────────────────
-  state.upsertStory(issueKey, "in-qa");
-  state.startStep(issueKey, "in-qa");
-  await jira.transitionIssue(issueKey, "In QA");
-  state.finishStep(issueKey, "in-qa", { verdict: "ok" });
+  state.upsertStory(issueKey, 'in-qa');
+  state.startStep(issueKey, 'in-qa');
+  await jira.transitionIssue(issueKey, 'In QA');
+  state.finishStep(issueKey, 'in-qa', { verdict: 'ok' });
 
-  log.info("workflow.handoff-to-qa", { issueKey, mrUrl });
-  emitWorkflowComplete(issueKey, state, "in-qa", true, mrUrl);
+  log.info('workflow.handoff-to-qa', { issueKey, mrUrl });
+  emitWorkflowComplete(issueKey, state, 'in-qa', true, mrUrl);
 }
 
 async function escalateToHumanReview(
@@ -339,23 +354,23 @@ async function escalateToHumanReview(
   state?: StateStore,
   mrUrl?: string,
 ): Promise<void> {
-  log.warn("workflow.escalate", { issueKey, reason });
+  log.warn('workflow.escalate', { issueKey, reason });
   const body =
     `*Escalated to human review.*\n\n` +
     `Reason: ${reason}\n\n` +
     (unresolvedItems.length > 0
-      ? `Unresolved items:\n${unresolvedItems.map((i) => `- ${i}`).join("\n")}`
-      : "");
+      ? `Unresolved items:\n${unresolvedItems.map((i) => `- ${i}`).join('\n')}`
+      : '');
 
   await jira.commentOnIssue(issueKey, body);
-  await jira.transitionIssue(issueKey, "Needs human review");
+  await jira.transitionIssue(issueKey, 'Needs human review');
 
   if (state) {
-    emitWorkflowComplete(issueKey, state, "needs-human-review", false, mrUrl);
+    emitWorkflowComplete(issueKey, state, 'needs-human-review', false, mrUrl);
   }
 }
 
-const DEFAULT_RECOVERY_MODEL = "claude-opus-4-5";
+const DEFAULT_RECOVERY_MODEL = 'claude-opus-4-5';
 
 /**
  * Scan for agent steps that started a session but never finished (process
@@ -379,14 +394,20 @@ export async function recoverInterruptedSteps(
       unstable_v2_resumeSession(sessionId!, {
         model: ctxBase.behaviour.anthropicModel ?? DEFAULT_RECOVERY_MODEL,
       });
-      log.info("recovery.session-resumed", { issueKey, step, sessionId });
+      log.info('recovery.session-resumed', { issueKey, step, sessionId });
       await runStory({ issueKey, state, ...ctxBase });
     } catch (err) {
-      log.warn("recovery.session-failed", { issueKey, step, sessionId, err: String(err) });
+      log.warn('recovery.session-failed', { issueKey, step, sessionId, err: String(err) });
       try {
-        await escalateToHumanReview(ctxBase.jira, issueKey, "Crash recovery failed: " + String(err), [], state);
+        await escalateToHumanReview(
+          ctxBase.jira,
+          issueKey,
+          'Crash recovery failed: ' + String(err),
+          [],
+          state,
+        );
       } catch (escalateErr) {
-        log.error("recovery.escalation-failed", { issueKey, err: String(escalateErr) });
+        log.error('recovery.escalation-failed', { issueKey, err: String(escalateErr) });
       }
     }
   }
@@ -404,33 +425,47 @@ export async function addressFeedback(
   const { issueKey, state, jira } = ctx;
   const input: AgentInput = { issueKey, context: {} };
 
-  log.info("workflow.address-feedback.start", { issueKey, mrUrl });
+  log.info('workflow.address-feedback.start', { issueKey, mrUrl });
 
   try {
-    state.upsertStory(issueKey, "address-feedback");
+    state.upsertStory(issueKey, 'address-feedback');
 
     const result = await engineer.run({
       ...input,
       context: {
-        task: "address-feedback",
+        task: 'address-feedback',
         mrUrl,
         comments: [comment],
         model: ctx.behaviour.anthropicModel,
       },
     });
 
-    const sessionId = result.artefacts["sessionId"] as string | undefined;
-    state.startStep(issueKey, "address-feedback", sessionId);
-    state.finishStep(issueKey, "address-feedback", {
+    const sessionId = result.artefacts['sessionId'] as string | undefined;
+    state.startStep(issueKey, 'address-feedback', sessionId);
+    state.finishStep(issueKey, 'address-feedback', {
       costUsd: result.costUsd,
-      verdict: result.success ? "addressed" : "partial",
+      verdict: result.success ? 'addressed' : 'partial',
     });
 
     if (!result.success) {
-      await escalateToHumanReview(jira, issueKey, "Engineer failed to address feedback", [comment], state, mrUrl);
+      await escalateToHumanReview(
+        jira,
+        issueKey,
+        'Engineer failed to address feedback',
+        [comment],
+        state,
+        mrUrl,
+      );
     }
   } catch (err) {
-    log.error("workflow.address-feedback.error", { issueKey, err: String(err) });
-    await escalateToHumanReview(jira, issueKey, "Unexpected error during address-feedback", [], state, mrUrl);
+    log.error('workflow.address-feedback.error', { issueKey, err: String(err) });
+    await escalateToHumanReview(
+      jira,
+      issueKey,
+      'Unexpected error during address-feedback',
+      [],
+      state,
+      mrUrl,
+    );
   }
 }

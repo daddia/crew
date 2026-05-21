@@ -31,17 +31,17 @@ must exist before this binary can be built.
 
 ### 1.1 In scope
 
-| Capability | Story |
-| --- | --- |
-| `crew-diagnose` binary entry point in `packages/crew/package.json` `bin` map | CREW-69-001 |
-| Convention-based discovery of a crew's compiled `diagnose.config.js` via `--config` flag (default: `./dist/diagnose.config.js` relative to cwd) | CREW-69-001 |
-| Dynamic import of the config module, extraction of `DiagnosticsConfig.checks`, invocation of `runDiagnosticsChecks` | CREW-69-001 |
-| Coloured one-line-per-check output (ANSI codes, `✓` / `✗`) and a final summary line | CREW-69-002 |
-| Exit code 0 (all pass) / 1 (any fail or config load error) | CREW-69-001 |
-| `pnpm diagnose` script in `crews/delivery-build/package.json` delegates to `crew-diagnose` | CREW-69-003 |
-| Retire `crews/delivery-build/src/diagnose.ts` (logic is now in the binary) | CREW-69-003 |
+| Capability                                                                                                                                                     | Story       |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| `crew-diagnose` binary entry point in `packages/crew/package.json` `bin` map                                                                                   | CREW-69-001 |
+| Convention-based discovery of a crew's compiled `diagnose.config.js` via `--config` flag (default: `./dist/diagnose.config.js` relative to cwd)                | CREW-69-001 |
+| Dynamic import of the config module, extraction of `DiagnosticsConfig.checks`, invocation of `runDiagnosticsChecks`                                            | CREW-69-001 |
+| Coloured one-line-per-check output (ANSI codes, `✓` / `✗`) and a final summary line                                                                            | CREW-69-002 |
+| Exit code 0 (all pass) / 1 (any fail or config load error)                                                                                                     | CREW-69-001 |
+| `pnpm diagnose` script in `crews/delivery-build/package.json` delegates to `crew-diagnose`                                                                     | CREW-69-003 |
+| Retire `crews/delivery-build/src/diagnose.ts` (logic is now in the binary)                                                                                     | CREW-69-003 |
 | Update `@daddia/crew` to `0.3.0` (or `0.4.0` if diagnostics shipped separately) with the `bin` entry; update pinned dep in `crews/delivery-build/package.json` | CREW-69-004 |
-| Unit tests for the output formatter and exit-code logic | CREW-69-002 |
+| Unit tests for the output formatter and exit-code logic                                                                                                        | CREW-69-002 |
 
 ### 1.2 Out of scope
 
@@ -63,11 +63,11 @@ must exist before this binary can be built.
 The `crew-diagnose` binary is a thin entry point that glues three existing
 surfaces together:
 
-| Surface | Where it lives | This WP's role |
-| --- | --- | --- |
-| Check library | `@daddia/crew/diagnostics` (CREW-68) | Imports `runDiagnosticsChecks` |
-| Crew check config | `dist/diagnose.config.js` in each crew | Loads dynamically at runtime |
-| Crew config validation | `@daddia/crew/config` | Loaded by `diagnose.config.ts` before checks run |
+| Surface                | Where it lives                         | This WP's role                                   |
+| ---------------------- | -------------------------------------- | ------------------------------------------------ |
+| Check library          | `@daddia/crew/diagnostics` (CREW-68)   | Imports `runDiagnosticsChecks`                   |
+| Crew check config      | `dist/diagnose.config.js` in each crew | Loads dynamically at runtime                     |
+| Crew config validation | `@daddia/crew/config`                  | Loaded by `diagnose.config.ts` before checks run |
 
 The binary does not import from any `crews/*` path. The dependency direction
 is:
@@ -137,12 +137,12 @@ crew-diagnose [--config <path>]
 
 No other flags in this WP. Exit codes:
 
-| Condition | Exit code |
-| --- | --- |
-| All checks pass | 0 |
-| Any check fails | 1 |
-| Config file not found or import throws | 1 |
-| Config file does not export `DiagnosticsConfig` shape | 1 |
+| Condition                                             | Exit code |
+| ----------------------------------------------------- | --------- |
+| All checks pass                                       | 0         |
+| Any check fails                                       | 1         |
+| Config file not found or import throws                | 1         |
+| Config file does not export `DiagnosticsConfig` shape | 1         |
 
 ### 4.2 Formatter
 
@@ -158,7 +158,7 @@ export interface FormatOptions {
  * Suitable for use in tests and non-TTY environments.
  */
 export function formatResults(
-  checks: import("@daddia/crew/diagnostics").DiagnosticCheck[],
+  checks: import('@daddia/crew/diagnostics').DiagnosticCheck[],
   opts?: FormatOptions,
 ): string;
 ```
@@ -246,15 +246,15 @@ Same as §5.1 up to step 6. `formatResults` marks failing checks with `✗` in r
 
 ## 7. Error paths
 
-| Trigger | Binary behaviour |
-| --- | --- |
-| Config file path not resolvable (typo in `--config`) | stderr: `config file not found: {path}`; exit 1 |
-| Config module throws on import (e.g. `loadConfig` fails) | stderr: `config load error: {message}`; exit 1 |
-| Config module has no default export | stderr: `config file does not export a DiagnosticsConfig`; exit 1 |
-| Config module's default export has no `checks` array | stderr: same as above; exit 1 |
-| One check returns `ok: false` | Printed with `✗` in output; summary names the failing check; exit 1 |
-| All checks pass | Final line: `All N checks passed.`; exit 0 |
-| `runDiagnosticsChecks` itself throws (should not happen — runner wraps errors) | stderr: `unexpected error: {message}`; exit 1 |
+| Trigger                                                                        | Binary behaviour                                                    |
+| ------------------------------------------------------------------------------ | ------------------------------------------------------------------- |
+| Config file path not resolvable (typo in `--config`)                           | stderr: `config file not found: {path}`; exit 1                     |
+| Config module throws on import (e.g. `loadConfig` fails)                       | stderr: `config load error: {message}`; exit 1                      |
+| Config module has no default export                                            | stderr: `config file does not export a DiagnosticsConfig`; exit 1   |
+| Config module's default export has no `checks` array                           | stderr: same as above; exit 1                                       |
+| One check returns `ok: false`                                                  | Printed with `✗` in output; summary names the failing check; exit 1 |
+| All checks pass                                                                | Final line: `All N checks passed.`; exit 0                          |
+| `runDiagnosticsChecks` itself throws (should not happen — runner wraps errors) | stderr: `unexpected error: {message}`; exit 1                       |
 
 ## 8. Observability
 
@@ -264,13 +264,13 @@ code is the machine-readable signal for CI.
 
 ## 9. Testing strategy
 
-| Layer | Path | Scope | Target |
-| --- | --- | --- | --- |
-| Unit (formatter) | `packages/crew/test/cli/format.test.ts` | All pass output; partial fail with summary; zero checks; ANSI present by default; ANSI absent with `noColor: true`; failing check names in summary | 100% branch coverage of `format.ts` |
-| Unit (binary main) | `packages/crew/test/cli/diagnose.test.ts` | Exit 0 when all checks pass; exit 1 when any check fails; exit 1 when config file missing; exit 1 when config module throws on import; exit 1 when default export missing `checks`; `--config` flag overrides default path | All EARS paths; `process.exit` spied via `vi.spyOn`; dynamic import mocked via `vi.mock` |
-| Integration (crew wiring) | `crews/delivery-build/tests/diagnose-script.test.ts` (optional) | Running `node node_modules/.bin/crew-diagnose --config dist/diagnose.config.js` against a stub config that returns fixed check results exits 0 and prints expected output | Smoke test: binary resolves in `node_modules/.bin` after `pnpm install` |
-| Boundary | `pnpm lint` | `packages/crew/src/cli/**` does not import from `crews/*` | exit 0 |
-| Type | `pnpm typecheck` | `crew-diagnose` entry resolves; `DiagnosticsConfig` from `@daddia/crew/diagnostics` used in dynamic import check | exit 0 |
+| Layer                     | Path                                                            | Scope                                                                                                                                                                                                                      | Target                                                                                   |
+| ------------------------- | --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Unit (formatter)          | `packages/crew/test/cli/format.test.ts`                         | All pass output; partial fail with summary; zero checks; ANSI present by default; ANSI absent with `noColor: true`; failing check names in summary                                                                         | 100% branch coverage of `format.ts`                                                      |
+| Unit (binary main)        | `packages/crew/test/cli/diagnose.test.ts`                       | Exit 0 when all checks pass; exit 1 when any check fails; exit 1 when config file missing; exit 1 when config module throws on import; exit 1 when default export missing `checks`; `--config` flag overrides default path | All EARS paths; `process.exit` spied via `vi.spyOn`; dynamic import mocked via `vi.mock` |
+| Integration (crew wiring) | `crews/delivery-build/tests/diagnose-script.test.ts` (optional) | Running `node node_modules/.bin/crew-diagnose --config dist/diagnose.config.js` against a stub config that returns fixed check results exits 0 and prints expected output                                                  | Smoke test: binary resolves in `node_modules/.bin` after `pnpm install`                  |
+| Boundary                  | `pnpm lint`                                                     | `packages/crew/src/cli/**` does not import from `crews/*`                                                                                                                                                                  | exit 0                                                                                   |
+| Type                      | `pnpm typecheck`                                                | `crew-diagnose` entry resolves; `DiagnosticsConfig` from `@daddia/crew/diagnostics` used in dynamic import check                                                                                                           | exit 0                                                                                   |
 
 ## 10. Acceptance gates
 

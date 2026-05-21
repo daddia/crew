@@ -1,9 +1,9 @@
-import type { Context } from "hono";
-import { checkReplayWindow, verifySignature } from "@daddia/crew/webhooks";
-import { log } from "../observability.js";
-import type { StateStore } from "../state.js";
-import { runStory, type WorkflowCtxBase } from "../workflow.js";
-import { has, runStoryWithLock } from "../in-flight.js";
+import type { Context } from 'hono';
+import { checkReplayWindow, verifySignature } from '@daddia/crew/webhooks';
+import { log } from '../observability.js';
+import type { StateStore } from '../state.js';
+import { runStory, type WorkflowCtxBase } from '../workflow.js';
+import { has, runStoryWithLock } from '../in-flight.js';
 
 export async function jiraHandler(
   c: Context,
@@ -16,55 +16,55 @@ export async function jiraHandler(
 
   // 1. Verify HMAC signature.
   try {
-    verifySignature("jira", bodyBuffer, c.req.header(), secret);
+    verifySignature('jira', bodyBuffer, c.req.header(), secret);
   } catch (err) {
-    log.warn("jira.handler.signature-failed", { err: String(err) });
-    return c.json({ error: "Forbidden" }, 403);
+    log.warn('jira.handler.signature-failed', { err: String(err) });
+    return c.json({ error: 'Forbidden' }, 403);
   }
 
-  const body: unknown = JSON.parse(bodyBuffer.toString("utf8"));
+  const body: unknown = JSON.parse(bodyBuffer.toString('utf8'));
   if (!isJiraEvent(body)) {
-    return c.json({ error: "Unrecognised payload" }, 400);
+    return c.json({ error: 'Unrecognised payload' }, 400);
   }
 
   // 2. Timestamp replay window.
   try {
     checkReplayWindow({ timestampMs: body.timestamp });
   } catch (err) {
-    log.warn("jira.handler.replay-rejected", { err: String(err) });
-    return c.json({ error: "Replay rejected" }, 400);
+    log.warn('jira.handler.replay-rejected', { err: String(err) });
+    return c.json({ error: 'Replay rejected' }, 400);
   }
 
   // 3. Idempotency — skip if we've seen this event.
   const eventId = String(body.id);
-  if (state.checkAndRecord("jira", eventId)) {
-    log.info("jira.handler.duplicate", { eventId });
+  if (state.checkAndRecord('jira', eventId)) {
+    log.info('jira.handler.duplicate', { eventId });
     return c.json({ ok: true, duplicate: true });
   }
 
   // 4. Filter to "Ready for Dev" transitions only.
   const transition = body.transition;
-  if (transition?.transitionName !== "Ready for Dev") {
+  if (transition?.transitionName !== 'Ready for Dev') {
     return c.json({ ok: true, ignored: true });
   }
 
   const issueKey = body.issue?.key;
   if (!issueKey) {
-    return c.json({ error: "Missing issue key" }, 400);
+    return c.json({ error: 'Missing issue key' }, 400);
   }
 
   if (has(issueKey)) {
-    log.info("jira.handler.in-flight", { issueKey });
-    return c.json({ error: "workflow-in-flight", issueKey }, 429);
+    log.info('jira.handler.in-flight', { issueKey });
+    return c.json({ error: 'workflow-in-flight', issueKey }, 429);
   }
 
-  log.info("jira.handler.dispatch", { issueKey, eventId });
+  log.info('jira.handler.dispatch', { issueKey, eventId });
 
   runStoryWithLock(
     issueKey,
     () => runStory({ issueKey, state, ...ctxBase }),
     (err) => {
-      log.error("jira.handler.workflow-error", { issueKey, err: String(err) });
+      log.error('jira.handler.workflow-error', { issueKey, err: String(err) });
     },
     { deferred: true },
   );
@@ -80,10 +80,5 @@ interface JiraEvent {
 }
 
 function isJiraEvent(v: unknown): v is JiraEvent {
-  return (
-    typeof v === "object" &&
-    v !== null &&
-    "id" in v &&
-    "timestamp" in v
-  );
+  return typeof v === 'object' && v !== null && 'id' in v && 'timestamp' in v;
 }

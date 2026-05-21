@@ -40,14 +40,14 @@ tooling. See `design.md §1.2`.
 
 ## 2. Conventions
 
-| Convention | Value |
-| --- | --- |
-| Epic ID | `CREW-65` |
-| Story ID | `CREW-65-{nnn}` |
-| Status values | Not started, In progress, In review, Done, Blocked |
-| Priority levels | P0 (blocking), P1 (reliability), P2 (quality) |
-| Estimation | Fibonacci story points (1, 2, 3, 5, 8) |
-| Acceptance format | EARS + Gherkin |
+| Convention        | Value                                              |
+| ----------------- | -------------------------------------------------- |
+| Epic ID           | `CREW-65`                                          |
+| Story ID          | `CREW-65-{nnn}`                                    |
+| Status values     | Not started, In progress, In review, Done, Blocked |
+| Priority levels   | P0 (blocking), P1 (reliability), P2 (quality)      |
+| Estimation        | Fibonacci story points (1, 2, 3, 5, 8)             |
+| Acceptance format | EARS + Gherkin                                     |
 
 ## 3. Stories
 
@@ -251,6 +251,7 @@ tooling. See `design.md §1.2`.
     - `tests/poller.test.ts` — `process.env` mutation replaced with `Config` injection
     - `tests/handlers.gitlab.test.ts` — same
     - `tests/integrations.jira.test.ts` — same
+
   - **Design:** [`./design.md §4.4`](design.md#44-factory-signatures-consumers)
     and [`./design.md §5.1`](design.md#51-cold-boot--happy-path)
   - **Acceptance (EARS):**
@@ -397,25 +398,25 @@ tooling. See `design.md §1.2`.
 
 ### Stories to design sections
 
-| Story | design.md section |
-| --- | --- |
-| CREW-65-001 | §3.2 Evolved files (packages/crew package.json, tsconfig) |
-| CREW-65-002 | §3.1 New files; §4.1 Shared primitives |
-| CREW-65-003 | §4.2 Per-crew schema; §4.3 Env-var mapping |
-| CREW-65-004 | §4.4 Factory signatures; §5.1 Runtime view – happy path |
-| CREW-65-005 | §5.1 – §5.3 Runtime views; §8.1 Log events |
+| Story       | design.md section                                                     |
+| ----------- | --------------------------------------------------------------------- |
+| CREW-65-001 | §3.2 Evolved files (packages/crew package.json, tsconfig)             |
+| CREW-65-002 | §3.1 New files; §4.1 Shared primitives                                |
+| CREW-65-003 | §4.2 Per-crew schema; §4.3 Env-var mapping                            |
+| CREW-65-004 | §4.4 Factory signatures; §5.1 Runtime view – happy path               |
+| CREW-65-005 | §5.1 – §5.3 Runtime views; §8.1 Log events                            |
 | CREW-65-006 | §3.2 Evolved files (tooling/eslint-config); §7 Error paths (lint row) |
 
 ### Stories to product outcomes
 
-| Story | Product outcome |
-| --- | --- |
-| CREW-65-001 | Unblocks the primitive library; establishes the `@daddia/crew/config` subpath contract |
-| CREW-65-002 | Provides typed, Zod-validated, Secret-branded config primitives reusable by every current and future crew |
-| CREW-65-003 | `delivery-build` has a single validated schema; misconfig is now a startup error, not a silent operational failure |
-| CREW-65-004 | `process.env` is no longer scattered across 8 source files; tests no longer mutate global state; factory-injected clients are unit-testable without env setup |
+| Story       | Product outcome                                                                                                                                                        |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CREW-65-001 | Unblocks the primitive library; establishes the `@daddia/crew/config` subpath contract                                                                                 |
+| CREW-65-002 | Provides typed, Zod-validated, Secret-branded config primitives reusable by every current and future crew                                                              |
+| CREW-65-003 | `delivery-build` has a single validated schema; misconfig is now a startup error, not a silent operational failure                                                     |
+| CREW-65-004 | `process.env` is no longer scattered across 8 source files; tests no longer mutate global state; factory-injected clients are unit-testable without env setup          |
 | CREW-65-005 | Every deployment emits one structured line answering "what is this process running with?"; bad deploys are rejected by Railway's healthcheck before they serve traffic |
-| CREW-65-006 | The `process.env` boundary is enforced by tooling, not just convention; future contributors cannot accidentally bypass `loadConfig` |
+| CREW-65-006 | The `process.env` boundary is enforced by tooling, not just convention; future contributors cannot accidentally bypass `loadConfig`                                    |
 
 ## 5. Dependency graph
 
@@ -444,12 +445,12 @@ A story in this backlog is done when:
 
 ## 7. Risks
 
-| ID | Risk | Likelihood | Impact | Mitigation |
-| --- | --- | --- | --- | --- |
-| R1 | `z.ZodBranded` has no runtime representation; `redact()` cannot detect branded fields without an explicit runtime sentinel | High | High | Design §12 OQ-6 resolves this: attach a non-enumerable property in `Secret`'s `transform` at parse time. Settle the implementation approach at the start of CREW-65-002. |
-| R2 | The CREW-65-004 test refactor is the largest single chunk of effort; it touches five existing test files and could surface hidden coupling to `process.env` beyond the catalogued files | Medium | Medium | Run a repo-wide `grep -r "process\.env"` inside `crews/delivery-build/src` at the start of CREW-65-004 to enumerate every occurrence before writing the first line of the refactor. |
-| R3 | `zod` `z.coerce.number()` silently coerces strings like `"0"` or `"NaN"` to valid numbers; `refactorLoopCap = 0` would disable the peer-review loop | Low | High | Add explicit `z.coerce.number().int().nonnegative()` for caps; add unit tests for boundary values `0`, `1`, and invalid strings in CREW-65-003. |
-| R4 | ESLint rule (CREW-65-006) may need per-file overrides if future integration tests legitimately construct envs from scratch; blanket ban in `tests/` deferred | Low | Low | The transitional carve-out for `tests/` (design §12 OQ-4) is the mitigation; tighten to `tests/` in a follow-on story. |
+| ID  | Risk                                                                                                                                                                                    | Likelihood | Impact | Mitigation                                                                                                                                                                          |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| R1  | `z.ZodBranded` has no runtime representation; `redact()` cannot detect branded fields without an explicit runtime sentinel                                                              | High       | High   | Design §12 OQ-6 resolves this: attach a non-enumerable property in `Secret`'s `transform` at parse time. Settle the implementation approach at the start of CREW-65-002.            |
+| R2  | The CREW-65-004 test refactor is the largest single chunk of effort; it touches five existing test files and could surface hidden coupling to `process.env` beyond the catalogued files | Medium     | Medium | Run a repo-wide `grep -r "process\.env"` inside `crews/delivery-build/src` at the start of CREW-65-004 to enumerate every occurrence before writing the first line of the refactor. |
+| R3  | `zod` `z.coerce.number()` silently coerces strings like `"0"` or `"NaN"` to valid numbers; `refactorLoopCap = 0` would disable the peer-review loop                                     | Low        | High   | Add explicit `z.coerce.number().int().nonnegative()` for caps; add unit tests for boundary values `0`, `1`, and invalid strings in CREW-65-003.                                     |
+| R4  | ESLint rule (CREW-65-006) may need per-file overrides if future integration tests legitimately construct envs from scratch; blanket ban in `tests/` deferred                            | Low        | Low    | The transitional carve-out for `tests/` (design §12 OQ-4) is the mitigation; tighten to `tests/` in a follow-on story.                                                              |
 
 Technical and architecture risks are authoritative in `AGENTS.md` and
 `docs/work/crew-config/design.md §12`.

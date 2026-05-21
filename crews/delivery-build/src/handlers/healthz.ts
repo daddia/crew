@@ -1,15 +1,15 @@
-import type { Context } from "hono";
-import { CONFIG_SCHEMA_VERSION } from "../config.js";
-import { inFlight } from "../in-flight.js";
-import { lastTickAt, lastTickStatus } from "../poller-state.js";
-import type { StateStore } from "../state.js";
+import type { Context } from 'hono';
+import { CONFIG_SCHEMA_VERSION } from '../config.js';
+import { inFlight } from '../in-flight.js';
+import { lastTickAt, lastTickStatus } from '../poller-state.js';
+import type { StateStore } from '../state.js';
 
 export interface HealthzBody {
   ok: boolean;
   schemaVersion: number;
   poller: {
     lastTickAt: number | null;
-    lastTickStatus: "ok" | "error" | null;
+    lastTickStatus: 'ok' | 'error' | null;
     inFlightCount: number;
     inFlight: string[];
   };

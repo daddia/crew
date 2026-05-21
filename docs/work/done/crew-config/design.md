@@ -26,15 +26,15 @@ TDD-mode design for the `crew-config` work package. There is no parent
 
 ### 1.1 In scope
 
-| Capability | Story (placeholder) |
-| --- | --- |
-| New `@daddia/crew/config` subpath that exposes loader, validator, secret-redaction, and workspace-detection primitives | CREW-65-001 |
-| Add `zod` as a runtime dependency of `packages/crew` and wire the primitive code into the package's build + tests | CREW-65-002 |
-| Per-crew `Config` schema and `loadConfig()` for `crews/delivery-build` (the first consumer) | CREW-65-003 |
-| Refactor `crews/delivery-build` to thread `Config` explicitly: `index.ts`, `integrations/jira.ts`, `integrations/gitlab.ts`, `poller.ts`, `workflow.ts`, `handlers/jira.ts`, `handlers/gitlab.ts` | CREW-65-004 |
-| Boot-time provenance log line + redacted-snapshot helper at the call site | CREW-65-005 |
-| ESLint rule banning `process.env` access outside `config.ts` (in `tooling/eslint-config`) | CREW-65-006 |
-| Update `crews/delivery-build/.env.example` and `README.md` to mirror the schema buckets | CREW-65-003 |
+| Capability                                                                                                                                                                                        | Story (placeholder) |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| New `@daddia/crew/config` subpath that exposes loader, validator, secret-redaction, and workspace-detection primitives                                                                            | CREW-65-001         |
+| Add `zod` as a runtime dependency of `packages/crew` and wire the primitive code into the package's build + tests                                                                                 | CREW-65-002         |
+| Per-crew `Config` schema and `loadConfig()` for `crews/delivery-build` (the first consumer)                                                                                                       | CREW-65-003         |
+| Refactor `crews/delivery-build` to thread `Config` explicitly: `index.ts`, `integrations/jira.ts`, `integrations/gitlab.ts`, `poller.ts`, `workflow.ts`, `handlers/jira.ts`, `handlers/gitlab.ts` | CREW-65-004         |
+| Boot-time provenance log line + redacted-snapshot helper at the call site                                                                                                                         | CREW-65-005         |
+| ESLint rule banning `process.env` access outside `config.ts` (in `tooling/eslint-config`)                                                                                                         | CREW-65-006         |
+| Update `crews/delivery-build/.env.example` and `README.md` to mirror the schema buckets                                                                                                           | CREW-65-003         |
 
 ### 1.2 Out of scope
 
@@ -59,12 +59,12 @@ This work package extends the shared `@daddia/crew` package with a third entry
 point and refactors `crews/delivery-build` to consume it. It does not change
 any agent persona, workflow sequence, or webhook contract.
 
-| Concern | Where it lives | Source |
-| --- | --- | --- |
-| Subpath export pattern (parallel to `./webhooks`) | `packages/crew/package.json` `exports` map | [`AGENTS.md` "Key packages"](../../../AGENTS.md) |
-| `crews/* → packages/*` only; never `crews/* → crews/*`; never `packages/* → crews/*` | `.dependency-cruiser.cjs` | [`AGENTS.md` "Dependency rules"](../../../AGENTS.md) |
-| Crew-owned state, never shared across crews | Each crew owns its `state.ts` | [`AGENTS.md` "State store conventions"](../../../AGENTS.md) — config follows the same per-crew ownership rule |
-| Webhook secrets verified by `verifySignature()` from `@daddia/crew/webhooks` | `crews/delivery-build/src/handlers/*.ts` | [`AGENTS.md` "Webhook handler conventions"](../../../AGENTS.md) — webhook secrets become a `Config` field passed into the verifier |
+| Concern                                                                              | Where it lives                             | Source                                                                                                                             |
+| ------------------------------------------------------------------------------------ | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Subpath export pattern (parallel to `./webhooks`)                                    | `packages/crew/package.json` `exports` map | [`AGENTS.md` "Key packages"](../../../AGENTS.md)                                                                                   |
+| `crews/* → packages/*` only; never `crews/* → crews/*`; never `packages/* → crews/*` | `.dependency-cruiser.cjs`                  | [`AGENTS.md` "Dependency rules"](../../../AGENTS.md)                                                                               |
+| Crew-owned state, never shared across crews                                          | Each crew owns its `state.ts`              | [`AGENTS.md` "State store conventions"](../../../AGENTS.md) — config follows the same per-crew ownership rule                      |
+| Webhook secrets verified by `verifySignature()` from `@daddia/crew/webhooks`         | `crews/delivery-build/src/handlers/*.ts`   | [`AGENTS.md` "Webhook handler conventions"](../../../AGENTS.md) — webhook secrets become a `Config` field passed into the verifier |
 
 The mental model: **`@daddia/crew/config` is how config is loaded; the crew's
 `config.ts` is what config is.** The shared package owns mechanism; each crew
@@ -137,7 +137,7 @@ packages/crew/src/{agent,unit,session,hooks,loaders,memory,observability,webhook
 ### 4.1 Shared primitives (`@daddia/crew/config`)
 
 ```typescript
-import { z, type ZodSchema, type ZodError } from "zod";
+import { z, type ZodSchema, type ZodError } from 'zod';
 
 export const SECRET_BRAND: unique symbol;
 
@@ -149,28 +149,20 @@ export function redact<T>(value: T): T;
 
 export type EnvMapping = Record<string, string>;
 
-export function loadEnv<T>(
-  env: NodeJS.ProcessEnv,
-  schema: ZodSchema<T>,
-  mapping: EnvMapping,
-): T;
+export function loadEnv<T>(env: NodeJS.ProcessEnv, schema: ZodSchema<T>, mapping: EnvMapping): T;
 
-export function loadYaml<T>(
-  filePath: string,
-  schema: ZodSchema<T>,
-  label: string,
-): Promise<T>;
+export function loadYaml<T>(filePath: string, schema: ZodSchema<T>, label: string): Promise<T>;
 
 export function detectWorkspace(startDir: string): string;
 
 export function formatZodIssues(err: ZodError): string;
 
 export class ConfigNotFoundError extends Error {
-  readonly code: "CONFIG_NOT_FOUND";
+  readonly code: 'CONFIG_NOT_FOUND';
 }
 
 export class SchemaValidationError extends Error {
-  readonly code: "SCHEMA_VALIDATION";
+  readonly code: 'SCHEMA_VALIDATION';
   readonly issues: ReadonlyArray<{ path: string; message: string }>;
 }
 ```
@@ -178,8 +170,8 @@ export class SchemaValidationError extends Error {
 ### 4.2 Per-crew schema (`crews/delivery-build/src/config.ts`)
 
 ```typescript
-import { z } from "zod";
-import { Secret, loadEnv } from "@daddia/crew/config";
+import { z } from 'zod';
+import { Secret, loadEnv } from '@daddia/crew/config';
 
 export const CONFIG_SCHEMA_VERSION = 1 as const;
 
@@ -204,7 +196,7 @@ export const ConfigSchema = z.object({
     ciPollIntervalMs: z.coerce.number().int().positive().default(30_000),
     clarificationTimeoutHours: z.coerce.number().int().positive().default(24),
     anthropicModel: z.string().min(1).optional(),
-    logLevel: z.enum(["debug", "info", "warn", "error"]).default("info"),
+    logLevel: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
   }),
   infrastructure: z.object({
     port: z.coerce.number().int().positive().default(3000),
@@ -229,28 +221,28 @@ export function loadConfig(env?: NodeJS.ProcessEnv): Config;
 
 ```typescript
 const ENV_MAPPING: EnvMapping = {
-  "identity.crewId":                       "CREW_ID",
-  "identity.jira.baseUrl":                 "ATLASSIAN_BASE_URL",
-  "identity.jira.email":                   "ATLASSIAN_EMAIL",
-  "identity.jira.projectKey":              "JIRA_PROJECT_KEY",
-  "identity.jira.assigneeAccountId":       "JIRA_ASSIGNEE_ACCOUNT_ID",
-  "identity.gitlab.apiUrl":                "GITLAB_API_URL",
-  "identity.gitlab.projectId":             "GITLAB_PROJECT_ID",
-  "behaviour.pollIntervalMs":              "POLL_INTERVAL_MS",
-  "behaviour.refactorLoopCap":             "REFACTOR_LOOP_CAP",
-  "behaviour.ciRetryCap":                  "CI_RETRY_CAP",
-  "behaviour.ciPollIntervalMs":            "CI_POLL_INTERVAL_MS",
-  "behaviour.clarificationTimeoutHours":   "CLARIFICATION_TIMEOUT_HOURS",
-  "behaviour.anthropicModel":              "ANTHROPIC_MODEL",
-  "behaviour.logLevel":                    "LOG_LEVEL",
-  "infrastructure.port":                   "PORT",
-  "infrastructure.dbPath":                 "DB_PATH",
-  "infrastructure.projectDir":             "PROJECT_DIR",
-  "secrets.anthropicApiKey":               "ANTHROPIC_API_KEY",
-  "secrets.atlassianApiToken":             "ATLASSIAN_API_TOKEN",
-  "secrets.gitlabAccessToken":             "GITLAB_PERSONAL_ACCESS_TOKEN",
-  "secrets.jiraWebhookSecret":             "JIRA_WEBHOOK_SECRET",
-  "secrets.gitlabWebhookSecret":           "GITLAB_WEBHOOK_SECRET",
+  'identity.crewId': 'CREW_ID',
+  'identity.jira.baseUrl': 'ATLASSIAN_BASE_URL',
+  'identity.jira.email': 'ATLASSIAN_EMAIL',
+  'identity.jira.projectKey': 'JIRA_PROJECT_KEY',
+  'identity.jira.assigneeAccountId': 'JIRA_ASSIGNEE_ACCOUNT_ID',
+  'identity.gitlab.apiUrl': 'GITLAB_API_URL',
+  'identity.gitlab.projectId': 'GITLAB_PROJECT_ID',
+  'behaviour.pollIntervalMs': 'POLL_INTERVAL_MS',
+  'behaviour.refactorLoopCap': 'REFACTOR_LOOP_CAP',
+  'behaviour.ciRetryCap': 'CI_RETRY_CAP',
+  'behaviour.ciPollIntervalMs': 'CI_POLL_INTERVAL_MS',
+  'behaviour.clarificationTimeoutHours': 'CLARIFICATION_TIMEOUT_HOURS',
+  'behaviour.anthropicModel': 'ANTHROPIC_MODEL',
+  'behaviour.logLevel': 'LOG_LEVEL',
+  'infrastructure.port': 'PORT',
+  'infrastructure.dbPath': 'DB_PATH',
+  'infrastructure.projectDir': 'PROJECT_DIR',
+  'secrets.anthropicApiKey': 'ANTHROPIC_API_KEY',
+  'secrets.atlassianApiToken': 'ATLASSIAN_API_TOKEN',
+  'secrets.gitlabAccessToken': 'GITLAB_PERSONAL_ACCESS_TOKEN',
+  'secrets.jiraWebhookSecret': 'JIRA_WEBHOOK_SECRET',
+  'secrets.gitlabWebhookSecret': 'GITLAB_WEBHOOK_SECRET',
 };
 ```
 
@@ -258,18 +250,18 @@ const ENV_MAPPING: EnvMapping = {
 
 ```typescript
 export function createJiraClient(
-  identity: Config["identity"]["jira"],
-  secrets: Pick<Config["secrets"], "atlassianApiToken">,
+  identity: Config['identity']['jira'],
+  secrets: Pick<Config['secrets'], 'atlassianApiToken'>,
 ): JiraClient;
 
 export function createGitlabClient(
-  identity: Config["identity"]["gitlab"],
-  secrets: Pick<Config["secrets"], "gitlabAccessToken">,
+  identity: Config['identity']['gitlab'],
+  secrets: Pick<Config['secrets'], 'gitlabAccessToken'>,
 ): GitlabClient;
 
 export interface PollerDeps {
-  identity: Config["identity"];
-  behaviour: Pick<Config["behaviour"], "pollIntervalMs" | "clarificationTimeoutHours">;
+  identity: Config['identity'];
+  behaviour: Pick<Config['behaviour'], 'pollIntervalMs' | 'clarificationTimeoutHours'>;
   jira: JiraClient;
 }
 export function startPoller(deps: PollerDeps, state: StateStore): NodeJS.Timeout;
@@ -277,7 +269,7 @@ export function startPoller(deps: PollerDeps, state: StateStore): NodeJS.Timeout
 export interface WorkflowContext {
   issueKey: string;
   state: StateStore;
-  behaviour: Pick<Config["behaviour"], "refactorLoopCap" | "ciRetryCap" | "ciPollIntervalMs">;
+  behaviour: Pick<Config['behaviour'], 'refactorLoopCap' | 'ciRetryCap' | 'ciPollIntervalMs'>;
   jira: JiraClient;
   gitlab: GitlabClient;
 }
@@ -325,15 +317,15 @@ All config errors terminate the process at boot. There is no fallback mode,
 no "best-effort" degraded operation, and no per-field default for `Secret`s
 or `identity` fields.
 
-| Trigger | Error class | Handling | Log event |
-| --- | --- | --- | --- |
-| Required env var missing | `SchemaValidationError` | `process.exit(1)` before bind | `config.invalid` (error) |
-| Env var has unparseable type (e.g. `POLL_INTERVAL_MS=fast`) | `SchemaValidationError` | `process.exit(1)` before bind | `config.invalid` (error) |
-| Webhook secret < 16 chars | `SchemaValidationError` | `process.exit(1)` before bind | `config.invalid` (error) |
-| `ATLASSIAN_BASE_URL` not a valid URL | `SchemaValidationError` | `process.exit(1)` before bind | `config.invalid` (error) |
-| YAML config file missing (when a future crew opts in to file mode) | `ConfigNotFoundError` | `process.exit(1)` before bind | `config.not-found` (error) |
-| Code attempts to log a `Config` slice without `redact()` | n/a (lint) | ESLint rule blocks merge | n/a |
-| Code reads `process.env` outside `config.ts` | n/a (lint) | ESLint rule blocks merge | n/a |
+| Trigger                                                            | Error class             | Handling                      | Log event                  |
+| ------------------------------------------------------------------ | ----------------------- | ----------------------------- | -------------------------- |
+| Required env var missing                                           | `SchemaValidationError` | `process.exit(1)` before bind | `config.invalid` (error)   |
+| Env var has unparseable type (e.g. `POLL_INTERVAL_MS=fast`)        | `SchemaValidationError` | `process.exit(1)` before bind | `config.invalid` (error)   |
+| Webhook secret < 16 chars                                          | `SchemaValidationError` | `process.exit(1)` before bind | `config.invalid` (error)   |
+| `ATLASSIAN_BASE_URL` not a valid URL                               | `SchemaValidationError` | `process.exit(1)` before bind | `config.invalid` (error)   |
+| YAML config file missing (when a future crew opts in to file mode) | `ConfigNotFoundError`   | `process.exit(1)` before bind | `config.not-found` (error) |
+| Code attempts to log a `Config` slice without `redact()`           | n/a (lint)              | ESLint rule blocks merge      | n/a                        |
+| Code reads `process.env` outside `config.ts`                       | n/a (lint)              | ESLint rule blocks merge      | n/a                        |
 
 The `formatZodIssues()` helper produces a stable, multi-line string of the form:
 
@@ -352,10 +344,10 @@ a one-shot at boot — there is nothing to measure over time.
 
 ### 8.1 Log events
 
-| Event | Level | When | Fields |
-| --- | --- | --- | --- |
-| `config.loaded` | info | once, after `loadConfig()` returns successfully | `crewId`, `schemaVersion`, `gitSha`, `identity.*`, `behaviour.*`, `infrastructure.*`. Secrets replaced with `"***"`. |
-| `config.invalid` | error | once, on `SchemaValidationError` or `ConfigNotFoundError` | `code`, `issues` (array of `{path, message}`), `pid` |
+| Event            | Level | When                                                      | Fields                                                                                                               |
+| ---------------- | ----- | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `config.loaded`  | info  | once, after `loadConfig()` returns successfully           | `crewId`, `schemaVersion`, `gitSha`, `identity.*`, `behaviour.*`, `infrastructure.*`. Secrets replaced with `"***"`. |
+| `config.invalid` | error | once, on `SchemaValidationError` or `ConfigNotFoundError` | `code`, `issues` (array of `{path, message}`), `pid`                                                                 |
 
 `gitSha` resolves from the first defined of: `RAILWAY_GIT_COMMIT_SHA`,
 `GIT_SHA`, or `"unknown"`. Both events use the existing `createLogger`
@@ -372,15 +364,15 @@ marker rather than relying on Zod metadata at log time.
 
 ## 9. Testing strategy
 
-| Layer | Path | Scope | Target |
-| --- | --- | --- | --- |
-| Unit (primitives) | `packages/crew/test/config/` | Each primitive in isolation: `loadEnv` mapping + coercion + defaults; `loadYaml` ENOENT, parse error, schema mismatch; `redact` recursion across nested objects, arrays, `Secret`-branded strings; `formatZodIssues` snapshot stability; `detectWorkspace` walk-up termination. | 100% line coverage of `packages/crew/src/config/**`; every error branch exercised |
-| Unit (per-crew schema) | `crews/delivery-build/tests/config.test.ts` | Required-field absence -> `SchemaValidationError`; default applied when env unset; coercion of numeric strings; secret-length minimum; URL validation; idempotent `loadConfig()` calls return distinct instances. | One test per Zod constraint; explicit assertion that no secret value appears in `redact(config)` |
-| Integration (boot path) | `crews/delivery-build/tests/boot.test.ts` (NEW) | With a fixture env, assert: state store opened with the expected `dbPath`, poller registered with the expected interval, server listening on the expected port, `config.loaded` log emitted exactly once. | One success fixture, one misconfig fixture (exits 1, emits `config.invalid`) |
-| Integration (refactor parity) | `crews/delivery-build/tests/{poller,handlers.*,workflow,integrations.*}.test.ts` | Existing tests refactored: replace `process.env` mutation with constructed `Config` injected through factory functions. | Net no behaviour change; same suite passes; `process.env` mutation removed from test code |
-| Lint | `tooling/eslint-config` self-test | Synthetic `process.env["x"]` access in a fixture file outside `config.ts` produces an ESLint error matching `no-process-env-outside-config`. | Rule fires; rule does not fire inside `config.ts` |
-| Type | `pnpm typecheck` from repo root | Subpath import `@daddia/crew/config` resolves; `Config` type fully inferred from Zod schema; `Secret(z.string())` extends `z.ZodString`. | exit 0 |
-| Boundary | `pnpm lint` (dependency-cruiser) | New `packages/crew/src/config/**` files do not import from `crews/*`; new `crews/delivery-build/src/config.ts` imports only from `@daddia/crew/config`. | exit 0 |
+| Layer                         | Path                                                                             | Scope                                                                                                                                                                                                                                                                           | Target                                                                                           |
+| ----------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Unit (primitives)             | `packages/crew/test/config/`                                                     | Each primitive in isolation: `loadEnv` mapping + coercion + defaults; `loadYaml` ENOENT, parse error, schema mismatch; `redact` recursion across nested objects, arrays, `Secret`-branded strings; `formatZodIssues` snapshot stability; `detectWorkspace` walk-up termination. | 100% line coverage of `packages/crew/src/config/**`; every error branch exercised                |
+| Unit (per-crew schema)        | `crews/delivery-build/tests/config.test.ts`                                      | Required-field absence -> `SchemaValidationError`; default applied when env unset; coercion of numeric strings; secret-length minimum; URL validation; idempotent `loadConfig()` calls return distinct instances.                                                               | One test per Zod constraint; explicit assertion that no secret value appears in `redact(config)` |
+| Integration (boot path)       | `crews/delivery-build/tests/boot.test.ts` (NEW)                                  | With a fixture env, assert: state store opened with the expected `dbPath`, poller registered with the expected interval, server listening on the expected port, `config.loaded` log emitted exactly once.                                                                       | One success fixture, one misconfig fixture (exits 1, emits `config.invalid`)                     |
+| Integration (refactor parity) | `crews/delivery-build/tests/{poller,handlers.*,workflow,integrations.*}.test.ts` | Existing tests refactored: replace `process.env` mutation with constructed `Config` injected through factory functions.                                                                                                                                                         | Net no behaviour change; same suite passes; `process.env` mutation removed from test code        |
+| Lint                          | `tooling/eslint-config` self-test                                                | Synthetic `process.env["x"]` access in a fixture file outside `config.ts` produces an ESLint error matching `no-process-env-outside-config`.                                                                                                                                    | Rule fires; rule does not fire inside `config.ts`                                                |
+| Type                          | `pnpm typecheck` from repo root                                                  | Subpath import `@daddia/crew/config` resolves; `Config` type fully inferred from Zod schema; `Secret(z.string())` extends `z.ZodString`.                                                                                                                                        | exit 0                                                                                           |
+| Boundary                      | `pnpm lint` (dependency-cruiser)                                                 | New `packages/crew/src/config/**` files do not import from `crews/*`; new `crews/delivery-build/src/config.ts` imports only from `@daddia/crew/config`.                                                                                                                         | exit 0                                                                                           |
 
 The test refactor is the largest single chunk of effort. The current tests in
 `crews/delivery-build/tests/` mutate `process.env` between cases (see
@@ -478,8 +470,8 @@ from; gates are derived from `AGENTS.md` and §1–§9 above):
    allow transitionally in `tests/` until the refactor completes
    (CREW-65-004), then ban in `tests/` as well. **Owner:** daddia.
    **Blocks:** CREW-65-006.
-5. **Boot-time secret presence vs validity.** Schema validates *presence* and
-   *length* of secrets but cannot validate *correctness* (the Atlassian
+5. **Boot-time secret presence vs validity.** Schema validates _presence_ and
+   _length_ of secrets but cannot validate _correctness_ (the Atlassian
    token could be syntactically valid but revoked). Should boot perform a
    no-op authenticated probe against Jira and GitLab to fail fast on bad
    credentials? Recommendation: not in this WP; the first poll tick

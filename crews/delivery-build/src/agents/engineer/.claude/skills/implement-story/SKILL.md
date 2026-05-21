@@ -4,10 +4,10 @@ You are running this skill when `context.task === "implement-story"`.
 
 ## Inputs
 
-| Field | Source | Required |
-|---|---|---|
-| `issueKey` | top-level `AgentInput` | yes |
-| linked design (e.g. design.md path or attachment) | Jira issue body | when present |
+| Field                                             | Source                 | Required     |
+| ------------------------------------------------- | ---------------------- | ------------ |
+| `issueKey`                                        | top-level `AgentInput` | yes          |
+| linked design (e.g. design.md path or attachment) | Jira issue body        | when present |
 
 ## Steps
 
@@ -117,8 +117,8 @@ artefact, using the template below.
 
 ## Acceptance Criteria Coverage
 
-| Criterion | Evidence |
-|---|---|
+| Criterion    | Evidence                                                          |
+| ------------ | ----------------------------------------------------------------- |
 | {AC summary} | `path/to/file.ts:lineRange` and `path/to/file.test.ts::test name` |
 
 ## Files Changed

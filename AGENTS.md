@@ -60,56 +60,56 @@ tooling/
 
 Shared types and Claude Agent SDK helpers. Every persona module implements `Agent`. Every deployable service satisfies `AgentCrew`. Import session utilities and contract types from this package.
 
-| Type | Purpose |
-|---|---|
-| `Agent` | Interface every persona `agent.ts` must export |
-| `AgentCrew` | Interface every deployable crew must satisfy |
-| `AgentInput` | `{ issueKey, context }` passed into every `agent.run()` |
-| `AgentResult` | `{ success, summary, artefacts, costUsd }` returned by every run |
+| Type              | Purpose                                                             |
+| ----------------- | ------------------------------------------------------------------- |
+| `Agent`           | Interface every persona `agent.ts` must export                      |
+| `AgentCrew`       | Interface every deployable crew must satisfy                        |
+| `AgentInput`      | `{ issueKey, context }` passed into every `agent.run()`             |
+| `AgentResult`     | `{ success, summary, artefacts, costUsd }` returned by every run    |
 | `AgentDefinition` | Configuration passed to `resolveSession()` to boot a Claude session |
-| `PersonaName` | `"tech-lead" \| "engineer" \| "senior-engineer" \| "code-quality"` |
+| `PersonaName`     | `"tech-lead" \| "engineer" \| "senior-engineer" \| "code-quality"`  |
 
-| Export | Purpose |
-|---|---|
-| `resolveSession()` | Decide whether to create a new session or resume an existing one |
-| `readPromptFile()` | Load a persona's `prompt.md` |
-| `readSkillsDir()` | Discover `SKILL.md` files under a `.claude/skills/` tree |
-| `readSubagentsDir()` | Discover subagent `.md` files under a `.claude/agents/` directory |
-| `buildAuditHook()` | `PostToolUse` hook that enforces allowed-tools and logs every tool call |
-| `boundedIterGuard()` | Guard that throws `IterationCapReached` when loop cap is hit |
-| `IterationCapReached` | Error class for iteration cap exhaustion |
+| Export                | Purpose                                                                 |
+| --------------------- | ----------------------------------------------------------------------- |
+| `resolveSession()`    | Decide whether to create a new session or resume an existing one        |
+| `readPromptFile()`    | Load a persona's `prompt.md`                                            |
+| `readSkillsDir()`     | Discover `SKILL.md` files under a `.claude/skills/` tree                |
+| `readSubagentsDir()`  | Discover subagent `.md` files under a `.claude/agents/` directory       |
+| `buildAuditHook()`    | `PostToolUse` hook that enforces allowed-tools and logs every tool call |
+| `boundedIterGuard()`  | Guard that throws `IterationCapReached` when loop cap is hit            |
+| `IterationCapReached` | Error class for iteration cap exhaustion                                |
 
 ### `@daddia/crew/webhooks` (subpath)
 
 Security primitives for inbound webhook handlers. Import only from this subpath in crews that receive webhooks so consumers without ingress do not pull optional native dependencies.
 
-| Export | Purpose |
-|---|---|
-| `verifySignature()` | HMAC (Jira) or shared-token (GitLab) verification |
-| `checkReplayWindow()` | Reject replayed events outside a time window |
+| Export                     | Purpose                                                    |
+| -------------------------- | ---------------------------------------------------------- |
+| `verifySignature()`        | HMAC (Jira) or shared-token (GitLab) verification          |
+| `checkReplayWindow()`      | Reject replayed events outside a time window               |
 | `createIdempotencyStore()` | SQLite-backed deduplication keyed on `(provider, eventId)` |
-| `SignatureError` | Thrown on signature mismatch |
-| `ReplayError` | Thrown on replay detection |
+| `SignatureError`           | Thrown on signature mismatch                               |
+| `ReplayError`              | Thrown on replay detection                                 |
 
 ## Development commands
 
 Run from the repository root:
 
-| Command | Description |
-|---|---|
-| `pnpm build` | Build all packages and crews |
-| `pnpm typecheck` | Type-check everything |
-| `pnpm test` | Run Vitest suite |
-| `pnpm lint` | Enforce dependency boundaries with dependency-cruiser |
-| `pnpm clean` | Remove build artefacts |
+| Command          | Description                                           |
+| ---------------- | ----------------------------------------------------- |
+| `pnpm build`     | Build all packages and crews                          |
+| `pnpm typecheck` | Type-check everything                                 |
+| `pnpm test`      | Run Vitest suite                                      |
+| `pnpm lint`      | Enforce dependency boundaries with dependency-cruiser |
+| `pnpm clean`     | Remove build artefacts                                |
 
 Per-crew commands (run inside `crews/{name}/`):
 
-| Command | Description |
-|---|---|
-| `pnpm build` | Build this crew |
-| `pnpm dev` | Start the server with `--watch` |
-| `pnpm typecheck` | Type-check this crew |
+| Command          | Description                     |
+| ---------------- | ------------------------------- |
+| `pnpm build`     | Build this crew                 |
+| `pnpm dev`       | Start the server with `--watch` |
+| `pnpm typecheck` | Type-check this crew            |
 
 ## Dependency rules (enforced by dependency-cruiser)
 
@@ -162,6 +162,7 @@ export const engineer: Agent = {
 ```
 
 The `run` implementation:
+
 - Calls `resolveSession()` from `@daddia/crew` to decide create vs resume.
 - Builds an `AgentDefinition` from the persona's `promptPath`, `skillPaths`, `subagentPaths`, `allowedTools`, and `mcpServerNames`.
 - Attaches `buildAuditHook()` from `@daddia/crew` for every run.
@@ -196,6 +197,7 @@ The `REFACTOR_LOOP_CAP` env var (default: `2`) limits how many `address-feedback
 ## Webhook handler conventions
 
 Every inbound handler must:
+
 1. Call `verifySignature()` from `@daddia/crew/webhooks` before parsing the body.
 2. Call `checkReplayWindow()` and `createIdempotencyStore()` to deduplicate.
 3. Return `200` promptly; run the workflow asynchronously (fire-and-forget with error logging).
@@ -206,6 +208,7 @@ Every inbound handler must:
 Each crew's `mcp.json` declares the MCP servers it needs. Environment variable interpolation uses `${VAR_NAME}` syntax. The SDK resolves these at session start. Do not hardcode credentials.
 
 Currently configured servers:
+
 - `atlassian` — Jira read/write via `@anthropic-ai/mcp-server-atlassian`
 - `gitlab` — MR operations via `@anthropic-ai/mcp-server-gitlab`
 
@@ -236,13 +239,13 @@ Currently configured servers:
 
 **Error handling by layer:**
 
-| Layer | Pattern |
-|---|---|
-| `agent.ts` | Return `AgentResult { success: false }`. Do not throw to the workflow. |
-| `integrations/` | Throw typed subclasses (`JiraApiError`, `GitLabApiError`). |
-| `config.ts` | Zod + `SchemaValidationError`. Fail fast at boot. |
-| `workflow.ts` | `try/catch` every step; on catch call `escalateToHumanReview` and return. |
-| `handlers/` | Structured JSON errors only. No stack traces or internal details in bodies. |
+| Layer           | Pattern                                                                     |
+| --------------- | --------------------------------------------------------------------------- |
+| `agent.ts`      | Return `AgentResult { success: false }`. Do not throw to the workflow.      |
+| `integrations/` | Throw typed subclasses (`JiraApiError`, `GitLabApiError`).                  |
+| `config.ts`     | Zod + `SchemaValidationError`. Fail fast at boot.                           |
+| `workflow.ts`   | `try/catch` every step; on catch call `escalateToHumanReview` and return.   |
+| `handlers/`     | Structured JSON errors only. No stack traces or internal details in bodies. |
 
 **Testing:** `vi.mock` calls go at the top of the file before imports; re-import the subject after. Use `satisfies` on factory helpers for type-safe mocks. Test handlers via `app.request()`. New workflow branches (escalation, loop cap, deduplication) require unit tests; agent integration tests are not required per PR.
 

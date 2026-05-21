@@ -60,14 +60,14 @@ logic beyond what is required to consume `@daddia/crew` from the registry.
 
 ## 2. Conventions
 
-| Convention | Value |
-| --- | --- |
-| Epic ID | `CREW-56` |
-| Story ID | `CREW-56-{nnn}` |
-| Status values | Not started, In progress, In review, Done, Blocked |
-| Priority levels | P0 (blocking), P1 (reliability), P2 (quality) |
-| Estimation | Fibonacci story points (1, 2, 3, 5, 8) |
-| Acceptance format | EARS + Gherkin |
+| Convention        | Value                                              |
+| ----------------- | -------------------------------------------------- |
+| Epic ID           | `CREW-56`                                          |
+| Story ID          | `CREW-56-{nnn}`                                    |
+| Status values     | Not started, In progress, In review, Done, Blocked |
+| Priority levels   | P0 (blocking), P1 (reliability), P2 (quality)      |
+| Estimation        | Fibonacci story points (1, 2, 3, 5, 8)             |
+| Acceptance format | EARS + Gherkin                                     |
 
 ## 3. Stories
 
@@ -378,7 +378,7 @@ smoke-test verification step has not been run against a clean environment.
     published package on the registry, not `workspace:*`. Root `pnpm` / lockfile
     configuration allows resolution from the registry in CI and locally (e.g.
     `.npmrc` for the scope or documented token setup). `pnpm install`, `pnpm
-    typecheck`, and `pnpm test` pass for both crews from the repo root. No
+typecheck`, and `pnpm test` pass for both crews from the repo root. No
     crew `package.json` uses `workspace:*` for `@daddia/crew`.
   - **Implementation note:** `crews/delivery` and `crews/code-reviewer` have been
     replaced by `crews/delivery-build` and `crews/delivery-review` respectively.
@@ -445,31 +445,31 @@ smoke-test verification step has not been run against a clean environment.
 
 ### Stories to product outcomes
 
-| Story | Product outcome |
-| --- | --- |
-| CREW-56-001 | Reduces package coordination overhead; unblocks CREW-54-001 (AGENTS.md package names) |
-| CREW-56-002 | Preserves the `better-sqlite3` boundary so agents without webhook ingress do not pull in the native module unnecessarily |
-| CREW-56-003 | Delivery agent fully migrated; no dual-import risk during runtime |
-| CREW-56-004 | Code-reviewer agent fully migrated; enforces that the webhook native dep is not silently pulled into a CLI tool |
+| Story       | Product outcome                                                                                                            |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------- |
+| CREW-56-001 | Reduces package coordination overhead; unblocks CREW-54-001 (AGENTS.md package names)                                      |
+| CREW-56-002 | Preserves the `better-sqlite3` boundary so agents without webhook ingress do not pull in the native module unnecessarily   |
+| CREW-56-003 | Delivery agent fully migrated; no dual-import risk during runtime                                                          |
+| CREW-56-004 | Code-reviewer agent fully migrated; enforces that the webhook native dep is not silently pulled into a CLI tool            |
 | CREW-56-005 | Removes the three legacy build targets; makes `pnpm lint` (dep-cruiser) truthfully reflect the single-package architecture |
-| CREW-56-006 | First manual publish proves private `@daddia/crew` works on the registry |
-| CREW-56-007 | Semver and changelog are driven by Changesets; CI publishes routine releases |
-| CREW-56-008 | Agents consume the library like external consumers; validates semver and registry integration |
-| CREW-56-009 | Production-like deploy path is reproducible in Docker without workspace hacks |
+| CREW-56-006 | First manual publish proves private `@daddia/crew` works on the registry                                                   |
+| CREW-56-007 | Semver and changelog are driven by Changesets; CI publishes routine releases                                               |
+| CREW-56-008 | Agents consume the library like external consumers; validates semver and registry integration                              |
+| CREW-56-009 | Production-like deploy path is reproducible in Docker without workspace hacks                                              |
 
 ### Stories to codebase sections
 
-| Story | Files touched |
-| --- | --- |
-| CREW-56-001 | `packages/crew/` (scaffold; contracts + sdk sources merged here) |
-| CREW-56-002 | `packages/crew/src/webhooks/` (new), `packages/crew/package.json` |
-| CREW-56-003 | `crews/delivery/src/**`, `crews/delivery/package.json` |
-| CREW-56-004 | `crews/code-reviewer/src/**`, `crews/code-reviewer/package.json` |
-| CREW-56-005 | Legacy package dirs removed; `.dependency-cruiser.cjs`, `AGENTS.md`, root tooling touched |
-| CREW-56-006 | `packages/crew/package.json`, manual publish runbook, npm org settings |
-| CREW-56-007 | `.changeset/`, CI workflow(s) for version/publish, `CHANGELOG.md` (if generated), secrets docs |
+| Story       | Files touched                                                                                    |
+| ----------- | ------------------------------------------------------------------------------------------------ |
+| CREW-56-001 | `packages/crew/` (scaffold; contracts + sdk sources merged here)                                 |
+| CREW-56-002 | `packages/crew/src/webhooks/` (new), `packages/crew/package.json`                                |
+| CREW-56-003 | `crews/delivery/src/**`, `crews/delivery/package.json`                                           |
+| CREW-56-004 | `crews/code-reviewer/src/**`, `crews/code-reviewer/package.json`                                 |
+| CREW-56-005 | Legacy package dirs removed; `.dependency-cruiser.cjs`, `AGENTS.md`, root tooling touched        |
+| CREW-56-006 | `packages/crew/package.json`, manual publish runbook, npm org settings                           |
+| CREW-56-007 | `.changeset/`, CI workflow(s) for version/publish, `CHANGELOG.md` (if generated), secrets docs   |
 | CREW-56-008 | `crews/delivery/package.json`, `crews/code-reviewer/package.json`, lockfile, `.npmrc` (if added) |
-| CREW-56-009 | `Dockerfile` / `docker-compose.yml` or equivalent, ops/runbook snippet |
+| CREW-56-009 | `Dockerfile` / `docker-compose.yml` or equivalent, ops/runbook snippet                           |
 
 ### Definition of Done
 
@@ -539,8 +539,8 @@ monorepo paths. Further product-level risks are tracked in `docs/product/backlog
 - CREW-54-001 (`AGENTS.md` names) was superseded by CREW-56: canonical package
   documentation is `@daddia/crew`, `@daddia/crew/webhooks`, and `@daddia/crew-*`.
 - **CREW-56-006–009:** Publish `@daddia/crew` to npm (manual first, then Changesets
-  + CI), switch crews from `workspace:*` to registry semver, validate container
-  build and deploy locally (see §3 follow-on stories).
+  - CI), switch crews from `workspace:*` to registry semver, validate container
+    build and deploy locally (see §3 follow-on stories).
 - Any new agent crew should declare `@daddia/crew` (and optionally
   `@daddia/crew/webhooks`) as its shared library dependency; after CREW-56-008,
   prefer a semver range from the registry rather than `workspace:*` when policy

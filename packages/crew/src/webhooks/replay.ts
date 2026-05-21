@@ -20,15 +20,13 @@ export function checkReplayWindow(options: ReplayCheckOptions): void {
   const now = Date.now();
   const delta = Math.abs(now - timestampMs);
   if (delta > windowMs) {
-    throw new ReplayError(
-      `Request timestamp is ${delta}ms outside the ${windowMs}ms window`,
-    );
+    throw new ReplayError(`Request timestamp is ${delta}ms outside the ${windowMs}ms window`);
   }
 }
 
 export class ReplayError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = "ReplayError";
+    this.name = 'ReplayError';
   }
 }

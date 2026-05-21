@@ -8,10 +8,10 @@ write any code in this skill.
 
 ## Inputs
 
-| Field | Source | Required |
-|---|---|---|
-| `issueKey` | top-level `AgentInput` | yes |
-| `ticket` | `context.ticket` | when available — pre-fetched summary + description |
+| Field      | Source                 | Required                                           |
+| ---------- | ---------------------- | -------------------------------------------------- |
+| `issueKey` | top-level `AgentInput` | yes                                                |
+| `ticket`   | `context.ticket`       | when available — pre-fetched summary + description |
 
 ## Steps
 

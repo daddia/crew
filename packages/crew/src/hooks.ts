@@ -1,8 +1,4 @@
-import type {
-  HookCallback,
-  HookInput,
-  HookJSONOutput,
-} from "@anthropic-ai/claude-agent-sdk";
+import type { HookCallback, HookInput, HookJSONOutput } from '@anthropic-ai/claude-agent-sdk';
 
 export interface ToolUseEvent {
   tool: string;
@@ -21,7 +17,7 @@ export type PostToolUseHandler = (event: ToolUseEvent) => void;
  */
 export function toSDKHookCallback(handler: PostToolUseHandler): HookCallback {
   return async (input: HookInput): Promise<HookJSONOutput> => {
-    if (input.hook_event_name === "PostToolUse") {
+    if (input.hook_event_name === 'PostToolUse') {
       handler({
         tool: input.tool_name,
         input: input.tool_input,
@@ -45,9 +41,7 @@ export function buildAuditHook(
   const allowed = new Set(allowedTools);
   return (event) => {
     if (!allowed.has(event.tool)) {
-      throw new Error(
-        `Tool "${event.tool}" is not in the allowed list for this agent`,
-      );
+      throw new Error(`Tool "${event.tool}" is not in the allowed list for this agent`);
     }
     log(event);
   };
@@ -71,6 +65,6 @@ export class IterationCapReached extends Error {
   constructor(cap: number) {
     super(`Agent iteration cap of ${cap} reached`);
     this.cap = cap;
-    this.name = "IterationCapReached";
+    this.name = 'IterationCapReached';
   }
 }

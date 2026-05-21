@@ -7,7 +7,7 @@ allowed-tools:
   - Write
   - Glob
   - Grep
-argument-hint: "<scope: portfolio|product|domain> <name> [--stage stub|full]"
+argument-hint: '<scope: portfolio|product|domain> <name> [--stage stub|full]'
 ---
 
 # Write Solution Document

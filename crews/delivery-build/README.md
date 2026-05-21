@@ -21,37 +21,37 @@ Human feedback injected as MR comments is handled by `POST /webhooks/gitlab`, wh
 
 `railway.json` lives alongside this crew. Because the Dockerfile copies from `packages/` and `tooling/`, it needs the **repository root** as its Docker build context. Configure the Railway service with two settings:
 
-| Dashboard field | Value |
-|---|---|
-| Root Directory | *(leave blank — defaults to repo root)* |
-| Config File Path | `crews/delivery-build/railway.json` |
+| Dashboard field  | Value                                   |
+| ---------------- | --------------------------------------- |
+| Root Directory   | _(leave blank — defaults to repo root)_ |
+| Config File Path | `crews/delivery-build/railway.json`     |
 
 **Required environment variables** (set in the Railway service dashboard):
 
-| Variable | Description |
-|---|---|
-| `ANTHROPIC_API_KEY` | Anthropic API key |
-| `ANTHROPIC_MODEL` | Claude model override (optional; SDK default when not set) |
-| `ATLASSIAN_EMAIL` | Atlassian account email |
-| `ATLASSIAN_API_TOKEN` | Atlassian API token |
-| `ATLASSIAN_BASE_URL` | e.g. `https://yourorg.atlassian.net` |
-| `JIRA_PROJECT_KEY` | Jira project key (e.g. `CREW`) |
-| `JIRA_ASSIGNEE_ACCOUNT_ID` | Jira account ID of the engineer assigned to incoming stories |
-| `GITLAB_PERSONAL_ACCESS_TOKEN` | GitLab PAT with `api` scope |
-| `GITLAB_API_URL` | e.g. `https://gitlab.com/api/v4` |
-| `GITLAB_PROJECT_ID` | Numeric project ID |
-| `JIRA_WEBHOOK_SECRET` | Shared secret for Jira webhook HMAC verification |
-| `GITLAB_WEBHOOK_SECRET` | Shared token for GitLab webhook verification |
-| `DB_PATH` | Set to `/data/delivery-build.db` (matches the volume mount below) |
-| `PROJECT_DIR` | Absolute path to the repository root for engineer memory seeding |
-| `POLL_INTERVAL_MS` | Optional; ms between Jira polling ticks, defaults to `300000` |
-| `REFACTOR_LOOP_CAP` | Optional; max peer-review iterations before escalation, defaults to `2` |
-| `CI_RETRY_CAP` | Optional; max CI fix attempts before escalation, defaults to `3` |
-| `CI_POLL_INTERVAL_MS` | Optional; ms between CI pipeline polls, defaults to `30000` |
-| `CLARIFICATION_TIMEOUT_HOURS` | Optional; hours to wait for PM clarification before escalating, defaults to `24` |
-| `ATLASSIAN_ACCOUNT_ID` | Optional; Jira account ID of the bot account, used for reliable bot-vs-human comment detection (falls back to `ATLASSIAN_EMAIL` comparison when unset) |
-| `DIFF_FILE_CAP` | Optional; maximum number of files included in a MR diff sent to the agent, defaults to `50` |
-| `DIFF_SIZE_CAP_BYTES` | Optional; maximum byte size of a MR diff sent to the agent, defaults to `500000` |
+| Variable                       | Description                                                                                                                                            |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `ANTHROPIC_API_KEY`            | Anthropic API key                                                                                                                                      |
+| `ANTHROPIC_MODEL`              | Claude model override (optional; SDK default when not set)                                                                                             |
+| `ATLASSIAN_EMAIL`              | Atlassian account email                                                                                                                                |
+| `ATLASSIAN_API_TOKEN`          | Atlassian API token                                                                                                                                    |
+| `ATLASSIAN_BASE_URL`           | e.g. `https://yourorg.atlassian.net`                                                                                                                   |
+| `JIRA_PROJECT_KEY`             | Jira project key (e.g. `CREW`)                                                                                                                         |
+| `JIRA_ASSIGNEE_ACCOUNT_ID`     | Jira account ID of the engineer assigned to incoming stories                                                                                           |
+| `GITLAB_PERSONAL_ACCESS_TOKEN` | GitLab PAT with `api` scope                                                                                                                            |
+| `GITLAB_API_URL`               | e.g. `https://gitlab.com/api/v4`                                                                                                                       |
+| `GITLAB_PROJECT_ID`            | Numeric project ID                                                                                                                                     |
+| `JIRA_WEBHOOK_SECRET`          | Shared secret for Jira webhook HMAC verification                                                                                                       |
+| `GITLAB_WEBHOOK_SECRET`        | Shared token for GitLab webhook verification                                                                                                           |
+| `DB_PATH`                      | Set to `/data/delivery-build.db` (matches the volume mount below)                                                                                      |
+| `PROJECT_DIR`                  | Absolute path to the repository root for engineer memory seeding                                                                                       |
+| `POLL_INTERVAL_MS`             | Optional; ms between Jira polling ticks, defaults to `300000`                                                                                          |
+| `REFACTOR_LOOP_CAP`            | Optional; max peer-review iterations before escalation, defaults to `2`                                                                                |
+| `CI_RETRY_CAP`                 | Optional; max CI fix attempts before escalation, defaults to `3`                                                                                       |
+| `CI_POLL_INTERVAL_MS`          | Optional; ms between CI pipeline polls, defaults to `30000`                                                                                            |
+| `CLARIFICATION_TIMEOUT_HOURS`  | Optional; hours to wait for PM clarification before escalating, defaults to `24`                                                                       |
+| `ATLASSIAN_ACCOUNT_ID`         | Optional; Jira account ID of the bot account, used for reliable bot-vs-human comment detection (falls back to `ATLASSIAN_EMAIL` comparison when unset) |
+| `DIFF_FILE_CAP`                | Optional; maximum number of files included in a MR diff sent to the agent, defaults to `50`                                                            |
+| `DIFF_SIZE_CAP_BYTES`          | Optional; maximum byte size of a MR diff sent to the agent, defaults to `500000`                                                                       |
 
 **Persistent volume** — the SQLite database must survive redeploys. Railway does not support volume configuration in `railway.json`; provision the volume once via the CLI or dashboard before first deploy:
 
@@ -64,6 +64,7 @@ railway variables set DB_PATH=/data/delivery-build.db
 Or via the Railway dashboard: add a volume to the service, set the mount path to `/data`, then set `DB_PATH=/data/delivery-build.db` in the service variables.
 
 **Webhook URLs** — after deploying, register the public URLs with Jira and GitLab:
+
 - Jira: `https://<railway-domain>/webhooks/jira` — trigger on issue transition to "Ready for Dev"
 - GitLab: `https://<railway-domain>/webhooks/gitlab` — trigger on MR note (comment) events
 

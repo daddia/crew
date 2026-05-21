@@ -1,5 +1,5 @@
-import { existsSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { existsSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
 
 /**
  * Walk up the directory tree from startDir looking for a directory that
@@ -13,14 +13,14 @@ export function detectWorkspace(startDir: string): string {
   let dir = resolve(startDir);
 
   while (true) {
-    if (existsSync(join(dir, ".crew", "config"))) {
+    if (existsSync(join(dir, '.crew', 'config'))) {
       return dir;
     }
     const parent = dirname(dir);
     if (parent === dir) {
       throw new Error(
         `No workspace found. Searched from '${startDir}' to filesystem root for .crew/config. ` +
-        `Run from within a workspace directory or pass an explicit startDir to detectWorkspace().`,
+          `Run from within a workspace directory or pass an explicit startDir to detectWorkspace().`,
       );
     }
     dir = parent;

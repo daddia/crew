@@ -10,11 +10,11 @@ is the code itself.
 
 ## Inputs
 
-| Field | Source | Required |
-|---|---|---|
-| `issueKey` | top-level `AgentInput` | yes |
-| `mrUrl` | `context` | yes |
-| `diff` | `context` (unified diff text) | provided |
+| Field      | Source                        | Required |
+| ---------- | ----------------------------- | -------- |
+| `issueKey` | top-level `AgentInput`        | yes      |
+| `mrUrl`    | `context`                     | yes      |
+| `diff`     | `context` (unified diff text) | provided |
 
 The workflow pre-fetches the diff. Call `mcp__gitlab__list_merge_request_diffs`
 yourself if you need a fresh view after the engineer has pushed during this run.

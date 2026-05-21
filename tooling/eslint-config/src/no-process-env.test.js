@@ -7,8 +7,7 @@ import { describe, it, expect } from 'vitest';
 const RULE_CONFIG = [
   'error',
   {
-    selector:
-      "MemberExpression[object.object.name='process'][object.property.name='env']",
+    selector: "MemberExpression[object.object.name='process'][object.property.name='env']",
     message:
       'Direct process.env key access is banned outside config.ts. ' +
       'Add the variable to src/config.ts and consume it through the ' +
@@ -32,22 +31,18 @@ describe('no-restricted-syntax: process.env key-access ban', () => {
   const linter = new Linter();
 
   it('fires on process.env["KEY"] in a non-config src file', () => {
-    const messages = linter.verify(
-      'const x = process.env["JIRA_PROJECT_KEY"];',
-      [RULE_ON],
-      { filename: 'crews/delivery-build/src/poller.ts' },
-    );
+    const messages = linter.verify('const x = process.env["JIRA_PROJECT_KEY"];', [RULE_ON], {
+      filename: 'crews/delivery-build/src/poller.ts',
+    });
     const hits = messages.filter((m) => m.ruleId === 'no-restricted-syntax');
     expect(hits.length).toBeGreaterThan(0);
     expect(hits[0].message).toContain('config.ts');
   });
 
   it('fires on process.env.KEY in a non-config src file', () => {
-    const messages = linter.verify(
-      'const x = process.env.JIRA_PROJECT_KEY;',
-      [RULE_ON],
-      { filename: 'crews/delivery-build/src/poller.ts' },
-    );
+    const messages = linter.verify('const x = process.env.JIRA_PROJECT_KEY;', [RULE_ON], {
+      filename: 'crews/delivery-build/src/poller.ts',
+    });
     const hits = messages.filter((m) => m.ruleId === 'no-restricted-syntax');
     expect(hits.length).toBeGreaterThan(0);
   });

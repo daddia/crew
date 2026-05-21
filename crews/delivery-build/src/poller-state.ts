@@ -7,9 +7,9 @@
  * overwriting, or by mocking this module.
  */
 export let lastTickAt: number | null = null;
-export let lastTickStatus: "ok" | "error" | null = null;
+export let lastTickStatus: 'ok' | 'error' | null = null;
 
-export function recordTick(status: "ok" | "error"): void {
+export function recordTick(status: 'ok' | 'error'): void {
   lastTickAt = Date.now();
   lastTickStatus = status;
 }

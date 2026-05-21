@@ -18,27 +18,21 @@ export interface CreateMrOptions {
   targetBranch?: string;
 }
 
-export type PipelineStatus =
-  | "created"
-  | "pending"
-  | "running"
-  | "success"
-  | "failed"
-  | "canceled";
+export type PipelineStatus = 'created' | 'pending' | 'running' | 'success' | 'failed' | 'canceled';
 
 export class GitLabApiError extends Error {
   readonly statusCode: number;
   constructor(statusCode: number, message: string) {
     super(message);
     this.statusCode = statusCode;
-    this.name = "GitLabApiError";
+    this.name = 'GitLabApiError';
   }
 }
 
 export class GitLabUrlError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = "GitLabUrlError";
+    this.name = 'GitLabUrlError';
   }
 }
 
@@ -90,21 +84,21 @@ export function createGitlabClient(
     const res = await fetch(url, {
       ...init,
       headers: {
-        "PRIVATE-TOKEN": token,
-        "Content-Type": "application/json",
+        'PRIVATE-TOKEN': token,
+        'Content-Type': 'application/json',
         ...(init?.headers as Record<string, string> | undefined),
       },
     });
     if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      throw new GitLabApiError(res.status, `${init?.method ?? "GET"} ${path}: ${text}`);
+      const text = await res.text().catch(() => '');
+      throw new GitLabApiError(res.status, `${init?.method ?? 'GET'} ${path}: ${text}`);
     }
     return res;
   }
 
   return {
     async createMr(options) {
-      const { branchName, title, targetBranch = "main" } = options;
+      const { branchName, title, targetBranch = 'main' } = options;
 
       const lookupRes = await gitlabFetch(
         `/projects/${encodeURIComponent(projectId)}/merge_requests?source_branch=${encodeURIComponent(branchName)}&state=opened`,
@@ -114,18 +108,15 @@ export function createGitlabClient(
         return existing[0]!.web_url;
       }
 
-      const res = await gitlabFetch(
-        `/projects/${encodeURIComponent(projectId)}/merge_requests`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            source_branch: branchName,
-            target_branch: targetBranch,
-            title,
-            remove_source_branch: true,
-          }),
-        },
-      );
+      const res = await gitlabFetch(`/projects/${encodeURIComponent(projectId)}/merge_requests`, {
+        method: 'POST',
+        body: JSON.stringify({
+          source_branch: branchName,
+          target_branch: targetBranch,
+          title,
+          remove_source_branch: true,
+        }),
+      });
       const data = (await res.json()) as { web_url: string };
       return data.web_url;
     },
@@ -136,7 +127,7 @@ export function createGitlabClient(
         `/projects/${encodeURIComponent(projectId)}/merge_requests/${iid}/pipelines`,
       );
       const pipelines = (await res.json()) as Array<{ status: PipelineStatus }>;
-      return pipelines[0]?.status ?? "pending";
+      return pipelines[0]?.status ?? 'pending';
     },
 
     async getMrDiff(mrWebUrl) {
@@ -148,17 +139,18 @@ export function createGitlabClient(
       const { diffFileCap, diffSizeCapBytes } = behaviour;
 
       let parts = diffs;
-      let fileNote = "";
+      let fileNote = '';
       if (diffs.length > diffFileCap) {
         const omitted = diffs.length - diffFileCap;
         parts = diffs.slice(0, diffFileCap);
         fileNote = `\n[${omitted} files omitted — diff truncated at ${diffFileCap}]`;
       }
 
-      let result = parts.map((d) => `--- ${d.new_path}\n${d.diff}`).join("\n\n") + fileNote;
+      let result = parts.map((d) => `--- ${d.new_path}\n${d.diff}`).join('\n\n') + fileNote;
 
       if (result.length > diffSizeCapBytes) {
-        result = result.slice(0, diffSizeCapBytes) + `\n[diff truncated at ${diffSizeCapBytes} bytes]`;
+        result =
+          result.slice(0, diffSizeCapBytes) + `\n[diff truncated at ${diffSizeCapBytes} bytes]`;
       }
 
       return result;
@@ -166,10 +158,10 @@ export function createGitlabClient(
 
     async postReviewComment(mrWebUrl, body) {
       const iid = extractMrIid(projectId, mrWebUrl);
-      await gitlabFetch(
-        `/projects/${encodeURIComponent(projectId)}/merge_requests/${iid}/notes`,
-        { method: "POST", body: JSON.stringify({ body }) },
-      );
+      await gitlabFetch(`/projects/${encodeURIComponent(projectId)}/merge_requests/${iid}/notes`, {
+        method: 'POST',
+        body: JSON.stringify({ body }),
+      });
     },
   };
 }

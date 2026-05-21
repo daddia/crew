@@ -1,13 +1,13 @@
-import type { JiraClient } from "./integrations/jira.js";
-import type { GitlabClient } from "./integrations/gitlab.js";
-import { log } from "./observability.js";
-import { runStory } from "./workflow.js";
-import type { WorkflowCtxBase } from "./workflow.js";
-import type { Step, StateStore } from "./state.js";
-import { has, runStoryWithLock } from "./in-flight.js";
-import { recordTick } from "./poller-state.js";
+import type { JiraClient } from './integrations/jira.js';
+import type { GitlabClient } from './integrations/gitlab.js';
+import { log } from './observability.js';
+import { runStory } from './workflow.js';
+import type { WorkflowCtxBase } from './workflow.js';
+import type { Step, StateStore } from './state.js';
+import { has, runStoryWithLock } from './in-flight.js';
+import { recordTick } from './poller-state.js';
 
-const TERMINAL_STEPS = new Set<Step>(["in-qa", "needs-human-review"]);
+const TERMINAL_STEPS = new Set<Step>(['in-qa', 'needs-human-review']);
 
 /**
  * Dependencies for the poller — all values are injected at construction time
@@ -50,10 +50,10 @@ export async function pollTick(deps: PollerDeps, state: StateStore): Promise<voi
 
   if (!projectKey || !assigneeAccountId) {
     const missing = [
-      !projectKey && "identity.jira.projectKey",
-      !assigneeAccountId && "identity.jira.assigneeAccountId",
+      !projectKey && 'identity.jira.projectKey',
+      !assigneeAccountId && 'identity.jira.assigneeAccountId',
     ].filter(Boolean);
-    log.warn("poller.misconfigured", { missing });
+    log.warn('poller.misconfigured', { missing });
     return;
   }
 
@@ -63,8 +63,8 @@ export async function pollTick(deps: PollerDeps, state: StateStore): Promise<voi
   try {
     issues = await deps.jira.searchIssues(jql);
   } catch (err) {
-    log.warn("poller.search-error", { err: String(err) });
-    recordTick("error");
+    log.warn('poller.search-error', { err: String(err) });
+    recordTick('error');
     return;
   }
 
@@ -84,13 +84,13 @@ export async function pollTick(deps: PollerDeps, state: StateStore): Promise<voi
     const existing = state.getStory(issueKey);
     if (existing) {
       if (!TERMINAL_STEPS.has(existing.currentStep)) {
-        log.debug("poller.skip-in-progress", { issueKey, step: existing.currentStep });
+        log.debug('poller.skip-in-progress', { issueKey, step: existing.currentStep });
       }
       continue;
     }
 
     if (has(issueKey)) {
-      log.debug("poller.skip-in-flight", { issueKey });
+      log.debug('poller.skip-in-flight', { issueKey });
       continue;
     }
 
@@ -98,7 +98,7 @@ export async function pollTick(deps: PollerDeps, state: StateStore): Promise<voi
       issueKey,
       () => runStory({ issueKey, state, ...ctxBase }),
       (err) => {
-        log.error("poller.run-story-error", { issueKey, err: String(err) });
+        log.error('poller.run-story-error', { issueKey, err: String(err) });
       },
     );
   }
@@ -107,13 +107,13 @@ export async function pollTick(deps: PollerDeps, state: StateStore): Promise<voi
   const { email: botEmail, botAccountId } = deps.identity.jira;
   const timeoutMs = deps.behaviour.clarificationTimeoutHours * 60 * 60 * 1000;
 
-  const pendingStories = state.getStoriesAtStep("clarification-pending");
+  const pendingStories = state.getStoriesAtStep('clarification-pending');
 
   for (const story of pendingStories) {
     const { issueKey } = story;
 
     if (has(issueKey)) {
-      log.debug("poller.skip-in-flight", { issueKey });
+      log.debug('poller.skip-in-flight', { issueKey });
       continue;
     }
 
@@ -121,19 +121,19 @@ export async function pollTick(deps: PollerDeps, state: StateStore): Promise<voi
     try {
       comments = await deps.jira.getComments(issueKey);
     } catch (err) {
-      log.warn("poller.clarification-check-error", { issueKey, err: String(err) });
+      log.warn('poller.clarification-check-error', { issueKey, err: String(err) });
       continue;
     }
 
     // Find the step's started_at so we can ignore comments that were posted
     // before the question was asked (e.g. pre-existing thread activity).
     const history = state.getStepHistory(issueKey);
-    const pendingStep = [...history].reverse().find((s) => s.step === "clarification-pending");
+    const pendingStep = [...history].reverse().find((s) => s.step === 'clarification-pending');
     if (!pendingStep) {
       // State is inconsistent — stories table says clarification-pending but
       // steps table has no matching row. Skip rather than falling back to an
       // unrelated timestamp, which would misfire on old comments or timeouts.
-      log.warn("poller.clarification-step-missing", { issueKey });
+      log.warn('poller.clarification-step-missing', { issueKey });
       continue;
     }
     const pendingStartedAt = pendingStep.startedAt;
@@ -149,19 +149,19 @@ export async function pollTick(deps: PollerDeps, state: StateStore): Promise<voi
     );
 
     if (humanResponse) {
-      log.info("poller.clarification-resolved", { issueKey });
+      log.info('poller.clarification-resolved', { issueKey });
       runStoryWithLock(
         issueKey,
         () => runStory({ issueKey, state, ...ctxBase }),
         (err) => {
-          log.error("poller.run-story-error", { issueKey, err: String(err) });
+          log.error('poller.run-story-error', { issueKey, err: String(err) });
         },
       );
       continue;
     }
 
     if (Date.now() - pendingStartedAt > timeoutMs) {
-      log.warn("poller.clarification-timeout", {
+      log.warn('poller.clarification-timeout', {
         issueKey,
         timeoutHours: deps.behaviour.clarificationTimeoutHours,
       });
@@ -170,17 +170,17 @@ export async function pollTick(deps: PollerDeps, state: StateStore): Promise<voi
           issueKey,
           `*Escalated to human review.*\n\nReason: Clarification timeout — no human response received within ${deps.behaviour.clarificationTimeoutHours} hours.`,
         );
-        await deps.jira.transitionIssue(issueKey, "Needs human review");
+        await deps.jira.transitionIssue(issueKey, 'Needs human review');
         // Update state only after both Jira calls succeed. If either call
         // throws, state stays clarification-pending so the next tick retries.
-        state.upsertStory(issueKey, "needs-human-review");
+        state.upsertStory(issueKey, 'needs-human-review');
       } catch (err) {
-        log.error("poller.clarification-timeout-error", { issueKey, err: String(err) });
+        log.error('poller.clarification-timeout-error', { issueKey, err: String(err) });
       }
     }
   }
 
-  recordTick("ok");
+  recordTick('ok');
 }
 
 /**
@@ -188,13 +188,13 @@ export async function pollTick(deps: PollerDeps, state: StateStore): Promise<voi
  * clear it on shutdown.
  */
 export function startPoller(deps: PollerDeps, state: StateStore): ReturnType<typeof setInterval> {
-  log.info("poller.start", { intervalMs: deps.behaviour.pollIntervalMs });
+  log.info('poller.start', { intervalMs: deps.behaviour.pollIntervalMs });
   return setInterval(() => {
     // pollTick records "ok"/"error" at its own exit points. The .catch here
     // guards against any exception that escapes pollTick's internal handling.
     void pollTick(deps, state).catch((err: unknown) => {
-      recordTick("error");
-      log.error("poller.unhandled-error", { err: String(err) });
+      recordTick('error');
+      log.error('poller.unhandled-error', { err: String(err) });
     });
   }, deps.behaviour.pollIntervalMs);
 }

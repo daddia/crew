@@ -52,14 +52,14 @@ Phase-gated deferrals live in [`roadmap.md`](roadmap.md) §Later.
 
 ## 2. Conventions
 
-| Convention        | Value                                                          |
-| ----------------- | -------------------------------------------------------------- |
-| Epic ID           | `{PREFIX}{nn}` (e.g. `{PREFIX}01`)                            |
-| Story ID          | `{PREFIX}{nn}-{nn}` (lives in the work-package backlog)        |
-| Status            | Not started, In progress, In review, Done, Blocked             |
-| Priority          | P0 (must have), P1 (should have), P2 (stretch), P3 (defer)    |
-| Estimation        | Fibonacci story points (1, 2, 3, 5, 8, 13)                    |
-| Acceptance format | EARS + Gherkin at work-package scope                           |
+| Convention        | Value                                                      |
+| ----------------- | ---------------------------------------------------------- |
+| Epic ID           | `{PREFIX}{nn}` (e.g. `{PREFIX}01`)                         |
+| Story ID          | `{PREFIX}{nn}-{nn}` (lives in the work-package backlog)    |
+| Status            | Not started, In progress, In review, Done, Blocked         |
+| Priority          | P0 (must have), P1 (should have), P2 (stretch), P3 (defer) |
+| Estimation        | Fibonacci story points (1, 2, 3, 5, 8, 13)                 |
+| Acceptance format | EARS + Gherkin at work-package scope                       |
 
 ## 3. {Scope-dependent content}
 
@@ -79,19 +79,21 @@ WORK-PACKAGE SCOPE — story list (canonical schema):
   - **Epic:** {EPIC-ID} | **Labels:** phase:{phase}, domain:{d}, type:{type}
   - **Depends on:** -
   - **Deliverable:** <!-- one paragraph: what exists when this story is done -->
-  - **Design:** [`./design.md#{section}`](design.md#{section})
-  - **Acceptance (EARS):**
-    - WHEN <!-- trigger -->, THE SYSTEM SHALL <!-- behaviour -->.
-    - THE SYSTEM SHALL <!-- behaviour -->.
-  - **Acceptance (Gherkin):**
 
-    ```gherkin
-    Scenario: <!-- scenario title -->
-      Given <!-- precondition -->
-      When <!-- action -->
-      Then <!-- outcome -->
-    ```
--->
+- **Design:** [`./design.md#{section}`](design.md#{section})
+- **Acceptance (EARS):**
+  - WHEN <!-- trigger -->, THE SYSTEM SHALL <!-- behaviour -->.
+  - THE SYSTEM SHALL <!-- behaviour -->.
+- **Acceptance (Gherkin):**
+
+      ```gherkin
+      Scenario: <!-- scenario title -->
+        Given <!-- precondition -->
+        When <!-- action -->
+        Then <!-- outcome -->
+      ```
+
+  -->
 
 ## 4. {Scope-dependent detail}
 
@@ -101,6 +103,7 @@ DOMAIN SCOPE — epic detail entries (one per Now-phase epic):
 ### {PRE}01 -- {Title}
 
 **Scope.** <!-- What this epic delivers in one paragraph. -->
+
 **Key deliverables.** <!-- comma-separated list -->
 **Dependencies.** None (prerequisites satisfied).
 **Status.** Not started. **Work package:** `01-{slug}/` (planned).
@@ -111,8 +114,8 @@ WORK-PACKAGE SCOPE — traceability:
 
 ### Stories to solution sections
 
-| Story        | solution.md section       |
-| ------------ | ------------------------- |
+| Story        | solution.md section         |
+| ------------ | --------------------------- |
 | {EPIC-ID}-01 | §N.M <!-- section title --> |
 
 ### Definition of Done
@@ -124,7 +127,7 @@ A story in this backlog is done when:
 - [ ] Lint and typecheck pass with no new warnings.
 - [ ] Code review approved by at least one squad engineer.
 - [ ] PR merged into main.
--->
+      -->
 
 ## 5. Dependency graph
 
@@ -136,9 +139,9 @@ A story in this backlog is done when:
 
 ## 6. Risks
 
-| ID  | Risk                  | Likelihood | Impact | Mitigation          |
-| --- | --------------------- | ---------- | ------ | ------------------- |
-| R1  | <!-- delivery risk --> | Medium    | Medium | <!-- mitigation --> |
+| ID  | Risk                   | Likelihood | Impact | Mitigation          |
+| --- | ---------------------- | ---------- | ------ | ------------------- |
+| R1  | <!-- delivery risk --> | Medium     | Medium | <!-- mitigation --> |
 
 Technical and architecture risks are authoritative in [`solution.md`](solution.md) §10.1
 and are not duplicated here.

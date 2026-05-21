@@ -13,11 +13,11 @@
  * filesystem.
  */
 
-import { access, constants, readFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-import { spawn } from "node:child_process";
-import type { Config } from "./config.js";
+import { access, constants, readFile } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { spawn } from 'node:child_process';
+import type { Config } from './config.js';
 
 const _dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -26,13 +26,13 @@ const _dirname = dirname(fileURLToPath(import.meta.url));
  * works correctly whether the module is loaded from `src/` (Vitest) or from
  * the compiled `dist/` (production).
  */
-const DEFAULT_MCP_CONFIG_PATH = resolve(_dirname, "..", "mcp.json");
+const DEFAULT_MCP_CONFIG_PATH = resolve(_dirname, '..', 'mcp.json');
 
 const REQUIRED_TRANSITIONS = [
-  "In Progress",
-  "Clarification Needed",
-  "In QA",
-  "Needs human review",
+  'In Progress',
+  'Clarification Needed',
+  'In QA',
+  'Needs human review',
 ] as const;
 
 const MCP_HANDSHAKE_TIMEOUT_MS = 10_000;
@@ -55,10 +55,7 @@ export interface DiagnosticsOptions {
    * default spawn-and-handshake logic is skipped entirely. Receives the
    * resolved mcp.json path and the current `process.env`.
    */
-  checkMcpServers?: (
-    mcpConfigPath: string,
-    env: NodeJS.ProcessEnv,
-  ) => Promise<DiagnosticCheck>;
+  checkMcpServers?: (mcpConfigPath: string, env: NodeJS.ProcessEnv) => Promise<DiagnosticCheck>;
 
   /**
    * Inject a replacement for the DB directory writable check. Receives the
@@ -80,7 +77,7 @@ interface McpConfig {
 }
 
 function interpolateEnv(value: string, env: NodeJS.ProcessEnv): string {
-  return value.replace(/\$\{([^}]+)\}/g, (_, name: string) => env[name] ?? "");
+  return value.replace(/\$\{([^}]+)\}/g, (_, name: string) => env[name] ?? '');
 }
 
 /**
@@ -99,13 +96,13 @@ async function pingMcpServer(
 
   return new Promise((res) => {
     let settled = false;
-    let output = "";
+    let output = '';
 
     let child: ReturnType<typeof spawn>;
     try {
       child = spawn(def.command, def.args ?? [], {
         env: { ...env, ...resolvedEnv },
-        stdio: ["pipe", "pipe", "pipe"],
+        stdio: ['pipe', 'pipe', 'pipe'],
       });
     } catch (err) {
       res({ ok: false, detail: `${name}: failed to spawn — ${String(err)}` });
@@ -120,7 +117,7 @@ async function pingMcpServer(
       }
     }, MCP_HANDSHAKE_TIMEOUT_MS);
 
-    child.on("error", (err) => {
+    child.on('error', (err) => {
       if (!settled) {
         settled = true;
         clearTimeout(timer);
@@ -128,20 +125,20 @@ async function pingMcpServer(
       }
     });
 
-    child.on("exit", (code) => {
+    child.on('exit', (code) => {
       if (!settled) {
         settled = true;
         clearTimeout(timer);
         res({
           ok: false,
-          detail: `${name}: process exited with code ${code ?? "null"} before handshake`,
+          detail: `${name}: process exited with code ${code ?? 'null'} before handshake`,
         });
       }
     });
 
     // stdio: ["pipe","pipe","pipe"] guarantees these are non-null, but the
     // ChildProcess type marks them as nullable because other stdio modes exist.
-    child.stdout?.on("data", (chunk: Buffer) => {
+    child.stdout?.on('data', (chunk: Buffer) => {
       output += chunk.toString();
       if (output.includes('"jsonrpc"') || output.includes('"result"')) {
         if (!settled) {
@@ -155,15 +152,15 @@ async function pingMcpServer(
 
     const initRequest =
       JSON.stringify({
-        jsonrpc: "2.0",
+        jsonrpc: '2.0',
         id: 1,
-        method: "initialize",
+        method: 'initialize',
         params: {
-          protocolVersion: "2024-11-05",
+          protocolVersion: '2024-11-05',
           capabilities: {},
-          clientInfo: { name: "diagnostics", version: "1.0.0" },
+          clientInfo: { name: 'diagnostics', version: '1.0.0' },
         },
-      }) + "\n";
+      }) + '\n';
 
     child.stdin?.write(initRequest);
   });
@@ -173,11 +170,11 @@ async function defaultCheckMcpServers(
   mcpConfigPath: string,
   env: NodeJS.ProcessEnv,
 ): Promise<DiagnosticCheck> {
-  const checkName = "MCP servers boot";
+  const checkName = 'MCP servers boot';
 
   let raw: string;
   try {
-    raw = await readFile(mcpConfigPath, "utf-8");
+    raw = await readFile(mcpConfigPath, 'utf-8');
   } catch {
     return {
       name: checkName,
@@ -190,12 +187,12 @@ async function defaultCheckMcpServers(
   try {
     mcpConfig = JSON.parse(raw) as McpConfig;
   } catch {
-    return { name: checkName, ok: false, detail: "mcp.json is not valid JSON" };
+    return { name: checkName, ok: false, detail: 'mcp.json is not valid JSON' };
   }
 
   const serverEntries = Object.entries(mcpConfig.mcpServers);
   if (serverEntries.length === 0) {
-    return { name: checkName, ok: true, detail: "no MCP servers configured" };
+    return { name: checkName, ok: true, detail: 'no MCP servers configured' };
   }
 
   const failures: string[] = [];
@@ -207,7 +204,7 @@ async function defaultCheckMcpServers(
   }
 
   if (failures.length > 0) {
-    return { name: checkName, ok: false, detail: failures.join("; ") };
+    return { name: checkName, ok: false, detail: failures.join('; ') };
   }
 
   return {
@@ -218,7 +215,7 @@ async function defaultCheckMcpServers(
 }
 
 async function defaultCheckDirWritable(dir: string): Promise<DiagnosticCheck> {
-  const checkName = "DB_PATH directory writable";
+  const checkName = 'DB_PATH directory writable';
   try {
     await access(dir, constants.W_OK);
     return { name: checkName, ok: true, detail: dir };
@@ -253,16 +250,16 @@ export async function runDiagnostics(
 
   const { baseUrl, email, projectKey } = config.identity.jira;
   const jiraAuthHeader =
-    "Basic " +
-    Buffer.from(`${email}:${String(config.secrets.atlassianApiToken)}`).toString("base64");
+    'Basic ' +
+    Buffer.from(`${email}:${String(config.secrets.atlassianApiToken)}`).toString('base64');
   const jiraHeaders: HeadersInit = {
     Authorization: jiraAuthHeader,
-    Accept: "application/json",
+    Accept: 'application/json',
   };
 
   const gitlabToken = String(config.secrets.gitlabAccessToken);
   const { apiUrl, projectId } = config.identity.gitlab;
-  const gitlabHeaders: HeadersInit = { "PRIVATE-TOKEN": gitlabToken };
+  const gitlabHeaders: HeadersInit = { 'PRIVATE-TOKEN': gitlabToken };
 
   const checks: DiagnosticCheck[] = [];
   let firstIssueKey: string | undefined;
@@ -275,7 +272,7 @@ export async function runDiagnostics(
     );
     if (!res.ok) {
       checks.push({
-        name: "Jira API reachability",
+        name: 'Jira API reachability',
         ok: false,
         detail: `GET /issue/search returned HTTP ${res.status}`,
       });
@@ -283,14 +280,14 @@ export async function runDiagnostics(
       const data = (await res.json()) as { issues: Array<{ key: string }> };
       firstIssueKey = data.issues[0]?.key;
       checks.push({
-        name: "Jira API reachability",
+        name: 'Jira API reachability',
         ok: true,
         detail: `${baseUrl} is reachable`,
       });
     }
   } catch (err) {
     checks.push({
-      name: "Jira API reachability",
+      name: 'Jira API reachability',
       ok: false,
       detail: String(err),
     });
@@ -298,43 +295,41 @@ export async function runDiagnostics(
 
   // ── Check 2: Jira project key exists ────────────────────────────────────────
   try {
-    const res = await fetch(
-      `${baseUrl}/rest/api/3/project/${encodeURIComponent(projectKey)}`,
-      { headers: jiraHeaders },
-    );
+    const res = await fetch(`${baseUrl}/rest/api/3/project/${encodeURIComponent(projectKey)}`, {
+      headers: jiraHeaders,
+    });
     checks.push(
       res.ok
         ? {
-            name: "Jira project key",
+            name: 'Jira project key',
             ok: true,
             detail: `project ${projectKey} exists`,
           }
         : {
-            name: "Jira project key",
+            name: 'Jira project key',
             ok: false,
             detail: `project ${projectKey} returned HTTP ${res.status}`,
           },
     );
   } catch (err) {
-    checks.push({ name: "Jira project key", ok: false, detail: String(err) });
+    checks.push({ name: 'Jira project key', ok: false, detail: String(err) });
   }
 
   // ── Check 3: Required Jira transitions available ─────────────────────────────
   if (!firstIssueKey) {
     checks.push({
-      name: "Jira transitions",
+      name: 'Jira transitions',
       ok: false,
-      detail: "no issues found — cannot probe transitions",
+      detail: 'no issues found — cannot probe transitions',
     });
   } else {
     try {
-      const res = await fetch(
-        `${baseUrl}/rest/api/3/issue/${firstIssueKey}/transitions`,
-        { headers: jiraHeaders },
-      );
+      const res = await fetch(`${baseUrl}/rest/api/3/issue/${firstIssueKey}/transitions`, {
+        headers: jiraHeaders,
+      });
       if (!res.ok) {
         checks.push({
-          name: "Jira transitions",
+          name: 'Jira transitions',
           ok: false,
           detail: `GET /issue/${firstIssueKey}/transitions returned HTTP ${res.status}`,
         });
@@ -342,50 +337,47 @@ export async function runDiagnostics(
         const data = (await res.json()) as {
           transitions: Array<{ name: string; to: { name: string } }>;
         };
-        const availableNames = new Set(
-          data.transitions.flatMap((t) => [t.name, t.to.name]),
-        );
+        const availableNames = new Set(data.transitions.flatMap((t) => [t.name, t.to.name]));
         const missing = REQUIRED_TRANSITIONS.filter((t) => !availableNames.has(t));
         if (missing.length > 0) {
           checks.push({
-            name: "Jira transitions",
+            name: 'Jira transitions',
             ok: false,
-            detail: `missing transitions: ${missing.join(", ")}`,
+            detail: `missing transitions: ${missing.join(', ')}`,
           });
         } else {
           checks.push({
-            name: "Jira transitions",
+            name: 'Jira transitions',
             ok: true,
-            detail: "all four required transitions present",
+            detail: 'all four required transitions present',
           });
         }
       }
     } catch (err) {
-      checks.push({ name: "Jira transitions", ok: false, detail: String(err) });
+      checks.push({ name: 'Jira transitions', ok: false, detail: String(err) });
     }
   }
 
   // ── Check 4: GitLab API reachability ────────────────────────────────────────
   try {
-    const res = await fetch(
-      `${apiUrl}/projects/${encodeURIComponent(projectId)}`,
-      { headers: gitlabHeaders },
-    );
+    const res = await fetch(`${apiUrl}/projects/${encodeURIComponent(projectId)}`, {
+      headers: gitlabHeaders,
+    });
     checks.push(
       res.ok
         ? {
-            name: "GitLab API reachability",
+            name: 'GitLab API reachability',
             ok: true,
             detail: `${apiUrl} is reachable`,
           }
         : {
-            name: "GitLab API reachability",
+            name: 'GitLab API reachability',
             ok: false,
             detail: `GET /projects/${projectId} returned HTTP ${res.status}`,
           },
     );
   } catch (err) {
-    checks.push({ name: "GitLab API reachability", ok: false, detail: String(err) });
+    checks.push({ name: 'GitLab API reachability', ok: false, detail: String(err) });
   }
 
   // ── Check 5: MCP servers boot ────────────────────────────────────────────────

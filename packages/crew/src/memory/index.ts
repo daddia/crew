@@ -1,12 +1,12 @@
-import { access, mkdir, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { access, mkdir, writeFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
 
 /**
  * Canonical path for a persona's project memory file under
  * `<projectDir>/.claude/agent-memory/<personaName>/`.
  */
 export function memoryPath(projectDir: string, personaName: string): string {
-  return join(projectDir, ".claude", "agent-memory", personaName, "MEMORY.md");
+  return join(projectDir, '.claude', 'agent-memory', personaName, 'MEMORY.md');
 }
 
 /**
@@ -38,7 +38,7 @@ export async function seedProjectMemory(
 
   try {
     await mkdir(dirname(filePath), { recursive: true });
-    await writeFile(filePath, content, "utf8");
+    await writeFile(filePath, content, 'utf8');
     return null;
   } catch (err) {
     return err instanceof Error ? err : new Error(String(err));

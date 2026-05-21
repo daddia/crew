@@ -7,7 +7,7 @@ allowed-tools:
   - Write
   - Glob
   - Grep
-argument-hint: "<scope: portfolio|product|domain> <name> [--stage pitch|product]"
+argument-hint: '<scope: portfolio|product|domain> <name> [--stage pitch|product]'
 ---
 
 # Write Product Document

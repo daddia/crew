@@ -1,5 +1,5 @@
-import { z } from "zod";
-import { Secret, loadEnv, type EnvMapping } from "@daddia/crew/config";
+import { z } from 'zod';
+import { Secret, loadEnv, type EnvMapping } from '@daddia/crew/config';
 
 export const CONFIG_SCHEMA_VERSION = 1 as const;
 
@@ -32,7 +32,7 @@ export const ConfigSchema = z.object({
     diffFileCap: z.coerce.number().int().positive().default(50),
     diffSizeCapBytes: z.coerce.number().int().positive().default(500_000),
     anthropicModel: z.string().min(1).optional(),
-    logLevel: z.enum(["debug", "info", "warn", "error"]).default("info"),
+    logLevel: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
   }),
   infrastructure: z.object({
     port: z.coerce.number().int().positive().default(3000),
@@ -52,32 +52,32 @@ export const ConfigSchema = z.object({
 export type Config = z.infer<typeof ConfigSchema>;
 
 const ENV_MAPPING: EnvMapping = {
-  "identity.crewId":                       "CREW_ID",
-  "identity.jira.baseUrl":                 "ATLASSIAN_BASE_URL",
-  "identity.jira.email":                   "ATLASSIAN_EMAIL",
-  "identity.jira.projectKey":              "JIRA_PROJECT_KEY",
-  "identity.jira.assigneeAccountId":       "JIRA_ASSIGNEE_ACCOUNT_ID",
-  "identity.jira.botAccountId":            "ATLASSIAN_ACCOUNT_ID",
-  "identity.gitlab.apiUrl":                "GITLAB_API_URL",
-  "identity.gitlab.projectId":             "GITLAB_PROJECT_ID",
-  "behaviour.pollIntervalMs":              "POLL_INTERVAL_MS",
-  "behaviour.refactorLoopCap":             "REFACTOR_LOOP_CAP",
-  "behaviour.ciRetryCap":                  "CI_RETRY_CAP",
-  "behaviour.ciPollIntervalMs":            "CI_POLL_INTERVAL_MS",
-  "behaviour.clarificationTimeoutHours":   "CLARIFICATION_TIMEOUT_HOURS",
-  "behaviour.diffFileCap":                 "DIFF_FILE_CAP",
-  "behaviour.diffSizeCapBytes":            "DIFF_SIZE_CAP_BYTES",
-  "behaviour.anthropicModel":              "ANTHROPIC_MODEL",
-  "behaviour.logLevel":                    "LOG_LEVEL",
-  "infrastructure.port":                   "PORT",
-  "infrastructure.dbPath":                 "DB_PATH",
-  "infrastructure.projectDir":             "PROJECT_DIR",
-  "secrets.anthropicApiKey":               "ANTHROPIC_API_KEY",
-  "secrets.atlassianApiToken":             "ATLASSIAN_API_TOKEN",
-  "secrets.gitlabAccessToken":             "GITLAB_PERSONAL_ACCESS_TOKEN",
-  "secrets.jiraWebhookSecret":             "JIRA_WEBHOOK_SECRET",
-  "secrets.gitlabWebhookSecret":           "GITLAB_WEBHOOK_SECRET",
-  "secrets.honeycombApiKey":               "HONEYCOMB_API_KEY",
+  'identity.crewId': 'CREW_ID',
+  'identity.jira.baseUrl': 'ATLASSIAN_BASE_URL',
+  'identity.jira.email': 'ATLASSIAN_EMAIL',
+  'identity.jira.projectKey': 'JIRA_PROJECT_KEY',
+  'identity.jira.assigneeAccountId': 'JIRA_ASSIGNEE_ACCOUNT_ID',
+  'identity.jira.botAccountId': 'ATLASSIAN_ACCOUNT_ID',
+  'identity.gitlab.apiUrl': 'GITLAB_API_URL',
+  'identity.gitlab.projectId': 'GITLAB_PROJECT_ID',
+  'behaviour.pollIntervalMs': 'POLL_INTERVAL_MS',
+  'behaviour.refactorLoopCap': 'REFACTOR_LOOP_CAP',
+  'behaviour.ciRetryCap': 'CI_RETRY_CAP',
+  'behaviour.ciPollIntervalMs': 'CI_POLL_INTERVAL_MS',
+  'behaviour.clarificationTimeoutHours': 'CLARIFICATION_TIMEOUT_HOURS',
+  'behaviour.diffFileCap': 'DIFF_FILE_CAP',
+  'behaviour.diffSizeCapBytes': 'DIFF_SIZE_CAP_BYTES',
+  'behaviour.anthropicModel': 'ANTHROPIC_MODEL',
+  'behaviour.logLevel': 'LOG_LEVEL',
+  'infrastructure.port': 'PORT',
+  'infrastructure.dbPath': 'DB_PATH',
+  'infrastructure.projectDir': 'PROJECT_DIR',
+  'secrets.anthropicApiKey': 'ANTHROPIC_API_KEY',
+  'secrets.atlassianApiToken': 'ATLASSIAN_API_TOKEN',
+  'secrets.gitlabAccessToken': 'GITLAB_PERSONAL_ACCESS_TOKEN',
+  'secrets.jiraWebhookSecret': 'JIRA_WEBHOOK_SECRET',
+  'secrets.gitlabWebhookSecret': 'GITLAB_WEBHOOK_SECRET',
+  'secrets.honeycombApiKey': 'HONEYCOMB_API_KEY',
 };
 
 /**

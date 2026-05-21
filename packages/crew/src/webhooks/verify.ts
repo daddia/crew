@@ -1,6 +1,6 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHmac, timingSafeEqual } from 'node:crypto';
 
-export type Provider = "jira" | "gitlab";
+export type Provider = 'jira' | 'gitlab';
 
 /**
  * Verify the HMAC signature on an incoming webhook request.
@@ -15,10 +15,10 @@ export function verifySignature(
   secret: string,
 ): void {
   switch (provider) {
-    case "jira":
+    case 'jira':
       verifyJira(rawBody, headers, secret);
       break;
-    case "gitlab":
+    case 'gitlab':
       verifyGitLab(headers, secret);
       break;
   }
@@ -29,21 +29,18 @@ function verifyJira(
   headers: Record<string, string | string[] | undefined>,
   secret: string,
 ): void {
-  const header = singleHeader(headers, "x-hub-signature-256");
+  const header = singleHeader(headers, 'x-hub-signature-256');
   if (!header) {
-    throw new SignatureError("Missing X-Hub-Signature-256 header");
+    throw new SignatureError('Missing X-Hub-Signature-256 header');
   }
-  const prefix = "sha256=";
+  const prefix = 'sha256=';
   if (!header.startsWith(prefix)) {
-    throw new SignatureError("Unexpected signature format");
+    throw new SignatureError('Unexpected signature format');
   }
-  const expected = Buffer.from(header.slice(prefix.length), "hex");
-  const actual = Buffer.from(
-    createHmac("sha256", secret).update(rawBody).digest("hex"),
-    "hex",
-  );
+  const expected = Buffer.from(header.slice(prefix.length), 'hex');
+  const actual = Buffer.from(createHmac('sha256', secret).update(rawBody).digest('hex'), 'hex');
   if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) {
-    throw new SignatureError("Signature mismatch");
+    throw new SignatureError('Signature mismatch');
   }
 }
 
@@ -51,14 +48,14 @@ function verifyGitLab(
   headers: Record<string, string | string[] | undefined>,
   secret: string,
 ): void {
-  const token = singleHeader(headers, "x-gitlab-token");
+  const token = singleHeader(headers, 'x-gitlab-token');
   if (!token) {
-    throw new SignatureError("Missing X-Gitlab-Token header");
+    throw new SignatureError('Missing X-Gitlab-Token header');
   }
   const expected = Buffer.from(secret);
   const actual = Buffer.from(token);
   if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) {
-    throw new SignatureError("Token mismatch");
+    throw new SignatureError('Token mismatch');
   }
 }
 
@@ -74,6 +71,6 @@ function singleHeader(
 export class SignatureError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = "SignatureError";
+    this.name = 'SignatureError';
   }
 }

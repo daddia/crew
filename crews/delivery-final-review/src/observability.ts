@@ -1,6 +1,6 @@
-import { createLogger } from "@daddia/crew";
+import { createLogger } from '@daddia/crew';
 
-export const log = createLogger("delivery-review");
+export const log = createLogger('delivery-review');
 
 // createTracer is not exported by the currently installed build of @daddia/crew.
 // Export a stub so consumers that import `tracer` continue to compile; the stub

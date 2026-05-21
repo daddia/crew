@@ -1,10 +1,6 @@
-import { DatabaseSync } from "node:sqlite";
+import { DatabaseSync } from 'node:sqlite';
 
-export type Step =
-  | "final-code-review"
-  | "stakeholder-review"
-  | "done"
-  | "needs-human-review";
+export type Step = 'final-code-review' | 'stakeholder-review' | 'done' | 'needs-human-review';
 
 export interface StoryRow {
   issueKey: string;
@@ -55,18 +51,14 @@ export interface StateStore {
   upsertStory(issueKey: string, step: Step): void;
   getStory(issueKey: string): StoryRow | undefined;
   startStep(issueKey: string, step: Step, sessionId?: string): void;
-  finishStep(
-    issueKey: string,
-    step: Step,
-    result: { costUsd?: number; verdict?: string },
-  ): void;
+  finishStep(issueKey: string, step: Step, result: { costUsd?: number; verdict?: string }): void;
   getStepHistory(issueKey: string): StepRow[];
   close(): void;
 }
 
 export function createStateStore(dbPath: string): StateStore {
   const db = new DatabaseSync(dbPath);
-  db.exec("PRAGMA journal_mode = WAL");
+  db.exec('PRAGMA journal_mode = WAL');
   db.exec(SCHEMA);
 
   const upsertStoryStmt = db.prepare(

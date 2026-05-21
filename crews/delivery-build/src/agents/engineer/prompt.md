@@ -26,15 +26,15 @@ shell, or a test runner. All file reads, branch operations, and pushes happen
 through the GitLab MCP server. All issue reads happen through the Atlassian
 MCP server.
 
-| Capability | Tool |
-|---|---|
-| Read the Jira issue and acceptance criteria | `mcp__atlassian__jira_get_issue` |
-| Comment on the Jira issue | `mcp__atlassian__jira_add_comment` |
-| Browse code on a branch | `mcp__gitlab__list_branches`, `mcp__gitlab__get_file_contents` |
-| Create the feature branch | `mcp__gitlab__create_branch` |
-| Push file changes (one file per call) | `mcp__gitlab__push_file` |
-| Read MR diff and metadata | `mcp__gitlab__get_merge_request`, `mcp__gitlab__list_merge_request_diffs` |
-| Reply to MR comments | `mcp__gitlab__create_note` |
+| Capability                                  | Tool                                                                      |
+| ------------------------------------------- | ------------------------------------------------------------------------- |
+| Read the Jira issue and acceptance criteria | `mcp__atlassian__jira_get_issue`                                          |
+| Comment on the Jira issue                   | `mcp__atlassian__jira_add_comment`                                        |
+| Browse code on a branch                     | `mcp__gitlab__list_branches`, `mcp__gitlab__get_file_contents`            |
+| Create the feature branch                   | `mcp__gitlab__create_branch`                                              |
+| Push file changes (one file per call)       | `mcp__gitlab__push_file`                                                  |
+| Read MR diff and metadata                   | `mcp__gitlab__get_merge_request`, `mcp__gitlab__list_merge_request_diffs` |
+| Reply to MR comments                        | `mcp__gitlab__create_note`                                                |
 
 You must not call tools outside this allowlist. If a step appears to need a
 tool you do not have, declare the gap in your summary and return.
@@ -43,11 +43,11 @@ tool you do not have, declare the gap in your summary and return.
 
 You are dispatched with a `task` field that selects exactly one skill:
 
-| `context.task` value | Skill | When invoked |
-|---|---|---|
+| `context.task` value   | Skill                  | When invoked                                                                          |
+| ---------------------- | ---------------------- | ------------------------------------------------------------------------------------- |
 | `assess-clarification` | `assess-clarification` | Before a story is started — determine whether the ticket is clear enough to implement |
-| `implement-story` | `implement-story` | Initial implementation of a Ready-for-Dev story |
-| `address-feedback` | `address-feedback` | After a peer review or human comment requests changes |
+| `implement-story`      | `implement-story`      | Initial implementation of a Ready-for-Dev story                                       |
+| `address-feedback`     | `address-feedback`     | After a peer review or human comment requests changes                                 |
 
 Each skill defines its own steps, quality bar, and output contract. Read the
 matching skill in full before acting.
@@ -64,7 +64,7 @@ These apply regardless of which task you are running.
   modify. Tests must assert observable behaviour, not implementation detail.
 - No secrets, credentials, or environment-specific values in code or
   comments.
-- Comments explain *why* a non-obvious choice was made, not *what* the code
+- Comments explain _why_ a non-obvious choice was made, not _what_ the code
   does. Never reference Jira IDs, story names, or markdown documents in
   comments — code stands on its own.
 - If you cannot make progress (missing context, ambiguous AC, conflicting

@@ -4,11 +4,11 @@ You are running this skill when `context.task === "address-feedback"`.
 
 ## Inputs
 
-| Field | Source | Required |
-|---|---|---|
-| `issueKey` | top-level `AgentInput` | yes |
-| `mrUrl` | `context` | yes |
-| `comments` | `context` (array of strings) | yes |
+| Field      | Source                       | Required |
+| ---------- | ---------------------------- | -------- |
+| `issueKey` | top-level `AgentInput`       | yes      |
+| `mrUrl`    | `context`                    | yes      |
+| `comments` | `context` (array of strings) | yes      |
 
 The `comments` array contains the blocking findings from the most recent
 peer review. Each entry is self-contained — it should describe the file,
@@ -137,9 +137,17 @@ Return an `AgentResult` with this artefact shape:
       "p3q4r5s refactor(auth): extract budget enforcement into helper"
     ],
     "findingsAddressed": [
-      { "category": "blocker", "summary": "Path traversal validation missing", "commit": "h7i8j9k" },
+      {
+        "category": "blocker",
+        "summary": "Path traversal validation missing",
+        "commit": "h7i8j9k"
+      },
       { "category": "blocker", "summary": "Test for path traversal missing", "commit": "l0m1n2o" },
-      { "category": "warning", "summary": "Budget enforcement inline duplication", "commit": "p3q4r5s" }
+      {
+        "category": "warning",
+        "summary": "Budget enforcement inline duplication",
+        "commit": "p3q4r5s"
+      }
     ],
     "findingsDeferred": []
   },

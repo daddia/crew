@@ -1,16 +1,16 @@
-import type { ZodError } from "zod";
+import type { ZodError } from 'zod';
 
 export class ConfigNotFoundError extends Error {
-  readonly code = "CONFIG_NOT_FOUND" as const;
+  readonly code = 'CONFIG_NOT_FOUND' as const;
 
   constructor(message: string, options?: ErrorOptions) {
     super(message, options);
-    this.name = "ConfigNotFoundError";
+    this.name = 'ConfigNotFoundError';
   }
 }
 
 export class SchemaValidationError extends Error {
-  readonly code = "SCHEMA_VALIDATION" as const;
+  readonly code = 'SCHEMA_VALIDATION' as const;
   readonly issues: ReadonlyArray<{ path: string; message: string }>;
 
   constructor(
@@ -19,7 +19,7 @@ export class SchemaValidationError extends Error {
     options?: ErrorOptions,
   ) {
     super(message, options);
-    this.name = "SchemaValidationError";
+    this.name = 'SchemaValidationError';
     this.issues = issues;
   }
 }
@@ -32,7 +32,5 @@ export class SchemaValidationError extends Error {
  * that downstream tooling should treat as stable.
  */
 export function formatZodIssues(err: ZodError): string {
-  return err.issues
-    .map((i) => `${i.path.join(".")}: ${i.message}`)
-    .join("\n");
+  return err.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('\n');
 }

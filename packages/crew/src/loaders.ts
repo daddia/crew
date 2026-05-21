@@ -1,11 +1,11 @@
-import { readFile, readdir } from "node:fs/promises";
-import { join } from "node:path";
+import { readFile, readdir } from 'node:fs/promises';
+import { join } from 'node:path';
 
 /**
  * Read a persona prompt file and return its text content.
  */
 export async function readPromptFile(promptPath: string): Promise<string> {
-  return readFile(promptPath, "utf8");
+  return readFile(promptPath, 'utf8');
 }
 
 /**
@@ -30,7 +30,7 @@ async function collectSkillFiles(dir: string, acc: string[]): Promise<void> {
     const full = join(dir, entry.name);
     if (entry.isDirectory()) {
       await collectSkillFiles(full, acc);
-    } else if (entry.name === "SKILL.md") {
+    } else if (entry.name === 'SKILL.md') {
       acc.push(full);
     }
   }
@@ -48,7 +48,7 @@ export async function readSubagentsDir(agentsDir: string): Promise<string[]> {
     return [];
   }
   return entries
-    .filter((e) => e.isFile() && e.name.endsWith(".md"))
+    .filter((e) => e.isFile() && e.name.endsWith('.md'))
     .map((e) => join(agentsDir, e.name))
     .sort();
 }

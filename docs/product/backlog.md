@@ -63,24 +63,24 @@ remote cache, shared cross-persona memory. See section 13 (Future backlog).
 
 ## 2. Conventions
 
-| Convention | Value |
-| --- | --- |
-| Epic ID format | `CREW-{nn}` (continuing from 66) |
-| Story ID format | `CREW-{nn}-{nnn}` |
-| Status values | Not started, In progress, Done, Blocked |
-| Priority levels | P0 (blocks e2e run), P1 (reliability/observability), P2 (quality/docs) |
-| Estimation | Fibonacci story points (1, 2, 3, 5, 8) |
-| Acceptance format | EARS + Gherkin |
+| Convention        | Value                                                                  |
+| ----------------- | ---------------------------------------------------------------------- |
+| Epic ID format    | `CREW-{nn}` (continuing from 66)                                       |
+| Story ID format   | `CREW-{nn}-{nnn}`                                                      |
+| Status values     | Not started, In progress, Done, Blocked                                |
+| Priority levels   | P0 (blocks e2e run), P1 (reliability/observability), P2 (quality/docs) |
+| Estimation        | Fibonacci story points (1, 2, 3, 5, 8)                                 |
+| Acceptance format | EARS + Gherkin                                                         |
 
 ---
 
 ## 3. Epic breakdown
 
-| Epic | Title | Phase | Priority | Deps | Points | WP path | Status |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| CREW-66 | Functional and hardening completion | Now | P0 | — | 16 | `crews/delivery-build` | Done |
-| CREW-67 | End-to-end validation and operations | Now | P0 | CREW-66 | 12 | `crews/delivery-build` | In progress (4/5) |
-| **Total** | | | | | **28** | | |
+| Epic      | Title                                | Phase | Priority | Deps    | Points | WP path                | Status            |
+| --------- | ------------------------------------ | ----- | -------- | ------- | ------ | ---------------------- | ----------------- |
+| CREW-66   | Functional and hardening completion  | Now   | P0       | —       | 16     | `crews/delivery-build` | Done              |
+| CREW-67   | End-to-end validation and operations | Now   | P0       | CREW-66 | 12     | `crews/delivery-build` | In progress (4/5) |
+| **Total** |                                      |       |          |         | **28** |                        |                   |
 
 ---
 
@@ -188,18 +188,14 @@ work; no separate WP design doc).
     shape is emitted on escalation paths so cost can be attributed to
     abandoned runs. The log is the foundation for `product.md §7` autonomy
     rate and cost-per-run metrics.
-  - **Acceptance (EARS):**
-    - WHEN `runStory()` reaches the `In QA` handoff, THE SYSTEM SHALL emit a
-      single `workflow.complete` info log with `success: true` and a
-      `totalCostUsd` summed across all step rows for the issueKey.
-    - WHEN `runStory()` escalates to `Needs human review`, THE SYSTEM SHALL
-      emit a `workflow.complete` info log with `success: false` and the same
-      cost summary.
-    - WHEN the workflow halts at `Clarification Needed`, THE SYSTEM SHALL
-      emit a `workflow.complete` info log with `terminalStep:
-      "clarification-pending"` and the cost incurred so far.
-    - WHEN no agent steps have run, THE SYSTEM SHALL emit `totalCostUsd: 0`
-      and `agentSteps: []` rather than omitting the fields.
+  - **Acceptance (EARS):** - WHEN `runStory()` reaches the `In QA` handoff, THE SYSTEM SHALL emit a
+    single `workflow.complete` info log with `success: true` and a
+    `totalCostUsd` summed across all step rows for the issueKey. - WHEN `runStory()` escalates to `Needs human review`, THE SYSTEM SHALL
+    emit a `workflow.complete` info log with `success: false` and the same
+    cost summary. - WHEN the workflow halts at `Clarification Needed`, THE SYSTEM SHALL
+    emit a `workflow.complete` info log with `terminalStep:
+"clarification-pending"` and the cost incurred so far. - WHEN no agent steps have run, THE SYSTEM SHALL emit `totalCostUsd: 0`
+    and `agentSteps: []` rather than omitting the fields.
   - **Acceptance (Gherkin):**
 
     ```gherkin
@@ -233,7 +229,7 @@ work; no separate WP design doc).
   - **Deliverable:** `crews/delivery-build/src/index.ts` `/healthz` endpoint
     returns
     `{ ok: true, schemaVersion, poller: { lastTickAt, lastTickStatus,
-    inFlightCount, inFlight: string[] }, db: { ok, path } }`. The poller
+inFlightCount, inFlight: string[] }, db: { ok, path } }`. The poller
     publishes its `lastTickAt` and `lastTickStatus` ("ok" | "error") into a
     small in-memory state object exported alongside the `inFlight` set
     (shipped in CREW-66-005). The DB check runs `SELECT 1` against the SQLite
@@ -404,8 +400,8 @@ All five CREW-67 stories may start simultaneously except for:
 
 Recommended parallel tracks:
 
-| Track A (critical path) | Track B (independent) |
-| --- | --- |
+| Track A (critical path)                 | Track B (independent)                |
+| --------------------------------------- | ------------------------------------ |
 | CREW-67-001 → CREW-67-002 → CREW-67-005 | CREW-67-003 (then feeds CREW-67-004) |
 
 ## 8. Minimum viable slice
@@ -424,22 +420,22 @@ the smoke test.
 
 ## 9. Assumptions
 
-| ID | Assumption | Impact if wrong |
-| --- | --- | --- |
-| A1 | The engineer and senior-engineer personas consistently emit the JSON artefact envelope specified in each skill's Output contract section (landed in CREW-66-001/002) | If the model regresses to prose output, the parser downgrades the run to `success: false`; tighten the Output contract with an explicit "respond ONLY with the JSON object" terminal instruction |
-| A2 | `JIRA_ASSIGNEE_ACCOUNT_ID` is a valid Jira account ID (not display name) usable in JQL `assignee = "..."` | Wrong format causes the poller's JQL to return no results; CREW-67-001 transitions check catches this before deploy |
-| A3 | The Jira board exposes the four transition names exactly as written: `In Progress`, `Clarification Needed`, `In QA`, `Needs human review` | `transitionIssue()` silently no-ops on a name miss; CREW-67-001 catches this |
-| A4 | The Railway persistent volume at `DB_PATH` survives restarts | Without persistence the SQLite state is ephemeral and the recovery scan is a no-op |
-| A5 | The first e2e run uses a sandbox Jira project and GitLab project | Without a sandbox, a failed first run ships visible noise into a production board |
+| ID  | Assumption                                                                                                                                                           | Impact if wrong                                                                                                                                                                                  |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| A1  | The engineer and senior-engineer personas consistently emit the JSON artefact envelope specified in each skill's Output contract section (landed in CREW-66-001/002) | If the model regresses to prose output, the parser downgrades the run to `success: false`; tighten the Output contract with an explicit "respond ONLY with the JSON object" terminal instruction |
+| A2  | `JIRA_ASSIGNEE_ACCOUNT_ID` is a valid Jira account ID (not display name) usable in JQL `assignee = "..."`                                                            | Wrong format causes the poller's JQL to return no results; CREW-67-001 transitions check catches this before deploy                                                                              |
+| A3  | The Jira board exposes the four transition names exactly as written: `In Progress`, `Clarification Needed`, `In QA`, `Needs human review`                            | `transitionIssue()` silently no-ops on a name miss; CREW-67-001 catches this                                                                                                                     |
+| A4  | The Railway persistent volume at `DB_PATH` survives restarts                                                                                                         | Without persistence the SQLite state is ephemeral and the recovery scan is a no-op                                                                                                               |
+| A5  | The first e2e run uses a sandbox Jira project and GitLab project                                                                                                     | Without a sandbox, a failed first run ships visible noise into a production board                                                                                                                |
 
 ## 10. Risks
 
-| ID | Risk | Likelihood | Impact | Mitigation |
-| --- | --- | --- | --- | --- |
-| R1 | Agent does not consistently emit valid JSON in `resultMsg.result`, causing CREW-66-001/002 parsers to downgrade most runs to `success: false` | Medium | High | Tighten the skill's Output contract to say "respond ONLY with the JSON object — no surrounding prose"; as a fallback, parse the longest JSON-shaped substring before failing |
-| R2 | `getPipelineStatus` via GitLab MCP returns stale pipeline data due to caching | Low | Medium | Verify response freshness during the e2e run (CREW-67-005); fall back to direct REST call if stale |
-| R3 | First e2e run reveals an agent-tool gap (e.g. engineer needs a tool not in the allowlist) | Medium | Medium | The escalation path catches the failure cleanly; CREW-67-005 accepts an escalation outcome and requires a follow-up story rather than treating it as a blocker |
-| R4 | Cost-per-run on a real story exceeds expected budget by an order of magnitude | Low | High | CREW-67-002's `workflow.complete` log is the first data point; tighten `REFACTOR_LOOP_CAP` and `CI_RETRY_CAP` defaults if the first run is materially over budget |
+| ID  | Risk                                                                                                                                          | Likelihood | Impact | Mitigation                                                                                                                                                                   |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| R1  | Agent does not consistently emit valid JSON in `resultMsg.result`, causing CREW-66-001/002 parsers to downgrade most runs to `success: false` | Medium     | High   | Tighten the skill's Output contract to say "respond ONLY with the JSON object — no surrounding prose"; as a fallback, parse the longest JSON-shaped substring before failing |
+| R2  | `getPipelineStatus` via GitLab MCP returns stale pipeline data due to caching                                                                 | Low        | Medium | Verify response freshness during the e2e run (CREW-67-005); fall back to direct REST call if stale                                                                           |
+| R3  | First e2e run reveals an agent-tool gap (e.g. engineer needs a tool not in the allowlist)                                                     | Medium     | Medium | The escalation path catches the failure cleanly; CREW-67-005 accepts an escalation outcome and requires a follow-up story rather than treating it as a blocker               |
+| R4  | Cost-per-run on a real story exceeds expected budget by an order of magnitude                                                                 | Low        | High   | CREW-67-002's `workflow.complete` log is the first data point; tighten `REFACTOR_LOOP_CAP` and `CI_RETRY_CAP` defaults if the first run is materially over budget            |
 
 ## 11. Definition of Done
 
@@ -479,35 +475,35 @@ The following epics shipped before this revision and are not re-listed in
 section 4. Story-level detail is preserved in git history; this table
 summarises the outcome.
 
-| Epic | Title | Outcome | Notes |
-| --- | --- | --- | --- |
-| CREW-50 | Engineer + senior-engineer SDK wiring | Done | `memory: 'project'`, `buildAuditHook()`, subagent paths, project memory seeding |
-| CREW-54 | AGENTS.md + tooling cleanup | Done | Package names normalised |
-| CREW-55 | Deferred runtime concerns | Deferred | OTel tracing, Turbo remote cache deferred to Next phase |
-| CREW-56 | `@daddia/crew` consolidation | Done | Main entry + `./webhooks` subpath |
-| CREW-60 | Jira polling trigger | Done | `searchIssues`, `setInterval` poller, dedup against state + in-flight set |
-| CREW-61 | Workflow sequence alignment | Done | `context-seed → assess-clarification → implement → peer-review → open-mr → ci-check → in-qa`; `CI_RETRY_CAP`/`CI_POLL_INTERVAL_MS`; `In QA` handoff; `sessionId` wired into `state.startStep` |
-| CREW-62 | Clarification HITL | Done | `assess-clarification` engineer task; `getComments` poller resume; `CLARIFICATION_TIMEOUT_HOURS` |
-| CREW-63-001 | Startup env validation | Done | Replaced by zod-driven `loadConfig` + `SchemaValidationError` exit in `boot()` |
-| CREW-63-002 | Auth header timing | Done | Header construction moved into `createJiraClient` factory; no module-load-time side effects |
-| CREW-63-003 | Crash recovery | Done | `recoverInterruptedSteps()` runs before HTTP server bind |
-| CREW-63-005 | Single SQLite connection | Done | `webhook_events` table on the shared state-store handle; no second `DatabaseSync` |
-| CREW-63-006 | `finishStep()` filter | Done | `WHERE issue_key = ? AND step = ? AND finished_at IS NULL` |
-| CREW-63-008 | In-flight lock (poller side) | Done | Poller owns `inFlight` set; webhook side completed in CREW-66-005 |
-| CREW-64-001 | `corepack enable` | Done | `crews/delivery-build/Dockerfile` |
-| CREW-64-002 | GitHub Actions CI | Done | `.github/workflows/ci.yml` runs lint, typecheck, test on push and PR to `main` |
-| CREW-64-003 | Explicit Dockerfile lockfile COPY | Done | `COPY pnpm-lock.yaml ./` without glob |
-| CREW-64-004 | `PROJECT_DIR` and `ANTHROPIC_MODEL` documented | Done | Listed in `.env.example` and `README.md` |
-| CREW-64-005 | Test mock cleanup | Done | No `db: {} as never` in `tests/` |
-| CREW-64-007 | Loop-bound asymmetry comment | Done | Documented in `workflow.ts` and `AGENTS.md` |
-| CREW-65 | Shared crew config primitives + delivery-build adoption | Done | `@daddia/crew/config` subpath (`loadEnv`, `loadYaml`, `Secret`, `redact`, `detectWorkspace`, errors); per-crew `ConfigSchema` + `loadConfig()` in `crews/delivery-build/src/config.ts`; `Config` threaded through integrations, poller, workflow, handlers; boot-time `config.loaded` provenance log and `config.invalid` fast-fail; ESLint rule banning `process.env` outside `config.ts`. Detail in `docs/work/done/crew-config/backlog.md`. |
-| CREW-66-001 | Engineer extracts structured artefacts from SDK result | Done | Parses JSON artefact envelope from `resultMsg.result`; emits `branchName`, `title`, `questionsRequired`; falls back to `success: false` on parse failure |
-| CREW-66-002 | Senior-engineer extracts structured artefacts from SDK result | Done | Parses `{ verdict, comments }` from `resultMsg.result`; flattens findings to string array; `success: true` on approved |
-| CREW-66-003 | Pin MCP server versions in `mcp.json` | Cancelled | Cancelled by product owner |
-| CREW-66-004 | Add idempotency guard to `createMr()` | Done | `GET /merge_requests?source_branch=…&state=opened` before `POST`; returns existing URL on hit |
-| CREW-66-005 | Webhook handlers return 429 when issueKey is in flight | Done | Shared `in-flight.ts` module; `acquire/release` in poller and both handlers; HTTP 429 on conflict |
-| CREW-66-006 | Cap `getMrDiff()` by file count and byte size | Done | `DIFF_FILE_CAP` (default 50) and `DIFF_SIZE_CAP_BYTES` (default 500 000) with truncation notes |
-| CREW-66-007 | Validate `extractMrIid()` URL project path | Done | Throws `GitLabUrlError` on project path mismatch or missing `/merge_requests/` segment |
+| Epic        | Title                                                         | Outcome   | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ----------- | ------------------------------------------------------------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CREW-50     | Engineer + senior-engineer SDK wiring                         | Done      | `memory: 'project'`, `buildAuditHook()`, subagent paths, project memory seeding                                                                                                                                                                                                                                                                                                                                                                |
+| CREW-54     | AGENTS.md + tooling cleanup                                   | Done      | Package names normalised                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| CREW-55     | Deferred runtime concerns                                     | Deferred  | OTel tracing, Turbo remote cache deferred to Next phase                                                                                                                                                                                                                                                                                                                                                                                        |
+| CREW-56     | `@daddia/crew` consolidation                                  | Done      | Main entry + `./webhooks` subpath                                                                                                                                                                                                                                                                                                                                                                                                              |
+| CREW-60     | Jira polling trigger                                          | Done      | `searchIssues`, `setInterval` poller, dedup against state + in-flight set                                                                                                                                                                                                                                                                                                                                                                      |
+| CREW-61     | Workflow sequence alignment                                   | Done      | `context-seed → assess-clarification → implement → peer-review → open-mr → ci-check → in-qa`; `CI_RETRY_CAP`/`CI_POLL_INTERVAL_MS`; `In QA` handoff; `sessionId` wired into `state.startStep`                                                                                                                                                                                                                                                  |
+| CREW-62     | Clarification HITL                                            | Done      | `assess-clarification` engineer task; `getComments` poller resume; `CLARIFICATION_TIMEOUT_HOURS`                                                                                                                                                                                                                                                                                                                                               |
+| CREW-63-001 | Startup env validation                                        | Done      | Replaced by zod-driven `loadConfig` + `SchemaValidationError` exit in `boot()`                                                                                                                                                                                                                                                                                                                                                                 |
+| CREW-63-002 | Auth header timing                                            | Done      | Header construction moved into `createJiraClient` factory; no module-load-time side effects                                                                                                                                                                                                                                                                                                                                                    |
+| CREW-63-003 | Crash recovery                                                | Done      | `recoverInterruptedSteps()` runs before HTTP server bind                                                                                                                                                                                                                                                                                                                                                                                       |
+| CREW-63-005 | Single SQLite connection                                      | Done      | `webhook_events` table on the shared state-store handle; no second `DatabaseSync`                                                                                                                                                                                                                                                                                                                                                              |
+| CREW-63-006 | `finishStep()` filter                                         | Done      | `WHERE issue_key = ? AND step = ? AND finished_at IS NULL`                                                                                                                                                                                                                                                                                                                                                                                     |
+| CREW-63-008 | In-flight lock (poller side)                                  | Done      | Poller owns `inFlight` set; webhook side completed in CREW-66-005                                                                                                                                                                                                                                                                                                                                                                              |
+| CREW-64-001 | `corepack enable`                                             | Done      | `crews/delivery-build/Dockerfile`                                                                                                                                                                                                                                                                                                                                                                                                              |
+| CREW-64-002 | GitHub Actions CI                                             | Done      | `.github/workflows/ci.yml` runs lint, typecheck, test on push and PR to `main`                                                                                                                                                                                                                                                                                                                                                                 |
+| CREW-64-003 | Explicit Dockerfile lockfile COPY                             | Done      | `COPY pnpm-lock.yaml ./` without glob                                                                                                                                                                                                                                                                                                                                                                                                          |
+| CREW-64-004 | `PROJECT_DIR` and `ANTHROPIC_MODEL` documented                | Done      | Listed in `.env.example` and `README.md`                                                                                                                                                                                                                                                                                                                                                                                                       |
+| CREW-64-005 | Test mock cleanup                                             | Done      | No `db: {} as never` in `tests/`                                                                                                                                                                                                                                                                                                                                                                                                               |
+| CREW-64-007 | Loop-bound asymmetry comment                                  | Done      | Documented in `workflow.ts` and `AGENTS.md`                                                                                                                                                                                                                                                                                                                                                                                                    |
+| CREW-65     | Shared crew config primitives + delivery-build adoption       | Done      | `@daddia/crew/config` subpath (`loadEnv`, `loadYaml`, `Secret`, `redact`, `detectWorkspace`, errors); per-crew `ConfigSchema` + `loadConfig()` in `crews/delivery-build/src/config.ts`; `Config` threaded through integrations, poller, workflow, handlers; boot-time `config.loaded` provenance log and `config.invalid` fast-fail; ESLint rule banning `process.env` outside `config.ts`. Detail in `docs/work/done/crew-config/backlog.md`. |
+| CREW-66-001 | Engineer extracts structured artefacts from SDK result        | Done      | Parses JSON artefact envelope from `resultMsg.result`; emits `branchName`, `title`, `questionsRequired`; falls back to `success: false` on parse failure                                                                                                                                                                                                                                                                                       |
+| CREW-66-002 | Senior-engineer extracts structured artefacts from SDK result | Done      | Parses `{ verdict, comments }` from `resultMsg.result`; flattens findings to string array; `success: true` on approved                                                                                                                                                                                                                                                                                                                         |
+| CREW-66-003 | Pin MCP server versions in `mcp.json`                         | Cancelled | Cancelled by product owner                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| CREW-66-004 | Add idempotency guard to `createMr()`                         | Done      | `GET /merge_requests?source_branch=…&state=opened` before `POST`; returns existing URL on hit                                                                                                                                                                                                                                                                                                                                                  |
+| CREW-66-005 | Webhook handlers return 429 when issueKey is in flight        | Done      | Shared `in-flight.ts` module; `acquire/release` in poller and both handlers; HTTP 429 on conflict                                                                                                                                                                                                                                                                                                                                              |
+| CREW-66-006 | Cap `getMrDiff()` by file count and byte size                 | Done      | `DIFF_FILE_CAP` (default 50) and `DIFF_SIZE_CAP_BYTES` (default 500 000) with truncation notes                                                                                                                                                                                                                                                                                                                                                 |
+| CREW-66-007 | Validate `extractMrIid()` URL project path                    | Done      | Throws `GitLabUrlError` on project path mismatch or missing `/merge_requests/` segment                                                                                                                                                                                                                                                                                                                                                         |
 
 ---
 

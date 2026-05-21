@@ -1,5 +1,5 @@
 /** Personas across all agent crews. */
-export type PersonaName = "tech-lead" | "engineer" | "senior-engineer" | "code-quality";
+export type PersonaName = 'tech-lead' | 'engineer' | 'senior-engineer' | 'code-quality';
 
 /** Input passed to every agent run. */
 export interface AgentInput {
@@ -44,5 +44,5 @@ export interface AgentDefinition {
    * Scope for agent memory files.
    * 'project' loads `.claude/agent-memory/<name>/` and injects the memory file into context.
    */
-  memory?: "user" | "project" | "local";
+  memory?: 'user' | 'project' | 'local';
 }

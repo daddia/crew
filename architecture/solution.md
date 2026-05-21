@@ -159,14 +159,14 @@ treats each crew as a composable, durable step in a longer pipeline:
 
 ## 3. Solution strategy
 
-| # | Principle | Trade-off | Quality goal |
-| --- | --- | --- | --- |
-| 1 | **Independently deployable units, not modules.** Each crew is its own process, its own state, its own entry point. Coupling between crews is event-driven, never in-process. | Duplicated boilerplate per crew, paid back by lifting any crew into its own repo or org without rewiring dependencies. | Composability |
-| 2 | **Shared runtime, crew-owned policy.** `@daddia/crew` owns mechanism (session, audit hook, bounded-loop guard, webhook verification, typed config). Each crew owns intent (workflow, personas, prompts, definition of done). | A sharper API surface on the shared package; rewarded by every new crew picking up runtime fixes for free. | Reproducible deployability |
-| 3 | **Bounded loops and audit hooks are non-optional.** `boundedIterGuard()` wraps every refactor / CI-fix / remediation loop; `buildAuditHook()` wraps every persona run. Not opt-in — they are how a crew is built, in every vertical. | Less freedom for an "experimental" crew to skip controls; rewarded by every crew in the catalogue being safe to run unattended. | Auditability, Bounded operation |
-| 4 | **Idempotent fire-and-forget now; durable orchestration later.** Handlers verify, deduplicate, return 200, run the workflow async. The Future-phase orchestrator sits above crews — it doesn't change how they receive events. | A crashed partial run is recovered by a per-crew startup scan, not an external scheduler; acceptable until the second crew ships. | Autonomy with clean escalation |
-| 5 | **One process per tenant, one tenant per process.** Each instance is single-tenant by construction; the operational unit is the container (server) or the process invocation (CLI). Fleet management lives above the crew, not inside it. | Horizontal scale = more containers, not more threads; rewarded by trivial blast-radius isolation. | Composability |
-| 6 | **Runtime shape pluralism.** The `Agent` / `AgentCrew` contract is shape-agnostic. A crew deploys as a **server** (long-lived, stateful, polls + receives webhooks) for multi-step workflows, a **CLI package** (ephemeral, published to npm, invoked in CI) for stateless one-shots, or a **scheduled batch** (cron-triggered) for periodic work. Same audit, bounded-loop, and escalation guarantees in every shape. | The shared runtime API must remain topology-neutral; server-only helpers (`verifySignature`, crash recovery) cannot be imported by CLI-shaped crews. | Reproducible deployability |
+| #   | Principle                                                                                                                                                                                                                                                                                                                                                                                                              | Trade-off                                                                                                                                            | Quality goal                    |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| 1   | **Independently deployable units, not modules.** Each crew is its own process, its own state, its own entry point. Coupling between crews is event-driven, never in-process.                                                                                                                                                                                                                                           | Duplicated boilerplate per crew, paid back by lifting any crew into its own repo or org without rewiring dependencies.                               | Composability                   |
+| 2   | **Shared runtime, crew-owned policy.** `@daddia/crew` owns mechanism (session, audit hook, bounded-loop guard, webhook verification, typed config). Each crew owns intent (workflow, personas, prompts, definition of done).                                                                                                                                                                                           | A sharper API surface on the shared package; rewarded by every new crew picking up runtime fixes for free.                                           | Reproducible deployability      |
+| 3   | **Bounded loops and audit hooks are non-optional.** `boundedIterGuard()` wraps every refactor / CI-fix / remediation loop; `buildAuditHook()` wraps every persona run. Not opt-in — they are how a crew is built, in every vertical.                                                                                                                                                                                   | Less freedom for an "experimental" crew to skip controls; rewarded by every crew in the catalogue being safe to run unattended.                      | Auditability, Bounded operation |
+| 4   | **Idempotent fire-and-forget now; durable orchestration later.** Handlers verify, deduplicate, return 200, run the workflow async. The Future-phase orchestrator sits above crews — it doesn't change how they receive events.                                                                                                                                                                                         | A crashed partial run is recovered by a per-crew startup scan, not an external scheduler; acceptable until the second crew ships.                    | Autonomy with clean escalation  |
+| 5   | **One process per tenant, one tenant per process.** Each instance is single-tenant by construction; the operational unit is the container (server) or the process invocation (CLI). Fleet management lives above the crew, not inside it.                                                                                                                                                                              | Horizontal scale = more containers, not more threads; rewarded by trivial blast-radius isolation.                                                    | Composability                   |
+| 6   | **Runtime shape pluralism.** The `Agent` / `AgentCrew` contract is shape-agnostic. A crew deploys as a **server** (long-lived, stateful, polls + receives webhooks) for multi-step workflows, a **CLI package** (ephemeral, published to npm, invoked in CI) for stateless one-shots, or a **scheduled batch** (cron-triggered) for periodic work. Same audit, bounded-loop, and escalation guarantees in every shape. | The shared runtime API must remain topology-neutral; server-only helpers (`verifySignature`, crash recovery) cannot be imported by CLI-shaped crews. | Reproducible deployability      |
 
 ## 4. Building block view
 
@@ -338,7 +338,7 @@ process boot
 ```
 
 The invariant: no new story begins processing until interrupted runs have been
-either resumed or escalated. The `stories` row written *before* `agent.run()`
+either resumed or escalated. The `stories` row written _before_ `agent.run()`
 is the canonical in-flight signal.
 
 ## 6. Data model and ubiquitous language
@@ -346,23 +346,23 @@ is the canonical in-flight signal.
 ### 6.1 State and audit
 
 The audit trail is uniform across topologies — quality goal #1 cannot be
-conditional on deployment shape. The *storage* differs because a CLI-shaped
+conditional on deployment shape. The _storage_ differs because a CLI-shaped
 crew has no process between invocations.
 
-| Concern | Server-shaped | CLI-shaped |
-| --- | --- | --- |
-| Audit + step records | Per-crew SQLite (`stories`, `steps`, `webhook_events`) on a named volume. | Remote audit sink via `@daddia/crew/audit` (planned, blocks code-reviewer ship). Same `step` schema, different transport. |
-| Dedup / idempotency | `webhook_events` table; in-flight `stories` row prevents double-processing. | The system of record is the dedup store: before writing, the crew checks the SoR for its prior write at the same key (e.g. an existing AI-bot comment on the MR at the same SHA). No local state needed. |
-| Crash recovery | Startup scan of interrupted `stories` rows; resume or escalate (§5.5). | None needed — CI retries the whole job on failure. |
-| Cross-crew coordination | Event-driven through the work source; never via shared database. | Same — and the audit sink is read-only for cross-crew consumers. |
+| Concern                 | Server-shaped                                                               | CLI-shaped                                                                                                                                                                                               |
+| ----------------------- | --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Audit + step records    | Per-crew SQLite (`stories`, `steps`, `webhook_events`) on a named volume.   | Remote audit sink via `@daddia/crew/audit` (planned, blocks code-reviewer ship). Same `step` schema, different transport.                                                                                |
+| Dedup / idempotency     | `webhook_events` table; in-flight `stories` row prevents double-processing. | The system of record is the dedup store: before writing, the crew checks the SoR for its prior write at the same key (e.g. an existing AI-bot comment on the MR at the same SHA). No local state needed. |
+| Crash recovery          | Startup scan of interrupted `stories` rows; resume or escalate (§5.5).      | None needed — CI retries the whole job on failure.                                                                                                                                                       |
+| Cross-crew coordination | Event-driven through the work source; never via shared database.            | Same — and the audit sink is read-only for cross-crew consumers.                                                                                                                                         |
 
 **Server-shaped tables** (per-crew SQLite, never shared):
 
-| Table | Purpose |
-| --- | --- |
-| `stories` | One row per story; `current_step` and `updated_at`. The in-flight signal. |
-| `steps` | One row per step execution; `session_id`, `started_at`, `finished_at`, `cost_usd`, `verdict`. |
-| `webhook_events` | Deduplication log keyed on `(provider, event_id)`. |
+| Table            | Purpose                                                                                       |
+| ---------------- | --------------------------------------------------------------------------------------------- |
+| `stories`        | One row per story; `current_step` and `updated_at`. The in-flight signal.                     |
+| `steps`          | One row per step execution; `session_id`, `started_at`, `finished_at`, `cost_usd`, `verdict`. |
+| `webhook_events` | Deduplication log keyed on `(provider, event_id)`.                                            |
 
 **CLI-shaped audit envelope** (sent to the remote sink at run completion):
 
@@ -381,18 +381,18 @@ direct database coupling.
 
 ## 7. Cross-cutting concepts
 
-| Concept | Pattern |
-| --- | --- |
-| **Audit trail** | `buildAuditHook()` attached to every persona run; every tool call logged with cost and verdict. The audit trail is the product. Storage per topology — see §6.1. |
-| **Bounded operation** | `boundedIterGuard()` wraps every refactor / CI-fix / remediation loop; throws `IterationCapReached` on cap. |
-| **Tool safety** | Two-layer allowlist: SDK `allowedTools` + `buildAuditHook` belt-and-suspenders. |
-| **Idempotency** | Server crews: external writes key on `issueKey` or `(provider, event_id)`; `webhook_events` dedup. CLI crews: the system of record is the dedup store — check before write, keyed on the natural identity of the run (e.g. MR + SHA). |
-| **Configuration** | One typed `Config` per crew; `process.env` only inside `config.ts` (lint-enforced); secrets branded and redacted from logs. |
-| **Webhook security** *(server-shaped only)* | `verifySignature()` + `checkReplayWindow()` + dedup store, all from `@daddia/crew/webhooks`, before body parse. CLI crews have no inbound surface. |
-| **Observability** | Structured logs today; OTel traces + cost-per-run metrics planned (CREW-55-001). One boot log answers "what config is this running with?" |
-| **Crash recovery** *(server-shaped only)* | Startup scan resumes interrupted SDK sessions or escalates; completes before HTTP server and poller start. CLI crews are retried by CI at the job level. |
-| **Project memory** | Personas seed project memory at run start; reduces repeated context cost across runs. |
-| **Testing** | Vitest unit + integration tests per package and per crew; one `pnpm test` runs everything. |
+| Concept                                     | Pattern                                                                                                                                                                                                                               |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Audit trail**                             | `buildAuditHook()` attached to every persona run; every tool call logged with cost and verdict. The audit trail is the product. Storage per topology — see §6.1.                                                                      |
+| **Bounded operation**                       | `boundedIterGuard()` wraps every refactor / CI-fix / remediation loop; throws `IterationCapReached` on cap.                                                                                                                           |
+| **Tool safety**                             | Two-layer allowlist: SDK `allowedTools` + `buildAuditHook` belt-and-suspenders.                                                                                                                                                       |
+| **Idempotency**                             | Server crews: external writes key on `issueKey` or `(provider, event_id)`; `webhook_events` dedup. CLI crews: the system of record is the dedup store — check before write, keyed on the natural identity of the run (e.g. MR + SHA). |
+| **Configuration**                           | One typed `Config` per crew; `process.env` only inside `config.ts` (lint-enforced); secrets branded and redacted from logs.                                                                                                           |
+| **Webhook security** _(server-shaped only)_ | `verifySignature()` + `checkReplayWindow()` + dedup store, all from `@daddia/crew/webhooks`, before body parse. CLI crews have no inbound surface.                                                                                    |
+| **Observability**                           | Structured logs today; OTel traces + cost-per-run metrics planned (CREW-55-001). One boot log answers "what config is this running with?"                                                                                             |
+| **Crash recovery** _(server-shaped only)_   | Startup scan resumes interrupted SDK sessions or escalates; completes before HTTP server and poller start. CLI crews are retried by CI at the job level.                                                                              |
+| **Project memory**                          | Personas seed project memory at run start; reduces repeated context cost across runs.                                                                                                                                                 |
+| **Testing**                                 | Vitest unit + integration tests per package and per crew; one `pnpm test` runs everything.                                                                                                                                            |
 
 ## 8. Deployment and environments
 
@@ -424,30 +424,30 @@ Architectural decisions are inferred from the current codebase and product
 direction. Authoring them as MADR entries under `docs/architecture/decisions/`
 is itself a graduation candidate (see §11).
 
-| ID  | Decision                                                              | Status |
-| --- | --------------------------------------------------------------------- | ------ |
-| ADR-001 | One process per crew; no shared process across crews                | *(Not yet written)* |
-| ADR-002 | Shared runtime via `@daddia/crew`; crews depend on the published package, not the workspace | *(Not yet written)* |
-| ADR-003 | Polling as the primary trigger; webhooks as secondary (server-shaped) | *(Not yet written)* |
-| ADR-004 | Per-crew SQLite for server-shaped crews; remote audit sink for CLI-shaped crews; no shared database | *(Not yet written)* |
-| ADR-005 | Bounded loops and audit hooks are non-optional in the runtime API   | *(Not yet written)* |
-| ADR-006 | Typed config in one file per crew; `process.env` lint-banned elsewhere | *(Not yet written)* |
-| ADR-007 | Fire-and-forget handoff events now; durable cross-crew orchestration deferred to Future phase | *(Not yet written)* |
-| ADR-008 | Two first-class deployment topologies (server-shaped container, CLI-shaped npm package); scheduled-batch and others deferred until a concrete crew needs them | *(Not yet written)* |
+| ID      | Decision                                                                                                                                                      | Status              |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| ADR-001 | One process per crew; no shared process across crews                                                                                                          | _(Not yet written)_ |
+| ADR-002 | Shared runtime via `@daddia/crew`; crews depend on the published package, not the workspace                                                                   | _(Not yet written)_ |
+| ADR-003 | Polling as the primary trigger; webhooks as secondary (server-shaped)                                                                                         | _(Not yet written)_ |
+| ADR-004 | Per-crew SQLite for server-shaped crews; remote audit sink for CLI-shaped crews; no shared database                                                           | _(Not yet written)_ |
+| ADR-005 | Bounded loops and audit hooks are non-optional in the runtime API                                                                                             | _(Not yet written)_ |
+| ADR-006 | Typed config in one file per crew; `process.env` lint-banned elsewhere                                                                                        | _(Not yet written)_ |
+| ADR-007 | Fire-and-forget handoff events now; durable cross-crew orchestration deferred to Future phase                                                                 | _(Not yet written)_ |
+| ADR-008 | Two first-class deployment topologies (server-shaped container, CLI-shaped npm package); scheduled-batch and others deferred until a concrete crew needs them | _(Not yet written)_ |
 
 ## 10. Risks, technical debt, and open questions
 
 ### 10.1 Risks
 
-| ID  | Risk                                                                    | Likelihood | Impact | Mitigation                                                                 |
-| --- | ----------------------------------------------------------------------- | ---------- | ------ | -------------------------------------------------------------------------- |
-| R1  | Foundation model cost drift makes autonomous runs uneconomic            | Medium     | High   | Per-run cost cap; cost-per-run reported per crew; alert on rising trend.   |
-| R2  | Fire-and-forget event model loses a handoff between crews               | Medium     | Medium | Polling fallback on every consuming crew until durable orchestrator ships. |
-| R3  | Shared runtime API churn breaks deployed crews silently                 | Low        | High   | Semver via Changesets; crews pin a minor; integration tests on every release. |
-| R4  | Single-container deployment becomes a bottleneck at server-shaped fleet scale | Low | Medium | Defer until second server-shaped crew is in production; revisit topology then. |
-| R5  | Audit trail volume outpaces local SQLite                                | Low        | Medium | Plan shipping audit events to an external sink in the Next phase.          |
-| R6  | CLI-shaped crew loses run audit if invoked without a remote audit sink configured | Medium | High | Fail fast at CLI startup if `AUDIT_SINK_URL` (or equivalent) is unset; tested in `crews/{name}/tests/cli.boot.test.ts`. The audit trail is the product — running without it is not a permitted degraded mode. |
-| R7  | CLI-shaped crew double-acts on the same target across two CI invocations | Medium | Medium | The system of record is the dedup store: the workflow checks for its prior write at the same key (e.g. existing AI-bot comment on the MR at the same SHA) before acting. Tested per crew. |
+| ID  | Risk                                                                              | Likelihood | Impact | Mitigation                                                                                                                                                                                                    |
+| --- | --------------------------------------------------------------------------------- | ---------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| R1  | Foundation model cost drift makes autonomous runs uneconomic                      | Medium     | High   | Per-run cost cap; cost-per-run reported per crew; alert on rising trend.                                                                                                                                      |
+| R2  | Fire-and-forget event model loses a handoff between crews                         | Medium     | Medium | Polling fallback on every consuming crew until durable orchestrator ships.                                                                                                                                    |
+| R3  | Shared runtime API churn breaks deployed crews silently                           | Low        | High   | Semver via Changesets; crews pin a minor; integration tests on every release.                                                                                                                                 |
+| R4  | Single-container deployment becomes a bottleneck at server-shaped fleet scale     | Low        | Medium | Defer until second server-shaped crew is in production; revisit topology then.                                                                                                                                |
+| R5  | Audit trail volume outpaces local SQLite                                          | Low        | Medium | Plan shipping audit events to an external sink in the Next phase.                                                                                                                                             |
+| R6  | CLI-shaped crew loses run audit if invoked without a remote audit sink configured | Medium     | High   | Fail fast at CLI startup if `AUDIT_SINK_URL` (or equivalent) is unset; tested in `crews/{name}/tests/cli.boot.test.ts`. The audit trail is the product — running without it is not a permitted degraded mode. |
+| R7  | CLI-shaped crew double-acts on the same target across two CI invocations          | Medium     | Medium | The system of record is the dedup store: the workflow checks for its prior write at the same key (e.g. existing AI-bot comment on the MR at the same SHA) before acting. Tested per crew.                     |
 
 ### 10.2 Technical debt
 
@@ -481,20 +481,20 @@ Nothing graduates speculatively. Each row lifts only when the trigger fires.
 
 **Crew-level patterns** (lift when the second crew needs the same thing):
 
-| Pattern | Current home | Graduate to | Trigger |
-| --- | --- | --- | --- |
-| Remote audit sink | `crews/delivery-build/src/state.ts` (SQLite-only today) | `@daddia/crew/audit` (transport-agnostic API + at least one reference implementation) | **Code-reviewer (the first CLI-shaped crew) ships** — a CLI crew cannot hold SQLite locally, and the audit trail is the product. This is a Next-phase blocker, not Future. |
-| Story-source polling loop | `crews/delivery-build/src/poller.ts` | `@daddia/crew/triggers` | Second server-shaped crew adopts polling. |
-| Escalation helper | `crews/delivery-build/src/workflow.ts` (`escalateToHumanReview`) | `@daddia/crew/escalation` | Second crew copies the same shape. |
-| Server crash-recovery scan | `crews/delivery-build/src/workflow.ts` (`recoverInterruptedSteps`) | `@daddia/crew/recovery` | Second server-shaped crew needs interrupted-run recovery. |
-| Per-crew state schema (`stories`, `steps`, `webhook_events`) | `crews/delivery-build/src/state.ts` | `@daddia/crew/state` | Second server-shaped crew duplicates the same three tables. |
-| MCP config conventions | `crews/delivery-build/mcp.json` | `@daddia/crew/mcp` (loader + validator) | Second crew declares the same shape. |
-| ADRs | This document, §9 | `docs/architecture/decisions/{id}.md` (MADR) | Any decision in §9 is contested or revisited. |
-| Cross-crew handoff event schema | Implicit in `ready-for-*` log lines | `@daddia/crew/events` (typed contracts) | Cross-crew orchestrator design begins (Future phase). |
+| Pattern                                                      | Current home                                                       | Graduate to                                                                           | Trigger                                                                                                                                                                    |
+| ------------------------------------------------------------ | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Remote audit sink                                            | `crews/delivery-build/src/state.ts` (SQLite-only today)            | `@daddia/crew/audit` (transport-agnostic API + at least one reference implementation) | **Code-reviewer (the first CLI-shaped crew) ships** — a CLI crew cannot hold SQLite locally, and the audit trail is the product. This is a Next-phase blocker, not Future. |
+| Story-source polling loop                                    | `crews/delivery-build/src/poller.ts`                               | `@daddia/crew/triggers`                                                               | Second server-shaped crew adopts polling.                                                                                                                                  |
+| Escalation helper                                            | `crews/delivery-build/src/workflow.ts` (`escalateToHumanReview`)   | `@daddia/crew/escalation`                                                             | Second crew copies the same shape.                                                                                                                                         |
+| Server crash-recovery scan                                   | `crews/delivery-build/src/workflow.ts` (`recoverInterruptedSteps`) | `@daddia/crew/recovery`                                                               | Second server-shaped crew needs interrupted-run recovery.                                                                                                                  |
+| Per-crew state schema (`stories`, `steps`, `webhook_events`) | `crews/delivery-build/src/state.ts`                                | `@daddia/crew/state`                                                                  | Second server-shaped crew duplicates the same three tables.                                                                                                                |
+| MCP config conventions                                       | `crews/delivery-build/mcp.json`                                    | `@daddia/crew/mcp` (loader + validator)                                               | Second crew declares the same shape.                                                                                                                                       |
+| ADRs                                                         | This document, §9                                                  | `docs/architecture/decisions/{id}.md` (MADR)                                          | Any decision in §9 is contested or revisited.                                                                                                                              |
+| Cross-crew handoff event schema                              | Implicit in `ready-for-*` log lines                                | `@daddia/crew/events` (typed contracts)                                               | Cross-crew orchestrator design begins (Future phase).                                                                                                                      |
 
 **Platform-level patterns** (lift when the platform itself warrants the abstraction):
 
-| Pattern | Current home | Graduate to | Trigger |
-| --- | --- | --- | --- |
-| Crew catalogue / discovery | Implicit in `crews/` directory listing | `@daddia/crew/catalogue` (manifest + discovery API) | Five or more crews exist and a new crew needs to locate another crew's entry point or event schema programmatically. |
-| Fleet manifest | Manual deployment of one container per crew | `fleet.yaml` (crew type → instance count mapping) | A tenant needs to run more than one instance of the same crew type simultaneously (e.g. two delivery-build instances for different Jira projects). |
+| Pattern                    | Current home                                | Graduate to                                         | Trigger                                                                                                                                            |
+| -------------------------- | ------------------------------------------- | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Crew catalogue / discovery | Implicit in `crews/` directory listing      | `@daddia/crew/catalogue` (manifest + discovery API) | Five or more crews exist and a new crew needs to locate another crew's entry point or event schema programmatically.                               |
+| Fleet manifest             | Manual deployment of one container per crew | `fleet.yaml` (crew type → instance count mapping)   | A tenant needs to run more than one instance of the same crew type simultaneously (e.g. two delivery-build instances for different Jira projects). |

@@ -12,13 +12,13 @@ Manual publish steps for `@daddia/crew`.
 
 ## Prerequisites
 
-| Requirement | Notes |
-| --- | --- |
-| Node.js ≥ 24 | Match the version used in the repo |
-| pnpm ≥ 10 | `npm i -g pnpm` if missing |
-| npm CLI | Bundled with Node; used for `npm publish` |
-| npm account | Must be a member of the `@daddia` npm org with **publish** rights |
-| `NPM_TOKEN` | Automation token (type: **Publish**) from npmjs.com → Access Tokens |
+| Requirement  | Notes                                                               |
+| ------------ | ------------------------------------------------------------------- |
+| Node.js ≥ 24 | Match the version used in the repo                                  |
+| pnpm ≥ 10    | `npm i -g pnpm` if missing                                          |
+| npm CLI      | Bundled with Node; used for `npm publish`                           |
+| npm account  | Must be a member of the `@daddia` npm org with **publish** rights   |
+| `NPM_TOKEN`  | Automation token (type: **Publish**) from npmjs.com → Access Tokens |
 
 To request org access, contact a `@daddia` org owner on npmjs.com. `@daddia/crew` is published with public access, so no token is required to install it.
 
@@ -150,11 +150,11 @@ unset NPM_TOKEN
 
 ## Org and token reference
 
-| Role | Token type | Scope needed |
-| --- | --- | --- |
-| Package publisher (this runbook) | Automation — Publish | `@daddia` org, `@daddia/crew` package |
-| CI pipeline | Automation — Publish | `@daddia` org, stored as `NPM_TOKEN` secret |
-| Agent consumer / install | None — public package | `npm install @daddia/crew` with no token |
+| Role                             | Token type            | Scope needed                                |
+| -------------------------------- | --------------------- | ------------------------------------------- |
+| Package publisher (this runbook) | Automation — Publish  | `@daddia` org, `@daddia/crew` package       |
+| CI pipeline                      | Automation — Publish  | `@daddia` org, stored as `NPM_TOKEN` secret |
+| Agent consumer / install         | None — public package | `npm install @daddia/crew` with no token    |
 
 All tokens are created at [npmjs.com → Access Tokens](https://www.npmjs.com/settings/tokens).
 
@@ -175,6 +175,7 @@ pnpm changeset
 ```
 
 The interactive prompt asks for:
+
 - **Which packages** are affected → select `@daddia/crew`
 - **Semver bump type** → `patch` (bug fix), `minor` (new export), `major` (breaking change)
 - **Summary** → one line describing the change for the `CHANGELOG.md` entry

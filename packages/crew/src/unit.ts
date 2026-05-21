@@ -1,4 +1,4 @@
-import type { Agent } from "./agent.js";
+import type { Agent } from './agent.js';
 
 /** A deployable agent crew (e.g. "delivery"). */
 export interface AgentCrew {

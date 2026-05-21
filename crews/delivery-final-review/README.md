@@ -14,13 +14,13 @@ The delivery-review crew runs the final review and merge sequence for a story af
 
 ## Status
 
-| Component | Status |
-|---|---|
+| Component         | Status                                 |
+| ----------------- | -------------------------------------- |
 | `src/workflow.ts` | Stubbed — throws `not yet implemented` |
-| `src/state.ts` | Scaffolded |
-| `src/index.ts` | Scaffolded (healthz only) |
-| Agents | Not yet added |
-| Webhook handler | Not yet added |
+| `src/state.ts`    | Scaffolded                             |
+| `src/index.ts`    | Scaffolded (healthz only)              |
+| Agents            | Not yet added                          |
+| Webhook handler   | Not yet added                          |
 
 ## Running locally
 

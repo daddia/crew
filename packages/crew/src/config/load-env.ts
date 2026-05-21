@@ -1,7 +1,7 @@
-import { ZodError, type ZodSchema } from "zod";
-import { SchemaValidationError, formatZodIssues } from "./errors.js";
-import { attachSecretPaths } from "./redact.js";
-import type { ZodTypeAny } from "zod";
+import { ZodError, type ZodSchema } from 'zod';
+import { SchemaValidationError, formatZodIssues } from './errors.js';
+import { attachSecretPaths } from './redact.js';
+import type { ZodTypeAny } from 'zod';
 
 /**
  * Maps a schema field's dot-notation path to the env var that supplies its
@@ -19,22 +19,19 @@ export type EnvMapping = Record<string, string>;
  * Zod schema expects. Only paths present in the mapping are set; undefined
  * env values are omitted so Zod can apply defaults or surface "Required".
  */
-function buildNestedFromEnv(
-  env: NodeJS.ProcessEnv,
-  mapping: EnvMapping,
-): Record<string, unknown> {
+function buildNestedFromEnv(env: NodeJS.ProcessEnv, mapping: EnvMapping): Record<string, unknown> {
   const result: Record<string, unknown> = {};
 
   for (const [dotPath, envVar] of Object.entries(mapping)) {
     const raw = env[envVar];
-    const keys = dotPath.split(".");
+    const keys = dotPath.split('.');
 
     // Always materialise intermediate objects so Zod can apply field-level
     // defaults even when no env var is set for that subtree.
     let cursor = result;
     for (let i = 0; i < keys.length - 1; i++) {
       const key = keys[i]!;
-      if (typeof cursor[key] !== "object" || cursor[key] === null) {
+      if (typeof cursor[key] !== 'object' || cursor[key] === null) {
         cursor[key] = {};
       }
       cursor = cursor[key] as Record<string, unknown>;
@@ -60,11 +57,7 @@ function buildNestedFromEnv(
  * Secret-marked fields in the schema are tracked on the result so that
  * redact() can replace them without requiring access to the schema.
  */
-export function loadEnv<T>(
-  env: NodeJS.ProcessEnv,
-  schema: ZodSchema<T>,
-  mapping: EnvMapping,
-): T {
+export function loadEnv<T>(env: NodeJS.ProcessEnv, schema: ZodSchema<T>, mapping: EnvMapping): T {
   const nested = buildNestedFromEnv(env, mapping);
 
   let result: T;
@@ -73,18 +66,15 @@ export function loadEnv<T>(
   } catch (err: unknown) {
     if (err instanceof ZodError) {
       const issues = err.issues.map((i) => ({
-        path: i.path.join("."),
+        path: i.path.join('.'),
         message: i.message,
       }));
-      throw new SchemaValidationError(
-        `Config validation failed:\n${formatZodIssues(err)}`,
-        issues,
-      );
+      throw new SchemaValidationError(`Config validation failed:\n${formatZodIssues(err)}`, issues);
     }
     throw err;
   }
 
-  if (result !== null && typeof result === "object") {
+  if (result !== null && typeof result === 'object') {
     attachSecretPaths(result as object, schema as unknown as ZodTypeAny);
   }
 

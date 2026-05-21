@@ -68,11 +68,13 @@ In a future phase, individual crews become composable steps in larger pipelines.
 Crew is evaluated on two levels:
 
 **Platform level (applies to every crew):**
+
 - **Autonomy rate** — the percentage of runs that complete without a human intervention. This is the primary signal of platform health. A declining autonomy rate means crews are receiving work they cannot handle, or that the runtime is failing them.
 - **Cost per run** — total spend per completed workflow execution. This is the primary commercial metric. The expectation is that cost decreases as prompts and skills mature. A rising trend is a signal to investigate.
 - **Time to first crew** — for a new domain, how long it takes to go from blank slate to a deployed, running crew. This measures the leverage of the shared runtime.
 
 **Delivery crew level:**
+
 - **Cycle time** — story from entering the delivery sequence to merged MR. Target: meet or beat the team's current median on comparable stories.
 - **Escalation rate** — percentage of stories that require human intervention. Target range defined in `docs/solution.md`.
 
@@ -89,14 +91,14 @@ Numeric thresholds, alert conditions, and baseline measurements live in `docs/so
 
 ## 9. Stakeholders and RACI
 
-| Concern | Responsible | Accountable | Consulted | Informed |
-|---|---|---|---|---|
-| Platform architecture and runtime | daddia | daddia | — | — |
-| Delivery crew design and prompts | daddia | daddia | — | — |
-| New crew scoping and prioritisation | daddia | daddia | — | — |
-| Cost monitoring | daddia | daddia | — | — |
-| Integration with external systems | daddia | daddia | — | — |
-| Definition of done per story (delivery crew) | Story author | Story author | daddia | crew |
+| Concern                                      | Responsible  | Accountable  | Consulted | Informed |
+| -------------------------------------------- | ------------ | ------------ | --------- | -------- |
+| Platform architecture and runtime            | daddia       | daddia       | —         | —        |
+| Delivery crew design and prompts             | daddia       | daddia       | —         | —        |
+| New crew scoping and prioritisation          | daddia       | daddia       | —         | —        |
+| Cost monitoring                              | daddia       | daddia       | —         | —        |
+| Integration with external systems            | daddia       | daddia       | —         | —        |
+| Definition of done per story (delivery crew) | Story author | Story author | daddia    | crew     |
 
 This is a solo-operated product in its current phase. The RACI expands when crews are operated by or for other teams.
 

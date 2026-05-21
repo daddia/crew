@@ -19,9 +19,9 @@ link is required at runtime.
 
 ## Prerequisites
 
-| Requirement | Notes |
-| --- | --- |
-| Docker ≥ 25 | `docker version` to confirm |
+| Requirement | Notes                                                                          |
+| ----------- | ------------------------------------------------------------------------------ |
+| Docker ≥ 25 | `docker version` to confirm                                                    |
 | `.env` file | Copy `crews/delivery/.env.example` to `crews/delivery/.env` and fill in values |
 
 `@daddia/crew` is a **public** npm package. No npm token is needed to install
@@ -50,10 +50,10 @@ docker build -f crews/delivery/Dockerfile -t crew-delivery:local .
 
 The build runs in two stages:
 
-| Stage | What happens |
-| --- | --- |
-| `base` | pnpm installs `@daddia/crew@^0.1.0` from npm (no workspace source needed); TypeScript compiles `@daddia/crew-delivery` |
-| `runtime` | `pnpm deploy` bundles production deps into `/deploy`; slim `node:24-slim` image runs `node dist/index.js` |
+| Stage     | What happens                                                                                                           |
+| --------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `base`    | pnpm installs `@daddia/crew@^0.1.0` from npm (no workspace source needed); TypeScript compiles `@daddia/crew-delivery` |
+| `runtime` | `pnpm deploy` bundles production deps into `/deploy`; slim `node:24-slim` image runs `node dist/index.js`              |
 
 Expected final output:
 
@@ -126,13 +126,13 @@ Expected output contains the version and an npm registry URL:
 
 ## Build args reference
 
-| Variable | Where set | Purpose |
-| --- | --- | --- |
-| *(none required)* | — | `@daddia/crew` is public; no auth needed to install |
-| `ANTHROPIC_API_KEY` | `.env` / runtime env | Agent model calls |
-| `JIRA_WEBHOOK_SECRET` | `.env` / runtime env | Jira webhook HMAC verification |
-| `GITLAB_WEBHOOK_SECRET` | `.env` / runtime env | GitLab webhook token verification |
-| `DB_PATH` | `.env` / runtime env | SQLite file path (default `/data/delivery.db`) |
+| Variable                | Where set            | Purpose                                             |
+| ----------------------- | -------------------- | --------------------------------------------------- |
+| _(none required)_       | —                    | `@daddia/crew` is public; no auth needed to install |
+| `ANTHROPIC_API_KEY`     | `.env` / runtime env | Agent model calls                                   |
+| `JIRA_WEBHOOK_SECRET`   | `.env` / runtime env | Jira webhook HMAC verification                      |
+| `GITLAB_WEBHOOK_SECRET` | `.env` / runtime env | GitLab webhook token verification                   |
+| `DB_PATH`               | `.env` / runtime env | SQLite file path (default `/data/delivery.db`)      |
 
 No secrets are needed at image build time. All credentials are injected at
 `docker run` or `docker compose up` via the env file.

@@ -146,6 +146,6 @@ the quality goal it satisfies. -->
 <!-- Patterns that should lift to a shared library when a second area adopts
      them. State the trigger; do not graduate speculatively. -->
 
-| Pattern        | Current home    | Graduate to             | Trigger                        |
-| -------------- | --------------- | ----------------------- | ------------------------------ |
-| {pattern name} | §{N.M}          | `architecture/patterns/{name}.md` | {Second context that adopts it} |
+| Pattern        | Current home | Graduate to                       | Trigger                         |
+| -------------- | ------------ | --------------------------------- | ------------------------------- |
+| {pattern name} | §{N.M}       | `architecture/patterns/{name}.md` | {Second context that adopts it} |

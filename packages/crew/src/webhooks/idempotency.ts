@@ -1,5 +1,5 @@
-import { DatabaseSync } from "node:sqlite";
-import type { Provider } from "./verify.js";
+import { DatabaseSync } from 'node:sqlite';
+import type { Provider } from './verify.js';
 
 export interface IdempotencyStore {
   /**

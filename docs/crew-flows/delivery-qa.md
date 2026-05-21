@@ -32,4 +32,4 @@
  *   QA_DEFECT_LOOP_CAP       - max remediation cycles before escalation
  *   REMEDIATION_TIMEOUT_HOURS - max wait for engineer remediation before escalation
  */
- ```
+```

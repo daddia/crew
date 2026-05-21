@@ -1,11 +1,11 @@
-import type { ZodTypeAny } from "zod";
+import type { ZodTypeAny } from 'zod';
 
 /**
  * Unique symbol used as the TypeScript brand for Secret-marked schema fields.
  * Callers use the `Secret()` function to apply the brand; they do not need to
  * reference this symbol directly.
  */
-export const SECRET_BRAND: unique symbol = Symbol("crew.config.secret");
+export const SECRET_BRAND: unique symbol = Symbol('crew.config.secret');
 
 /**
  * TypeScript brand type for a secret-marked Zod schema node.
@@ -57,11 +57,9 @@ function findSecretPaths(schema: ZodTypeAny, prefix: string): string[] {
 
   // ZodObject: recurse into each field with its key appended to the prefix
   const shape = (schema as unknown as Record<string, unknown>).shape;
-  if (shape && typeof shape === "object" && shape !== null) {
+  if (shape && typeof shape === 'object' && shape !== null) {
     const paths: string[] = [];
-    for (const [key, fieldSchema] of Object.entries(
-      shape as Record<string, ZodTypeAny>,
-    )) {
+    for (const [key, fieldSchema] of Object.entries(shape as Record<string, ZodTypeAny>)) {
       const childPrefix = prefix ? `${prefix}.${key}` : key;
       paths.push(...findSecretPaths(fieldSchema, childPrefix));
     }
@@ -70,8 +68,7 @@ function findSecretPaths(schema: ZodTypeAny, prefix: string): string[] {
 
   // Wrapper types (ZodOptional, ZodDefault, ZodNullable …) expose their
   // inner schema via _def.innerType in Zod v4.
-  const innerType = (schema as unknown as { _def?: { innerType?: ZodTypeAny } })
-    ._def?.innerType;
+  const innerType = (schema as unknown as { _def?: { innerType?: ZodTypeAny } })._def?.innerType;
   if (innerType) {
     return findSecretPaths(innerType, prefix);
   }
@@ -85,7 +82,7 @@ function findSecretPaths(schema: ZodTypeAny, prefix: string): string[] {
  * so that redact() can later locate and replace those paths.
  */
 export function attachSecretPaths(result: object, schema: ZodTypeAny): void {
-  const paths = findSecretPaths(schema, "");
+  const paths = findSecretPaths(schema, '');
   if (paths.length > 0) {
     secretPathsRegistry.set(result, new Set(paths));
   }
@@ -99,7 +96,7 @@ export function attachSecretPaths(result: object, schema: ZodTypeAny): void {
  * other objects it returns a structural clone with no secrets replaced.
  */
 export function redact<T>(value: T): T {
-  if (value === null || typeof value !== "object") {
+  if (value === null || typeof value !== 'object') {
     return value;
   }
 
@@ -108,14 +105,14 @@ export function redact<T>(value: T): T {
   const paths = secretPathsRegistry.get(value as object);
   if (paths) {
     for (const path of paths) {
-      const keys = path.split(".");
+      const keys = path.split('.');
       let cursor = clone;
       for (let i = 0; i < keys.length - 1; i++) {
         const next = cursor[keys[i]!];
-        if (next === null || typeof next !== "object") break;
+        if (next === null || typeof next !== 'object') break;
         cursor = next as Record<string, unknown>;
       }
-      cursor[keys[keys.length - 1]!] = "***";
+      cursor[keys[keys.length - 1]!] = '***';
     }
     // Carry the secret-path registry forward so the clone is also redactable.
     secretPathsRegistry.set(clone as object, paths);

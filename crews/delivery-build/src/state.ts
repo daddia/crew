@@ -1,18 +1,18 @@
-import { DatabaseSync } from "node:sqlite";
+import { DatabaseSync } from 'node:sqlite';
 
 export type Step =
-  | "triage"
-  | "context-seed"
-  | "assess-clarification"
-  | "clarification-pending"
-  | "implement"
-  | "peer-code-review"
-  | "address-feedback"
-  | "open-mr"
-  | "ci-check"
-  | "in-qa"
-  | "ready-for-review"
-  | "needs-human-review";
+  | 'triage'
+  | 'context-seed'
+  | 'assess-clarification'
+  | 'clarification-pending'
+  | 'implement'
+  | 'peer-code-review'
+  | 'address-feedback'
+  | 'open-mr'
+  | 'ci-check'
+  | 'in-qa'
+  | 'ready-for-review'
+  | 'needs-human-review';
 
 export interface StoryRow {
   issueKey: string;
@@ -61,11 +61,7 @@ export interface StateStore {
   getStory(issueKey: string): StoryRow | undefined;
   getStoriesAtStep(step: Step): StoryRow[];
   startStep(issueKey: string, step: Step, sessionId?: string): void;
-  finishStep(
-    issueKey: string,
-    step: Step,
-    result: { costUsd?: number; verdict?: string },
-  ): void;
+  finishStep(issueKey: string, step: Step, result: { costUsd?: number; verdict?: string }): void;
   getStepHistory(issueKey: string): StepRow[];
   countRefactorIterations(issueKey: string): number;
   /**
@@ -86,7 +82,7 @@ export interface StateStore {
 
 export function createStateStore(dbPath: string): StateStore {
   const db = new DatabaseSync(dbPath);
-  db.exec("PRAGMA journal_mode = WAL");
+  db.exec('PRAGMA journal_mode = WAL');
   db.exec(SCHEMA);
 
   const upsertStoryStmt = db.prepare(
@@ -144,7 +140,7 @@ export function createStateStore(dbPath: string): StateStore {
      ORDER BY started_at ASC`,
   );
 
-  const pingStmt = db.prepare("SELECT 1");
+  const pingStmt = db.prepare('SELECT 1');
 
   return {
     upsertStory(issueKey, step) {

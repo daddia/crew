@@ -5,7 +5,7 @@ services:
       dockerfile: crews/delivery/Dockerfile
     image: crew-delivery:local
     ports:
-      - "3000:3000"
+      - '3000:3000'
     env_file:
       - crews/delivery/.env
     volumes:

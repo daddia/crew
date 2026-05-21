@@ -1,10 +1,10 @@
-import { NodeSDK } from "@opentelemetry/sdk-node";
-import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
-import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
-import { trace } from "@opentelemetry/api";
-import type { Tracer } from "@opentelemetry/api";
+import { NodeSDK } from '@opentelemetry/sdk-node';
+import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
+import { trace } from '@opentelemetry/api';
+import type { Tracer } from '@opentelemetry/api';
 
-export type LogLevel = "debug" | "info" | "warn" | "error";
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 export interface LogRecord {
   level: LogLevel;
@@ -34,7 +34,7 @@ function emit(
     ts: new Date().toISOString(),
     ...fields,
   };
-  process.stdout.write(JSON.stringify(record) + "\n");
+  process.stdout.write(JSON.stringify(record) + '\n');
 }
 
 /**
@@ -49,10 +49,10 @@ function emit(
  */
 export function createLogger(service: string): Logger {
   return {
-    debug: (msg, fields) => emit(service, "debug", msg, fields),
-    info: (msg, fields) => emit(service, "info", msg, fields),
-    warn: (msg, fields) => emit(service, "warn", msg, fields),
-    error: (msg, fields) => emit(service, "error", msg, fields),
+    debug: (msg, fields) => emit(service, 'debug', msg, fields),
+    info: (msg, fields) => emit(service, 'info', msg, fields),
+    warn: (msg, fields) => emit(service, 'warn', msg, fields),
+    error: (msg, fields) => emit(service, 'error', msg, fields),
   };
 }
 
@@ -80,8 +80,8 @@ export interface TracingOptions {
 export function initTracing(options: TracingOptions): void {
   const traceExporter = options.honeycombApiKey
     ? new OTLPTraceExporter({
-        url: "https://api.honeycomb.io/v1/traces",
-        headers: { "x-honeycomb-team": options.honeycombApiKey },
+        url: 'https://api.honeycomb.io/v1/traces',
+        headers: { 'x-honeycomb-team': options.honeycombApiKey },
       })
     : undefined;
 

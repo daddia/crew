@@ -98,11 +98,20 @@ crews/delivery/src/index.ts
 `ATLASSIAN_BASE_URL`, `ATLASSIAN_EMAIL`, `ATLASSIAN_API_TOKEN`, `GITLAB_PERSONAL_ACCESS_TOKEN`, `ANTHROPIC_API_KEY` all silently default to `""`. A misconfigured deployment will start successfully and only fail when the first workflow runs, making debugging harder. Add an eager validation block to `index.ts`:
 
 ```typescript
-const required = ['ANTHROPIC_API_KEY', 'ATLASSIAN_BASE_URL', 'ATLASSIAN_EMAIL',
-                  'ATLASSIAN_API_TOKEN', 'GITLAB_PERSONAL_ACCESS_TOKEN',
-                  'JIRA_WEBHOOK_SECRET', 'GITLAB_WEBHOOK_SECRET'];
-const missing = required.filter(k => !process.env[k]);
-if (missing.length) { log.error('server.missing-env', { missing }); process.exit(1); }
+const required = [
+  'ANTHROPIC_API_KEY',
+  'ATLASSIAN_BASE_URL',
+  'ATLASSIAN_EMAIL',
+  'ATLASSIAN_API_TOKEN',
+  'GITLAB_PERSONAL_ACCESS_TOKEN',
+  'JIRA_WEBHOOK_SECRET',
+  'GITLAB_WEBHOOK_SECRET',
+];
+const missing = required.filter((k) => !process.env[k]);
+if (missing.length) {
+  log.error('server.missing-env', { missing });
+  process.exit(1);
+}
 ```
 
 ### 8. No workflow crash recovery
@@ -211,7 +220,7 @@ crews/delivery/src/integrations/jira.ts:14
 ```
 
 ```typescript
-const authHeader = "Basic " + Buffer.from(`${EMAIL}:${API_TOKEN}`).toString("base64");
+const authHeader = 'Basic ' + Buffer.from(`${EMAIL}:${API_TOKEN}`).toString('base64');
 ```
 
 This runs at import time before any env var validation (see #7). If `EMAIL` or `API_TOKEN` are empty, a Base64 of `:` is silently baked in. Move the header construction inside `jiraFetch()` so it can fail loudly once startup validation is in place.
@@ -285,22 +294,22 @@ crews/delivery/src/integrations/gitlab.ts:59
 
 ## Priority Matrix
 
-| # | Issue | Effort | Impact |
-|---|---|---|---|
-| 1–2 | Wire agent `run()` + `resolveSession()` | High | P0 — system is inert without this |
-| 3 | Fix code-reviewer Dockerfile pnpm version | Low | P0 — build fails |
-| 4 | Add CI pipeline | Medium | P1 — no safety net |
-| 5 | Consolidate dual SQLite connections | Low | P1 — architectural confusion |
-| 6 | Fix `finishPhase()` ignoring `phase` param | Low | P1 — wrong row updated under replay |
-| 7 | Startup env validation | Low | P1 — silent misconfig |
-| 8 | Workflow crash recovery | High | P1 — story loss on restart |
-| 9 | Pin MCP server versions | Low | P1 — silent prod breakage |
-| 10 | `createMr()` idempotency | Medium | P1 — duplicate MRs |
-| 11 | Fix AGENTS.md package names | Low | P2 — contributor confusion |
-| 12 | Wire `subagentPaths` in SDK session | Medium | P2 — dead code path |
-| 13 | Remove spurious `db` from test mocks | Low | P2 — type error |
-| 14–15 | Delete unused tooling + esbuild entry | Low | P2 — maintenance noise |
-| 16–18 | Settings comment, auth header, MR IID | Low | P2 — correctness/clarity |
-| 19–25 | Tracing, rate limiting, env examples, etc. | Various | P3 — hardening |
+| #     | Issue                                      | Effort  | Impact                              |
+| ----- | ------------------------------------------ | ------- | ----------------------------------- |
+| 1–2   | Wire agent `run()` + `resolveSession()`    | High    | P0 — system is inert without this   |
+| 3     | Fix code-reviewer Dockerfile pnpm version  | Low     | P0 — build fails                    |
+| 4     | Add CI pipeline                            | Medium  | P1 — no safety net                  |
+| 5     | Consolidate dual SQLite connections        | Low     | P1 — architectural confusion        |
+| 6     | Fix `finishPhase()` ignoring `phase` param | Low     | P1 — wrong row updated under replay |
+| 7     | Startup env validation                     | Low     | P1 — silent misconfig               |
+| 8     | Workflow crash recovery                    | High    | P1 — story loss on restart          |
+| 9     | Pin MCP server versions                    | Low     | P1 — silent prod breakage           |
+| 10    | `createMr()` idempotency                   | Medium  | P1 — duplicate MRs                  |
+| 11    | Fix AGENTS.md package names                | Low     | P2 — contributor confusion          |
+| 12    | Wire `subagentPaths` in SDK session        | Medium  | P2 — dead code path                 |
+| 13    | Remove spurious `db` from test mocks       | Low     | P2 — type error                     |
+| 14–15 | Delete unused tooling + esbuild entry      | Low     | P2 — maintenance noise              |
+| 16–18 | Settings comment, auth header, MR IID      | Low     | P2 — correctness/clarity            |
+| 19–25 | Tracing, rate limiting, env examples, etc. | Various | P3 — hardening                      |
 
 The most valuable next step is implementing `resolveSession()` and the four `run()` methods in `packages/crew/src/session.ts` and each `agent.ts` — everything else is scaffolding that works correctly once the SDK calls are live.

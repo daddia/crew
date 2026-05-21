@@ -34,7 +34,7 @@ export class JiraApiError extends Error {
   constructor(statusCode: number, message: string) {
     super(message);
     this.statusCode = statusCode;
-    this.name = "JiraApiError";
+    this.name = 'JiraApiError';
   }
 }
 
@@ -48,23 +48,22 @@ export function createJiraClient(
 ): JiraClient {
   const { baseUrl, email } = identity;
   const authHeader =
-    "Basic " +
-    Buffer.from(`${email}:${secrets.atlassianApiToken}`).toString("base64");
+    'Basic ' + Buffer.from(`${email}:${secrets.atlassianApiToken}`).toString('base64');
 
   async function jiraFetch(path: string, init?: RequestInit): Promise<Response> {
     const url = `${baseUrl}/rest/api/3${path}`;
     const res = await fetch(url, {
       ...init,
       headers: {
-        "Authorization": authHeader,
-        "Content-Type": "application/json",
-        "Accept": "application/json",
+        Authorization: authHeader,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
         ...(init?.headers as Record<string, string> | undefined),
       },
     });
     if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      throw new JiraApiError(res.status, `${init?.method ?? "GET"} ${path}: ${text}`);
+      const text = await res.text().catch(() => '');
+      throw new JiraApiError(res.status, `${init?.method ?? 'GET'} ${path}: ${text}`);
     }
     return res;
   }
@@ -80,7 +79,7 @@ export function createJiraClient(
       );
       if (!transition) return;
       await jiraFetch(`/issue/${issueKey}/transitions`, {
-        method: "POST",
+        method: 'POST',
         body: JSON.stringify({ transition: { id: transition.id } }),
       });
     },
@@ -106,12 +105,12 @@ export function createJiraClient(
 
     async commentOnIssue(issueKey, body) {
       await jiraFetch(`/issue/${issueKey}/comment`, {
-        method: "POST",
+        method: 'POST',
         body: JSON.stringify({
           body: {
-            type: "doc",
+            type: 'doc',
             version: 1,
-            content: [{ type: "paragraph", content: [{ type: "text", text: body }] }],
+            content: [{ type: 'paragraph', content: [{ type: 'text', text: body }] }],
           },
         }),
       });
@@ -127,15 +126,15 @@ export function createJiraClient(
         }>;
       };
       return data.comments.map((c) => ({
-        accountId: c.author.accountId ?? "",
-        author: c.author.emailAddress ?? c.author.displayName ?? "",
-        body: extractAdfText(c.body) ?? "",
+        accountId: c.author.accountId ?? '',
+        author: c.author.emailAddress ?? c.author.displayName ?? '',
+        body: extractAdfText(c.body) ?? '',
         created: c.created,
       }));
     },
 
     async searchIssues(jql) {
-      const params = new URLSearchParams({ jql, fields: "key", maxResults: "50" });
+      const params = new URLSearchParams({ jql, fields: 'key', maxResults: '50' });
       const res = await jiraFetch(`/issue/search?${params.toString()}`);
       const data = (await res.json()) as { issues: Array<{ key: string }> };
       return data.issues.map((issue) => ({ issueKey: issue.key }));
@@ -144,12 +143,12 @@ export function createJiraClient(
 }
 
 function extractAdfText(node: unknown): string | null {
-  if (!node || typeof node !== "object") return null;
+  if (!node || typeof node !== 'object') return null;
   const n = node as { text?: string; content?: unknown[] };
-  if (typeof n.text === "string") return n.text;
+  if (typeof n.text === 'string') return n.text;
   if (Array.isArray(n.content)) {
     const parts = n.content.map(extractAdfText).filter((s): s is string => s !== null);
-    return parts.length > 0 ? parts.join("\n") : null;
+    return parts.length > 0 ? parts.join('\n') : null;
   }
   return null;
 }

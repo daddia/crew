@@ -3,6 +3,7 @@
 An agent crew is a deployable agent service containing two or more personas that hand off work in a defined sequence. The delivery crew (`engineer → senior-engineer → tech-lead`) is the canonical example.
 
 Use an agent crew when:
+
 - the workflow has distinct phases with different authority or skill requirements (implement, review, approve);
 - no single persona should both produce and gate output (separation of concerns);
 - a bounded feedback loop needs a separate actor to address and re-review.
@@ -13,13 +14,13 @@ Use a solo persona (see `adding-a-persona.md`) when a crew does one job end-to-e
 
 Before writing code, define the roster in terms of phases, not job titles.
 
-| Question | Example answer |
-|---|---|
-| What phases does the workflow have? | implement → peer-review → address-feedback → final-review |
-| Which phase requires read/write tools? | implement, address-feedback |
-| Which phase requires read-only tools? | peer-review, final-review |
-| Which persona owns the feedback loop? | the same persona that implemented (engineer) |
-| Which persona is the final gate? | a separate, senior persona (tech-lead) |
+| Question                               | Example answer                                            |
+| -------------------------------------- | --------------------------------------------------------- |
+| What phases does the workflow have?    | implement → peer-review → address-feedback → final-review |
+| Which phase requires read/write tools? | implement, address-feedback                               |
+| Which phase requires read-only tools?  | peer-review, final-review                                 |
+| Which persona owns the feedback loop?  | the same persona that implemented (engineer)              |
+| Which persona is the final gate?       | a separate, senior persona (tech-lead)                    |
 
 Keep the roster minimal. A two-persona team (producer + gatekeeper) covers most workflows.
 
@@ -122,13 +123,13 @@ Add every phase name to the `Phase` union:
 
 ```typescript
 export type Phase =
-  | "implement"
-  | "open-mr"
-  | "peer-review"
-  | "address-feedback"
-  | "final-review"
-  | "done"
-  | "needs-human-review";
+  | 'implement'
+  | 'open-mr'
+  | 'peer-review'
+  | 'address-feedback'
+  | 'final-review'
+  | 'done'
+  | 'needs-human-review';
 ```
 
 Phases must be stable strings — they are stored in SQLite and used for crash-recovery lookups.
@@ -137,13 +138,13 @@ Phases must be stable strings — they are stored in SQLite and used for crash-r
 
 Each persona receives only what it needs for its phase. Pass context explicitly in the `context` field of `AgentInput`:
 
-| Phase | Typical context keys |
-|---|---|
-| implement | `task`, `issueKey` |
-| open-mr | `branchName`, `title` |
-| peer-review | `task`, `mrUrl`, `diff` |
+| Phase            | Typical context keys        |
+| ---------------- | --------------------------- |
+| implement        | `task`, `issueKey`          |
+| open-mr          | `branchName`, `title`       |
+| peer-review      | `task`, `mrUrl`, `diff`     |
 | address-feedback | `task`, `mrUrl`, `comments` |
-| final-review | `task`, `mrUrl` |
+| final-review     | `task`, `mrUrl`             |
 
 Never pass a persona's full result object to the next persona. Extract only what is needed.
 

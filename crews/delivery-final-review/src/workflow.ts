@@ -1,5 +1,5 @@
-import type { StateStore } from "./state.js";
-import { log } from "./observability.js";
+import type { StateStore } from './state.js';
+import { log } from './observability.js';
 
 export interface WorkflowContext {
   issueKey: string;
@@ -34,6 +34,6 @@ export interface WorkflowContext {
  */
 export async function runReview(ctx: WorkflowContext): Promise<void> {
   const { issueKey } = ctx;
-  log.info("workflow.review.start", { issueKey });
-  throw new Error("delivery-review: not yet implemented");
+  log.info('workflow.review.start', { issueKey });
+  throw new Error('delivery-review: not yet implemented');
 }

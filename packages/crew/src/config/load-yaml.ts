@@ -1,7 +1,7 @@
-import { readFile } from "node:fs/promises";
-import { ZodError, type ZodSchema } from "zod";
-import { parse as parseYaml } from "yaml";
-import { ConfigNotFoundError, SchemaValidationError, formatZodIssues } from "./errors.js";
+import { readFile } from 'node:fs/promises';
+import { ZodError, type ZodSchema } from 'zod';
+import { parse as parseYaml } from 'yaml';
+import { ConfigNotFoundError, SchemaValidationError, formatZodIssues } from './errors.js';
 
 /**
  * Read a YAML file from disk, parse it, and validate the result against a
@@ -20,12 +20,9 @@ export async function loadYaml<T>(
 ): Promise<T> {
   let raw: string;
   try {
-    raw = await readFile(filePath, "utf-8");
+    raw = await readFile(filePath, 'utf-8');
   } catch (err: unknown) {
-    throw new ConfigNotFoundError(
-      `${label} not found at ${filePath}`,
-      { cause: err },
-    );
+    throw new ConfigNotFoundError(`${label} not found at ${filePath}`, { cause: err });
   }
 
   let parsed: unknown;
@@ -34,7 +31,7 @@ export async function loadYaml<T>(
   } catch (err: unknown) {
     throw new SchemaValidationError(
       `${label} at ${filePath} contains invalid YAML`,
-      [{ path: "", message: "invalid YAML syntax" }],
+      [{ path: '', message: 'invalid YAML syntax' }],
       { cause: err },
     );
   }
@@ -44,7 +41,7 @@ export async function loadYaml<T>(
   } catch (err: unknown) {
     if (err instanceof ZodError) {
       const issues = err.issues.map((i) => ({
-        path: i.path.join("."),
+        path: i.path.join('.'),
         message: i.message,
       }));
       throw new SchemaValidationError(

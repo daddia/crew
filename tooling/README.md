@@ -6,12 +6,12 @@ Each directory is a workspace package under `@repo/*`, listed in `pnpm-workspace
 
 ## Packages
 
-| Package | Name | Purpose |
-|---|---|---|
+| Package              | Name                      | Purpose                                                         |
+| -------------------- | ------------------------- | --------------------------------------------------------------- |
 | `typescript-config/` | `@repo/typescript-config` | Shared base `tsconfig` and optional framework-flavoured extends |
-| `eslint-config/` | `@repo/eslint-config` | Shared ESLint flat config (base, library) |
-| `prettier-config/` | `@repo/prettier-config` | Shared Prettier config |
-| `vitest-config/` | `@repo/vitest-config` | Shared Vitest config (base and UI variants) |
+| `eslint-config/`     | `@repo/eslint-config`     | Shared ESLint flat config (base, library)                       |
+| `prettier-config/`   | `@repo/prettier-config`   | Shared Prettier config                                          |
+| `vitest-config/`     | `@repo/vitest-config`     | Shared Vitest config (base and UI variants)                     |
 
 ## Usage
 
