@@ -3,22 +3,31 @@
   "private": true,
   "version": "0.0.0",
   "packageManager": "pnpm@10.33.2",
+  "prettier": "@repo/prettier-config",
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",
     "typecheck": "turbo typecheck",
     "test": "turbo test",
-    "lint": "turbo lint",
+    "lint": "pnpm lint:dependencies && turbo lint",
     "lint:dependencies": "dependency-cruiser --config .dependency-cruiser.cjs crews packages",
     "lint:fix": "turbo lint:fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "release": "changeset publish",
+    "validate": "pnpm validate:build && pnpm validate:quality && pnpm test",
+    "validate:build": "pnpm install && pnpm build",
+    "validate:quality": "pnpm format && pnpm lint:fix && pnpm lint:dependencies && pnpm typecheck",
     "clean": "turbo clean",
-    "release": "changeset publish"
+    "reset": "pnpm clean && rm -rf node_modules && pnpm install"
   },
   "devDependencies": {
     "@changesets/cli": "^2.31.0",
-    "@types/node": "^25.7.0",
+    "@repo/prettier-config": "workspace:*",
+    "@types/node": "^25.9.1",
     "dependency-cruiser": "^17.4.0",
-    "turbo": "^2.9.12",
+    "prettier": "^3.8.3",
+    "turbo": "^2.9.14",
     "typescript": "^6.0.3"
   }
 }

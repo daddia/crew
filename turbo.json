@@ -1,13 +1,14 @@
 {
-  "$schema": "https://v2-9-12.turborepo.dev/schema.json",
+  "$schema": "https://turborepo.dev/schema.json",
   "ui": "tui",
+  "globalPassThroughEnv": ["npm_config_user_agent", "https_proxy"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
       "outputs": ["dist/**"]
     },
     "typecheck": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^typecheck"],
       "outputs": []
     },
     "lint": {
@@ -21,7 +22,7 @@
     },
     "test": {
       "dependsOn": ["^build"],
-      "outputs": ["coverage.json"]
+      "outputs": ["coverage/**", "coverage.json"]
     },
     "dev": {
       "dependsOn": ["^build"],

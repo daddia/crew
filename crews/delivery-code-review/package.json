@@ -14,14 +14,14 @@
   },
   "dependencies": {
     "@daddia/crew": "^0.3.0",
-    "@hono/node-server": "^2.0.2",
-    "hono": "^4.12.18"
+    "@hono/node-server": "^2.0.3",
+    "hono": "^4.12.21"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
     "@repo/vitest-config": "workspace:*",
-    "@types/node": "^25.7.0",
+    "@types/node": "^25.9.1",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.6"
+    "vitest": "^4.1.7"
   }
 }
