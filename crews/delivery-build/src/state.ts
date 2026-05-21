@@ -61,11 +61,7 @@ export interface StateStore {
   getStory(issueKey: string): StoryRow | undefined;
   getStoriesAtStep(step: Step): StoryRow[];
   startStep(issueKey: string, step: Step, sessionId?: string): void;
-  finishStep(
-    issueKey: string,
-    step: Step,
-    result: { costUsd?: number; verdict?: string },
-  ): void;
+  finishStep(issueKey: string, step: Step, result: { costUsd?: number; verdict?: string }): void;
   getStepHistory(issueKey: string): StepRow[];
   countRefactorIterations(issueKey: string): number;
   /**
