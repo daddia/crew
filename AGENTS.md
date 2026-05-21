@@ -80,31 +80,31 @@ Shared types and Claude Agent SDK helpers. Every persona module implements `Agen
 | `AgentDefinition` | Configuration passed to `resolveSession()` to boot a Claude session |
 | `PersonaName`     | `"tech-lead" \| "engineer" \| "senior-engineer" \| "code-quality"`  |
 
-| Export                    | Purpose                                                                      |
-| ------------------------- | ---------------------------------------------------------------------------- |
-| `resolveSession()`        | Decide whether to create a new session or resume an existing one             |
-| `readPromptFile()`        | Load a persona's `prompt.md`                                                 |
-| `readSkillsDir()`         | Discover `SKILL.md` files under a `.claude/skills/` tree                     |
-| `readSubagentsDir()`      | Discover subagent `.md` files under a `.claude/agents/` directory            |
-| `buildAuditHook()`        | `PostToolUse` hook that enforces allowed-tools and logs every tool call      |
-| `toSDKHookCallback()`     | Convert a `PostToolUseHandler` into the SDK's native hook callback format    |
-| `boundedIterGuard()`      | Guard that throws `IterationCapReached` when loop cap is hit                 |
-| `IterationCapReached`     | Error class for iteration cap exhaustion                                     |
-| `seedProjectMemory()`     | Seed project-level memory files into a persona's working context             |
-| `createLogger()`          | Create a structured `Logger` instance scoped to a crew or module             |
-| `initTracing()`           | Bootstrap OpenTelemetry tracing (call once at process start)                 |
-| `createTracer()`          | Obtain a scoped `Tracer` for a crew or module                                |
-| `SessionOptions`          | Options passed to `resolveSession()`                                         |
-| `ActiveSession`           | Return type of `resolveSession()`                                            |
-| `SDKMessage`              | Re-exported SDK message union type                                           |
-| `SDKResultMessage`        | Re-exported SDK result message type                                          |
-| `ToolUseEvent`            | Payload passed to every `PostToolUseHandler`                                 |
-| `PostToolUseHandler`      | Handler signature for post-tool-use hooks                                    |
-| `Logger` / `LogLevel`     | Structured logging types                                                     |
+| Export                      | Purpose                                                                    |
+| --------------------------- | -------------------------------------------------------------------------- |
+| `resolveSession()`          | Decide whether to create a new session or resume an existing one           |
+| `readPromptFile()`          | Load a persona's `prompt.md`                                               |
+| `readSkillsDir()`           | Discover `SKILL.md` files under a `.claude/skills/` tree                   |
+| `readSubagentsDir()`        | Discover subagent `.md` files under a `.claude/agents/` directory          |
+| `buildAuditHook()`          | `PostToolUse` hook that enforces allowed-tools and logs every tool call    |
+| `toSDKHookCallback()`       | Convert a `PostToolUseHandler` into the SDK's native hook callback format  |
+| `boundedIterGuard()`        | Guard that throws `IterationCapReached` when loop cap is hit               |
+| `IterationCapReached`       | Error class for iteration cap exhaustion                                   |
+| `seedProjectMemory()`       | Seed project-level memory files into a persona's working context           |
+| `createLogger()`            | Create a structured `Logger` instance scoped to a crew or module           |
+| `initTracing()`             | Bootstrap OpenTelemetry tracing (call once at process start)               |
+| `createTracer()`            | Obtain a scoped `Tracer` for a crew or module                              |
+| `SessionOptions`            | Options passed to `resolveSession()`                                       |
+| `ActiveSession`             | Return type of `resolveSession()`                                          |
+| `SDKMessage`                | Re-exported SDK message union type                                         |
+| `SDKResultMessage`          | Re-exported SDK result message type                                        |
+| `ToolUseEvent`              | Payload passed to every `PostToolUseHandler`                               |
+| `PostToolUseHandler`        | Handler signature for post-tool-use hooks                                  |
+| `Logger` / `LogLevel`       | Structured logging types                                                   |
 | `TracingOptions` / `Tracer` | OTel tracing types                                                         |
-| `Orchestrator`            | Interface for dynamic workflow planners (deterministic or Claude-assisted)   |
-| `OrchestratorRequest`     | `{ issueKey, context }` passed to `Orchestrator.plan()`                      |
-| `AgentRegistry`           | `Readonly<Record<string, Agent>>` — named agent lookup for orchestrators     |
+| `Orchestrator`              | Interface for dynamic workflow planners (deterministic or Claude-assisted) |
+| `OrchestratorRequest`       | `{ issueKey, context }` passed to `Orchestrator.plan()`                    |
+| `AgentRegistry`             | `Readonly<Record<string, Agent>>` — named agent lookup for orchestrators   |
 
 ### `@daddia/crew/webhooks` (subpath)
 
@@ -122,25 +122,25 @@ Security primitives for inbound webhook handlers. Import only from this subpath 
 
 Persistent state management for server-shaped crews. Provides the `StateStore` interface and a ready-to-use SQLite implementation. Import from this subpath instead of rolling your own SQLite layer — the schema, WAL configuration, and crash-recovery conventions are provided out of the box.
 
-| Export                       | Purpose                                                                                          |
-| ---------------------------- | ------------------------------------------------------------------------------------------------ |
-| `StateStore`                 | Interface every state store implementation must satisfy                                          |
-| `StoryRow`                   | Row type for the `stories` table (`issueKey`, `currentStep`, `startedAt`)                        |
-| `StepRow`                    | Row type for the `steps` table (execution record with timing and cost)                           |
-| `StepResult`                 | `{ costUsd?, verdict? }` passed to `finishStep()`                                                |
+| Export                           | Purpose                                                                                                |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `StateStore`                     | Interface every state store implementation must satisfy                                                |
+| `StoryRow`                       | Row type for the `stories` table (`issueKey`, `currentStep`, `startedAt`)                              |
+| `StepRow`                        | Row type for the `steps` table (execution record with timing and cost)                                 |
+| `StepResult`                     | `{ costUsd?, verdict? }` passed to `finishStep()`                                                      |
 | `createSqliteStateStore(dbPath)` | Returns a `StateStore` backed by SQLite with WAL mode, prepared statements, and the three-table schema |
 
 ### `@daddia/crew/workflow` (subpath)
 
 Structured execution engine for multi-step workflows. Wire up a `WorkflowPlan` and let the engine handle step sequencing, context accumulation, retry logic, and failure escalation. Use this instead of hand-rolling the run loop in `workflow.ts`.
 
-| Export                    | Purpose                                                                                            |
-| ------------------------- | -------------------------------------------------------------------------------------------------- |
-| `WorkflowPlan`            | `{ issueKey, steps }` — the complete execution plan for one story                                 |
-| `WorkflowStep`            | `{ name, agent, maxRetries?, onFailure? }` — one step in the plan                                 |
-| `FailurePolicy`           | `'escalate' \| 'continue' \| 'stop'` — what to do when a step fails after retries                 |
-| `WorkflowEngine`          | Interface returned by `createWorkflowEngine()` — has a single `run(plan, context?)` method        |
-| `WorkflowEngineOptions`   | `{ store, onEscalate, logger? }` — configuration passed to `createWorkflowEngine()`               |
+| Export                          | Purpose                                                                                              |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `WorkflowPlan`                  | `{ issueKey, steps }` — the complete execution plan for one story                                    |
+| `WorkflowStep`                  | `{ name, agent, maxRetries?, onFailure? }` — one step in the plan                                    |
+| `FailurePolicy`                 | `'escalate' \| 'continue' \| 'stop'` — what to do when a step fails after retries                    |
+| `WorkflowEngine`                | Interface returned by `createWorkflowEngine()` — has a single `run(plan, context?)` method           |
+| `WorkflowEngineOptions`         | `{ store, onEscalate, logger? }` — configuration passed to `createWorkflowEngine()`                  |
 | `createWorkflowEngine(options)` | Returns a `WorkflowEngine` that writes state, accumulates context, and calls `onEscalate` on failure |
 
 ## Development commands

@@ -83,10 +83,10 @@ const engine = createWorkflowEngine({
 const plan: WorkflowPlan = {
   issueKey,
   steps: [
-    { name: 'implement',       agent: engineer },
-    { name: 'peer-review',     agent: seniorEngineer, onFailure: 'continue' },
+    { name: 'implement', agent: engineer },
+    { name: 'peer-review', agent: seniorEngineer, onFailure: 'continue' },
     { name: 'address-feedback', agent: engineer },
-    { name: 'open-mr',         agent: engineer },
+    { name: 'open-mr', agent: engineer },
   ],
 };
 

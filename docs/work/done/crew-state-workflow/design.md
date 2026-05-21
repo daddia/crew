@@ -58,11 +58,11 @@ cost-benefit reverses.
 
 The three concepts are designed to be adopted in stages:
 
-| Concept | What it is | Adoption |
-| ------- | ---------- | -------- |
-| `StateStore` + `createSqliteStateStore` | Interface and SQLite implementation for crash-safe story and step tracking | Drop-in replacement for any crew's hand-rolled state layer |
-| `WorkflowEngine` + `WorkflowPlan` | Execution engine: reads a plan, calls each step's agent, writes state, handles retries and escalation | Optional — existing hand-rolled `workflow.ts` files remain valid |
-| `Orchestrator` | Interface: takes a request + agent registry, returns a `WorkflowPlan` | Type contract only; deterministic or Claude-assisted implementations are crew-owned |
+| Concept                                 | What it is                                                                                            | Adoption                                                                            |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `StateStore` + `createSqliteStateStore` | Interface and SQLite implementation for crash-safe story and step tracking                            | Drop-in replacement for any crew's hand-rolled state layer                          |
+| `WorkflowEngine` + `WorkflowPlan`       | Execution engine: reads a plan, calls each step's agent, writes state, handles retries and escalation | Optional — existing hand-rolled `workflow.ts` files remain valid                    |
+| `Orchestrator`                          | Interface: takes a request + agent registry, returns a `WorkflowPlan`                                 | Type contract only; deterministic or Claude-assisted implementations are crew-owned |
 
 Critically, the framework is **not prescriptive about adoption pace**. The
 `WorkflowEngine` is a convenience layer, not a mandate. A crew author can use
@@ -88,17 +88,17 @@ stands alone.
 
 ### 2.1 In scope
 
-| Capability | Subpath / location |
-| ---------- | ------------------ |
-| `StateStore` interface, `StoryRow`, `StepRow`, `StepResult` types | `@daddia/crew/state` |
-| `createSqliteStateStore(dbPath)` — SQLite implementation with WAL, three-table schema, prepared statements | `@daddia/crew/state` |
-| `WorkflowPlan`, `WorkflowStep`, `FailurePolicy` types | `@daddia/crew/workflow` |
-| `WorkflowEngine`, `WorkflowEngineOptions` types | `@daddia/crew/workflow` |
-| `createWorkflowEngine(options)` — executes a plan, writes state, calls `onEscalate` | `@daddia/crew/workflow` |
-| `Orchestrator`, `OrchestratorRequest`, `AgentRegistry` types | `@daddia/crew` main entry |
-| `orchestrator?: Orchestrator` field on `AgentCrew` interface | `@daddia/crew` main entry |
-| `toSDKHookCallback`, `ToolUseEvent`, `PostToolUseHandler` | `@daddia/crew` main entry |
-| Vitest resolve aliases for self-import in `packages/crew` tests | `packages/crew/vitest.config.ts` |
+| Capability                                                                                                 | Subpath / location               |
+| ---------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| `StateStore` interface, `StoryRow`, `StepRow`, `StepResult` types                                          | `@daddia/crew/state`             |
+| `createSqliteStateStore(dbPath)` — SQLite implementation with WAL, three-table schema, prepared statements | `@daddia/crew/state`             |
+| `WorkflowPlan`, `WorkflowStep`, `FailurePolicy` types                                                      | `@daddia/crew/workflow`          |
+| `WorkflowEngine`, `WorkflowEngineOptions` types                                                            | `@daddia/crew/workflow`          |
+| `createWorkflowEngine(options)` — executes a plan, writes state, calls `onEscalate`                        | `@daddia/crew/workflow`          |
+| `Orchestrator`, `OrchestratorRequest`, `AgentRegistry` types                                               | `@daddia/crew` main entry        |
+| `orchestrator?: Orchestrator` field on `AgentCrew` interface                                               | `@daddia/crew` main entry        |
+| `toSDKHookCallback`, `ToolUseEvent`, `PostToolUseHandler`                                                  | `@daddia/crew` main entry        |
+| Vitest resolve aliases for self-import in `packages/crew` tests                                            | `packages/crew/vitest.config.ts` |
 
 ### 2.2 Out of scope
 
@@ -114,13 +114,13 @@ stands alone.
 This work package adds two subpath exports parallel to the existing
 `./webhooks` and `./config` subpaths. The same crew-ownership rule applies:
 
-| Concern | Where it lives | Principle |
-| ------- | -------------- | --------- |
-| `StateStore` interface and SQLite implementation | `@daddia/crew/state` | Shared runtime owns mechanism |
-| Each crew's database path and `Step` type | `crews/{name}/src/state.ts` | Each crew owns its schema and init |
-| `WorkflowPlan` assembly | Crew's `workflow.ts` or `Orchestrator` impl | Each crew owns intent (the plan) |
-| `WorkflowEngine` execution | `@daddia/crew/workflow` | Shared runtime owns execution |
-| Escalation callback | Crew-provided `onEscalate` | Each crew owns its escalation path |
+| Concern                                          | Where it lives                              | Principle                          |
+| ------------------------------------------------ | ------------------------------------------- | ---------------------------------- |
+| `StateStore` interface and SQLite implementation | `@daddia/crew/state`                        | Shared runtime owns mechanism      |
+| Each crew's database path and `Step` type        | `crews/{name}/src/state.ts`                 | Each crew owns its schema and init |
+| `WorkflowPlan` assembly                          | Crew's `workflow.ts` or `Orchestrator` impl | Each crew owns intent (the plan)   |
+| `WorkflowEngine` execution                       | `@daddia/crew/workflow`                     | Shared runtime owns execution      |
+| Escalation callback                              | Crew-provided `onEscalate`                  | Each crew owns its escalation path |
 
 The mental model for the split:
 
