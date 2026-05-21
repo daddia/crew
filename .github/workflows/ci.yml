@@ -14,15 +14,25 @@ permissions:
 
 concurrency:
   group: ci-${{ github.ref }}
-  # Only cancel superseded PR builds; keep main / merge_queue runs intact so
-  # every commit on main lands with its own status.
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  validate:
-    name: Validate
+  quality:
+    name: Quality — ${{ matrix.name }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: format check
+            run: pnpm format:check
+          - name: lint
+            run: pnpm lint:eslint
+          - name: dependencies
+            run: pnpm lint:dependencies
+          - name: typecheck
+            run: pnpm typecheck
 
     steps:
       - name: Checkout
@@ -34,8 +44,6 @@ jobs:
           node-version-file: '.nvmrc'
 
       - name: Enable pnpm via Corepack
-        # Corepack ships with Node and reads pnpm's version from the
-        # `packageManager` field in package.json — single source of truth.
         run: corepack enable
 
       - name: Resolve pnpm store path
@@ -54,24 +62,100 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .turbo
-          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          key: ${{ runner.os }}-turbo-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-${{ github.sha }}
           restore-keys: |
-            ${{ runner.os }}-turbo-
+            ${{ runner.os }}-turbo-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Lint — dependency boundaries
-        run: pnpm lint:dependencies
+      - name: Run check
+        run: ${{ matrix.run }}
 
-      - name: Lint — ESLint
-        run: pnpm lint
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: quality
 
-      - name: Typecheck
-        run: pnpm typecheck
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
 
-      - name: Build
-        run: pnpm build
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Enable pnpm via Corepack
+        run: corepack enable
+
+      - name: Resolve pnpm store path
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      - name: Cache turbo
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
       - name: Test
         run: pnpm test
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Enable pnpm via Corepack
+        run: corepack enable
+
+      - name: Resolve pnpm store path
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      - name: Cache turbo
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build

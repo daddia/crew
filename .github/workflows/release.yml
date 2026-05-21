@@ -25,7 +25,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
         with:
-          # Full history so Changesets can compare versions correctly.
           fetch-depth: 0
 
       - name: Set up Node.js
@@ -35,8 +34,6 @@ jobs:
           registry-url: https://registry.npmjs.org
 
       - name: Enable pnpm via Corepack
-        # Corepack ships with Node and reads pnpm's version from the
-        # `packageManager` field in package.json — single source of truth.
         run: corepack enable
 
       - name: Resolve pnpm store path
@@ -55,16 +52,11 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build packages
-        # Only build publishable packages. Crews are deployable services that
-        # depend on the registry version of @daddia/crew, so a broken crew
-        # build must not block a package release.
         run: pnpm --filter './packages/*' build
 
       - name: Create Release PR or Publish
         uses: changesets/action@v1
         with:
-          # When pending changesets exist: open/update a "Version Packages" PR.
-          # When that PR is merged: run this script to publish.
           publish: pnpm run release
           title: "chore: version packages"
           commit: "chore: version packages"
