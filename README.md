@@ -48,6 +48,10 @@ pnpm typecheck  # TypeScript across all packages and crews
 pnpm test       # Vitest suite
 ```
 
+## Documentation
+
+Product strategy, roadmap, active backlog, architecture, crew flows, and research live in [`docs/`](docs/) and [`architecture/`](architecture/). See [`docs/README.md`](docs/README.md).
+
 ## Contributing
 
 See [`contributing/`](contributing/) for guides on adding personas, crews, and packages.

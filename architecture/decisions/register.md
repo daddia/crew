@@ -1,15 +1,15 @@
 ---
 type: Architecture Decision Register
-product: space
+product: crew
 owner: Engineering
 status: Current
-last_updated: 2026-04-27
+last_updated: 2026-05-21
 ---
 
-# Architecture Decision Register — Space
+# Architecture Decision Register — Crew
 
 ADRs live in `architecture/decisions/` in this repo. Use the template at
-`architecture/decisions/adr-template.md`. Target length 40–80 lines per ADR.
+[`adr-template.md`](adr-template.md). Target length 40–80 lines per ADR.
 
 ## Status legend
 
@@ -22,11 +22,11 @@ ADRs live in `architecture/decisions/` in this repo. Use the template at
 
 ---
 
-## Foundation decisions (Phase 1)
+## Foundation decisions
 
-| ID                                               | Title                                                                  | Status   |
-| ------------------------------------------------ | ---------------------------------------------------------------------- | -------- |
-| [ADR-0001](ADR-0001-skill-delivery-mechanism.md) | Skill delivery mechanism: three-repo split with stripped public mirror | Accepted |
+| ID   | Title | Status |
+| ---- | ----- | ------ |
+| _(none yet)_ | Crew-specific ADRs will be added as consequential runtime decisions are recorded. | — |
 
 ---
 
@@ -48,5 +48,4 @@ cp architecture/decisions/adr-template.md architecture/decisions/ADR-{####}-{sho
 1. Set status to `Proposed`. Open a PR for discussion.
 2. On acceptance: update status to `Accepted`, add a row above.
 
-**Placement rule**: Space monorepo decisions live here. Portfolio-level decisions (cross-cutting
-Space and Crew) live in the portfolio delivery workspace at `crew-space:architecture/decisions/`.
+**Placement rule:** Runtime and crew-specific decisions live in this repo (`architecture/decisions/`). Product strategy and delivery backlog live in `docs/product/`.

@@ -1,113 +1,136 @@
 ---
 type: Product Strategy
 scope: product
+version: '2.0'
+owner: daddia
+status: Current
+last_updated: 2026-05-21
 ---
 
 # Product -- Crew
 
 ## 1. Problem
 
-Autonomous AI agents are everywhere in demos. Reliable, deployable AI agent teams are rare. The gap between a working prototype and a production service that runs unattended, recovers from failure, respects cost limits, and hands back to a human at the right moment is wide — and almost nobody has crossed it.
+Autonomous AI agents are everywhere in demos. Reliable, deployable agent teams that run real knowledge work, unsupervised, at known cost — almost nobody has shipped them. The market has hundreds of frameworks, a handful of point agents, and no production substrate.
 
-- **Building agent teams is hard to standardise.** Every team that attempts this starts from scratch: bespoke session management, ad-hoc tool allowlists, no shared primitives for webhooks, idempotency, or state. The result is fragile one-offs that break in production and cannot be maintained by anyone other than their author.
-- **Deploying agent teams is harder.** An agent that works in a notebook is not a service. Turning a multi-step, multi-persona workflow into something that starts reliably, recovers from crashes, handles duplicate events, and reports its costs is a separate engineering project — one most teams never finish.
-- **Expanding agent coverage is reinvention.** Once a team builds one agent workflow, the second one repeats the same infrastructure work: new server, new state store, new webhook handlers, new security primitives. There is no reuse across crews unless someone deliberately designed for it.
-- **Oversight is an afterthought.** Most agent systems have no bounded loops, no escalation path, and no audit trail. They run until they hit an error or a cost ceiling — whichever comes first. Teams that want accountable automation need these properties built in from the start, not bolted on later.
-- **Coordinating work across crews is unsolved.** As the number of crews grows, so does the need to orchestrate work between them: one crew's output becoming another crew's input, long-running pipelines that span hours or days, and fan-out patterns where a single trigger kicks off multiple crews in parallel. Fire-and-forget event handling is sufficient for a single crew; it is inadequate for a network of them.
+- **Building one agent team is hard.** Every team starts from scratch on session management, tool allowlists, webhooks, idempotency, state, and recovery. The output is a fragile one-off owned by its author.
+- **Operating one in production is harder.** A working notebook is not a service. Reliable startup, crash recovery, duplicate-event handling, cost ceilings, audit trails, and clean escalation are a separate engineering project that most teams never finish.
+- **Scaling to two or more is reinvention.** The second agent workflow repeats the same infrastructure work. Without a substrate, every crew is built in isolation, every operational lesson learned twice.
+- **Oversight is an afterthought.** Most agent systems have no bounded loops, no escalation path, and no audit trail. Trust requires showing where automation stops, not only where it goes.
+- **Coordination across crews is unsolved.** Once two or more crews exist, the next bottleneck is composing them — pipelines that survive failures, fan out, and pause for a human without losing state. Fire-and-forget is adequate for one crew; it is inadequate for a catalogue.
+- **Frontier-model improvements do not solve it.** A better model raises the ceiling on a single call. It does not produce orchestration, governance, recall across runs, or cost optimisation across providers. Those are platform problems, and they compound where the model alone cannot.
 
 ## 2. Appetite
 
-Three phases.
+Four phases. A phase opens when the previous phase exits cleanly; calendar dates are not committed.
 
-**Now — prove the pattern with software delivery.** Build and ship the delivery crew end-to-end: story pickup, implementation, peer review, feedback loop, final review, merge. This is both a useful product in its own right and the proof of concept that validates the crew architecture. Success: at least three real stories complete the full delivery sequence without human intervention.
+**Now — prove the pattern with software delivery.** Ship the build slice of the delivery vertical end-to-end on real stories: pickup, clarification, implementation, peer review, MR, CI handoff to QA. This is both useful product and the proof point for the platform — the most demanding crew first, so everything after is easier.
 
-**Next — harden the runtime.** Once the loop is demonstrably reliable, invest in what makes it safe to run unattended at scale: startup reliability, crash recovery, observability, throughput controls. This phase ends when the crew can run overnight unsupervised and produce a cost and quality report in the morning.
+**Next — harden the runtime; close the delivery loop.** Operate unsupervised overnight with predictable recovery and observable cost and quality. Complete the delivery vertical (build → QA → review) and prove the compounding wedge: cost per accepted artefact trends down and recall trends up as the runtime matures.
 
-**Later — expand to new domains.** With a proven, hardened runtime, the architecture opens to new crews. Each new crew reuses the shared runtime, security primitives, and deployment pattern — only the workflow, personas, and prompts change. The first expansion candidates are identified by where repetitive, sequenced knowledge work is currently done manually.
+**Later — open the catalogue.** Add verticals beyond delivery: code review, documentation, discovery (PM, Architect), refine (DM, Technical Writer). Each new crew is workflow plus personas plus prompts — the substrate is reused. The catalogue is the product; delivery is its first proof.
 
-**Future — durable cross-crew orchestration.** Once multiple crews exist and are running independently, the platform gains a new class of problem: coordinating work across them. This phase introduces durable workflow orchestration as a first-class platform capability — pipelines that survive failures and restarts, fan-out patterns that trigger multiple crews from a single event, and long-running sequences where one crew's output becomes another crew's input. This layer sits above the individual crew and treats each crew as a composable step in a larger pipeline.
+**Future — durable cross-crew orchestration.** Promote coordination from event glue to a first-class platform capability: pipelines that survive process restarts, fan-out from a single trigger, suspend-and-resume around human decisions, and crew-as-a-step composition that lets the platform reason over its own catalogue. This is where the long-term commercial wedge lives.
 
 ## 3. Sketch
 
-Crew is a platform for building and deploying autonomous agent teams. Each crew is a self-contained, independently deployable service — its own server, its own workflow, its own state — built on shared runtime primitives that handle the hard parts: webhook security, session management, idempotency, cost tracking, escalation, and audit.
+Crew is **the runtime and catalogue for autonomous knowledge work**. Each crew is an independently deployable service — its own workflow, personas, prompts, and definition of done — built on a shared substrate that handles the parts every crew needs: security at the edge, session management, idempotency, bounded loops, cost ceilings, escalation, and an audit trail per action.
 
-A crew is defined by three things: the team of agent personas it employs, the workflow sequence those personas execute, and the events that trigger a run. A new crew can be assembled by writing the workflow, the personas, and the prompts. Everything else — serving, security, state management, crash recovery, workflow execution, observability — is provided by the shared runtime. The `@daddia/crew` package makes this concrete: `./state` provides the `StateStore` interface and a ready-to-use SQLite implementation; `./workflow` provides the `WorkflowEngine` that executes a plan, accumulates context across steps, and calls an escalation handler on failure; `./webhooks` and `./config` cover ingress security and typed configuration. A crew author wires these together; they do not reimplement them.
+A crew author writes intent: who is on the team, what sequence they execute, what triggers a run, what counts as done. Everything else is provided. A new crew goes from blank slate to deployed service in the same time it currently takes to write the prompts.
 
-The delivery crew is the first crew: a three-persona team (engineer, senior engineer, tech lead) that picks up a story, implements it, reviews it, and merges it. It demonstrates every capability the platform provides and ships real value while doing so.
+The delivery vertical is the first proof and the most demanding workload — multi-persona, multi-phase, external integrations, bounded feedback loops, human gates. Once it runs unattended on real stories, every later crew inherits a runtime that has already paid for crash recovery, observability, and safety.
 
-When a crew reaches the limit of what it can resolve autonomously, it hands back to a human with a plain-language summary of what is unresolved and why. Autonomous operation and human oversight are not in tension — the platform is designed to support both.
+When a crew reaches the limit of what it can resolve autonomously, it hands back to a human with full context. Autonomy and oversight are designed together, not traded against each other.
 
-In a future phase, individual crews become composable steps in larger pipelines. A durable orchestration layer coordinates work across crews: triggering a research crew when a planning crew finishes, running a review crew in parallel with a documentation crew, or suspending a pipeline mid-flight to wait for a human decision before resuming. Each crew remains independently deployable; the orchestration layer connects them without coupling them. The `Orchestrator` interface — already in `@daddia/crew` — is the type contract for this layer: it takes a request and an agent registry and returns a `WorkflowPlan`. Deterministic implementations give structured plans directly; Claude-assisted implementations reason over the registry to assemble one dynamically.
+In the future phase, individual crews become composable steps in longer pipelines. Coordination moves above the crew: triggering one crew when another finishes, fanning out from a single event, pausing on a human decision, resuming exactly where it stopped. Crews stay independently deployable; the orchestration layer connects them without coupling them. This is what turns a catalogue into a platform.
 
 ## 4. Rabbit holes
 
-- **Building a general-purpose agent framework.** Crew is not trying to replace agent SDKs or compete with foundation model tooling. It is a deployment and runtime layer — opinionated, production-focused, built on top of an existing SDK, not a replacement for one.
-- **Making every step autonomous.** The escalation path is a feature, not a failure mode. Crews are not designed to handle every situation; they are designed to handle the situations they can handle well and hand off everything else cleanly.
-- **One platform, all deployment targets.** In the current phase, each crew deploys as a single container on a managed runtime. Multi-region, multi-tenant, and serverless deployment patterns are deferred until the single-container model is proven.
-- **Supporting every integration out of the box.** The delivery crew integrates with Jira and GitLab. Future crews will integrate with different systems. The platform provides the integration pattern; it does not ship every integration.
+- **Building a general-purpose agent framework.** Crew is a runtime and deployment layer on top of an agent SDK, not a replacement for one. Model selection, prompt orchestration internals, and tool-call semantics belong to the SDK and the model provider.
+- **Owning the operator's workspace.** Crew reads from artefact-centric workspaces it does not own — product docs, designs, conventions, program mirrors. Workspace tooling, scaffolders, and skill libraries are outside this product. The runtime contract is the boundary.
+- **Making every step autonomous.** Escalation is a feature, not a failure mode. Crews handle what they can handle well and hand off the rest cleanly. Forcing autonomy past confidence is how trust collapses.
+- **One platform, every deployment target.** Multi-region, multi-tenant, and serverless deployment patterns are deferred until the single-container model is proven across more than one crew.
+- **Shipping every integration.** Each crew owns the integrations it needs. The platform provides the pattern and the security primitives, not an integration catalogue.
+- **Conversational multi-agent graphs.** Personas converge through versioned artefacts, not message passing. There is no shared agent memory and no cross-persona chat state.
+- **Browser-based governance UI.** Steering happens by editing strategy artefacts and approving outputs. An admin UI is not on the roadmap.
 
 ## 5. No-gos
 
-- Replacing the underlying agent SDK or foundation model — Crew is a runtime layer, not a model layer.
-- Workflows requiring real-time human collaboration mid-run — the platform is designed for autonomous runs with clean handoff points, not interactive sessions.
-- Crews that span multiple repositories, organisations, or security boundaries in a single run.
-- Stories or tasks with undefined success criteria — every crew needs a definition of done to validate against before it can close the loop.
+- Replacing the foundation model or the agent SDK — Crew is a runtime layer, not a model layer.
+- Workflows requiring real-time human collaboration mid-run — clean handoff points, not interactive sessions.
+- A single run touching multiple repositories, organisations, or security boundaries — one tenant per run.
+- Stories or tasks with no definition of done — without an exit condition, a crew cannot close the loop.
+- Compliance-driven environments that require a multi-reviewer change-advisory chain inside every PR — Crew is designed for teams that trust autonomous operation within configured bounds.
 
 ## 6. Target users
 
-**Primary — developer or small technical team who wants to automate a repeatable knowledge work workflow.** They have a well-understood process that follows a consistent sequence, they are comfortable with autonomous tooling, and they want the workflow to run without babysitting. They care about cost per run and autonomy rate. Success: the workflow runs overnight; they review the output in the morning and move on.
+**Primary — small engineering teams running structured backlogs.** They have established coding standards, an existing codebase with patterns, a passing test suite, and a backlog of well-specified stories. They want delivery throughput without growing headcount. They review merged work after the fact rather than in advance. Success: stories merge while they sleep; the audit trail tells them what happened and why.
 
-**Primary — solo developer or small engineering team using the delivery crew.** They have a steady backlog of well-specified stories and want to ship faster without growing the team. They review merged work after the fact rather than in advance. Success: stories merge while they sleep; the audit trail tells them exactly what was done and why.
+**Primary — operators of repetitive knowledge work beyond delivery.** Teams that run a consistent multi-step workflow — code review, documentation, release notes, customer-issue triage — and want it to run autonomously on schedule or on event. They care about cost per run and autonomy rate. Success: the workflow runs overnight; they review the output in the morning and move on.
 
-**Secondary — technical leader evaluating autonomous delivery for a larger team.** They want to redirect engineers away from rote delivery and toward higher-leverage work. They care about cost-per-story, escalation rate, and audit quality as management metrics. They are not daily operators; they set policy and read weekly summaries.
+**Secondary — technical leaders evaluating autonomous knowledge work for a larger organisation.** They want to redirect headcount away from rote work toward higher-leverage work. They care about cost per accepted artefact, escalation rate, and audit quality as management metrics. Not daily operators; they set policy and read weekly summaries.
 
-**Out of scope — enterprise teams with mandatory multi-reviewer approval workflows, compliance gates, or change advisory boards.** The crew is designed for teams that trust autonomous operation within configured bounds, not for organisations where every change requires a human sign-off chain.
+**Out of scope — enterprises with mandatory multi-reviewer approval chains or change advisory boards.** Crew is designed for teams that trust autonomous operation within configured bounds.
+
+**Out of scope — greenfield teams with no patterns or test suite.** Personas need something reliable to read; without a substrate of conventions, the system has no anchor.
 
 ## 7. Outcome metrics
 
-Crew is evaluated on two levels:
+Crew is evaluated on three levels. This document names the outcomes; numeric thresholds, baselines, and alert conditions live downstream.
 
-**Platform level (applies to every crew):**
+**Platform level (applies to every crew).**
 
-- **Autonomy rate** — the percentage of runs that complete without a human intervention. This is the primary signal of platform health. A declining autonomy rate means crews are receiving work they cannot handle, or that the runtime is failing them.
-- **Cost per run** — total spend per completed workflow execution. This is the primary commercial metric. The expectation is that cost decreases as prompts and skills mature. A rising trend is a signal to investigate.
-- **Time to first crew** — for a new domain, how long it takes to go from blank slate to a deployed, running crew. This measures the leverage of the shared runtime.
+- **Autonomy rate.** Share of runs completed without human intervention. The primary signal of platform health.
+- **Cost per accepted artefact.** Total spend divided by outputs accepted by humans or downstream gates. The primary commercial metric; the wedge against running a raw model or point agent on the same work.
+- **Time to first crew.** For a new domain, how long from blank slate to a deployed, running crew. Measures the leverage of the shared substrate.
+- **Audit completeness.** Share of runs reconstructible from the audit trail without consulting the operator. The trust metric.
 
-**Delivery crew level:**
+**Vertical level (delivery first; every later vertical inherits the shape).**
 
-- **Cycle time** — story from entering the delivery sequence to merged MR. Target: meet or beat the team's current median on comparable stories.
-- **Escalation rate** — percentage of stories that require human intervention. Target range defined in `docs/solution.md`.
+- **Cycle time end to end.** Trigger to accepted output. For delivery: story pickup to merged MR.
+- **Escalation rate.** Share of runs that hand off to a human. Stable or trending down at maturity; spiking means the runtime or the input has degraded.
+- **Recall across runs.** Share of recurring context retrieved correctly from prior runs without re-prompting. Compounds with project memory and cross-run learning.
 
-Numeric thresholds, alert conditions, and baseline measurements live in `docs/solution.md`.
+**Compounding level (the long-term thesis).**
+
+- **Cost-and-recall trajectory.** Cost per accepted artefact trending down and recall trending up after compaction, memory, and routing land. The proof that the platform improves with use, independently of any single model release.
+- **Catalogue breadth.** Number of independently deployable crews running real workloads. The signal that the substrate has earned its name.
+
+Targets, conditions, and benchmark methodology (CrewBench) are owned downstream.
 
 ## 8. Product principles
 
-- **Deploying a crew should be the easy part.** The platform absorbs the operational complexity — security, state, recovery, observability — so that building a new crew is a question of workflow and prompts, not infrastructure.
-- **Escalate rather than fail silently.** When a crew cannot proceed with confidence, it hands back to a human with context intact. Invisible failures are worse than visible escalations. Trust in autonomous systems is built by showing where they stop, not only where they go.
-- **Bounded everything.** Every loop has a cap. Every call has a timeout. Every run has a cost limit. Unbounded automation is unbounded spend and unbounded risk. This is a commercial constraint and a safety constraint.
-- **The audit trail is the product.** Every action every crew takes is logged. A team member should be able to reconstruct what happened in any run — what each agent decided, what it cost, why it escalated — without asking anyone. Accountability requires visibility.
-- **Conservative defaults, configurable limits.** Crews ship with narrow defaults. Teams that want more autonomy expand the limits explicitly. The platform never assumes permission it was not given.
-- **Independent crews, composable pipelines.** Each crew is independently deployable and independently operable. Coordination between crews is additive — a crew that works alone should keep working alone when a pipeline is added around it. Coupling is introduced at the orchestration layer, never at the crew layer.
+- **Deploying a crew should be the easy part.** The substrate absorbs operational complexity so a new crew is a question of workflow, personas, and prompts — not infrastructure.
+- **Escalate rather than fail silently.** A visible handoff to a human with context is always preferred to an invisible failure. Trust is built by showing where automation stops.
+- **Bounded everything.** Every loop has a cap, every external call a timeout, every run a cost ceiling. Unbounded automation is unbounded spend and unbounded risk.
+- **The audit trail is the product.** Every action a crew takes is reconstructible after the fact. Accountability requires visibility, and visibility is non-negotiable.
+- **Conservative defaults, configurable limits.** Crews ship narrow. Operators expand autonomy explicitly; the platform never assumes permission it was not granted.
+- **Independent crews, composable pipelines.** Crews run correctly alone. Coordination is added at the orchestration layer, never wired into crew internals — so independence is preserved as the catalogue grows.
+- **Compound above the model.** The commercial value of Crew lives in what cannot be matched by a single model call: orchestration, memory, evidence, evaluation, and governance. The runtime invests where compounding is possible.
+- **Legible to agents.** Crew is extended by AI agents, including Crew itself. Documentation, contracts, and conventions are written so an agent — not just a human — can reason about them and modify them safely.
 
 ## 9. Stakeholders and RACI
 
-| Concern                                      | Responsible  | Accountable  | Consulted | Informed |
-| -------------------------------------------- | ------------ | ------------ | --------- | -------- |
-| Platform architecture and runtime            | daddia       | daddia       | —         | —        |
-| Delivery crew design and prompts             | daddia       | daddia       | —         | —        |
-| New crew scoping and prioritisation          | daddia       | daddia       | —         | —        |
-| Cost monitoring                              | daddia       | daddia       | —         | —        |
-| Integration with external systems            | daddia       | daddia       | —         | —        |
-| Definition of done per story (delivery crew) | Story author | Story author | daddia    | crew     |
+| Concern                                       | Responsible  | Accountable | Consulted | Informed |
+| --------------------------------------------- | ------------ | ----------- | --------- | -------- |
+| Platform substrate (runtime, security, audit) | daddia       | daddia      | —         | —        |
+| Vertical crew design (workflow, personas)     | daddia       | daddia      | —         | —        |
+| New crew scoping and prioritisation           | daddia       | daddia      | —         | —        |
+| Cost, autonomy, and evidence reporting        | daddia       | daddia      | —         | —        |
+| External integrations                         | daddia       | daddia      | —         | —        |
+| Commercial release, licensing, pricing        | daddia       | daddia      | —         | —        |
+| Definition of done per run                    | Story author | Story owner | daddia    | crew     |
 
-This is a solo-operated product in its current phase. The RACI expands when crews are operated by or for other teams.
+Solo-operated today. The RACI expands as crews are operated by or for other teams; downstream operators become Responsible for definition of done and Informed of platform changes.
 
-## 10. Relationship to parent
+## 10. Relationship to the parent
 
-Crew is a standalone product with no parent in the current portfolio.
+Crew is a standalone product. It has no portfolio parent today, and the long-term thesis does not require one.
 
-The delivery crew is the proof point for the platform. It is the most complex crew that could be built — multi-persona, multi-phase, external integrations, bounded feedback loops — so shipping it demonstrates that the platform can support any crew built on it.
+The delivery vertical is the proof point for the platform. It is the most demanding crew that could be built — multi-persona, multi-phase, external integrations, bounded feedback loops, human gates. Shipping it demonstrates the substrate can support anything else built on top.
 
-Once the delivery crew is hardened and running reliably, the platform opens to expansion. The second and third crews will be identified by where the combination of a well-defined workflow, a clear definition of done, and high repetition creates the most leverage. The delivery crew's architecture — shared runtime, independent deployment, reusable primitives — is designed from the start to make that expansion fast.
+Once delivery is hardened, the catalogue opens. Candidates for the second and third verticals are identified where well-defined workflows, clear definitions of done, and high repetition create the most leverage — code review, documentation, discovery cycles, customer-issue triage. Each new vertical reuses the substrate end to end; only intent (workflow, personas, prompts) changes.
 
-The horizon beyond multi-crew expansion is durable cross-crew orchestration: a coordination layer that treats individual crews as composable steps in longer-running pipelines. This layer introduces the ability to suspend and resume work across process restarts, coordinate fan-out and fan-in patterns across crews, and wait for human decisions mid-pipeline without losing state. It does not change how individual crews are built or deployed; it adds a new surface above them. The delivery crew's current fire-and-forget event model is a deliberate starting point — durable orchestration is a future upgrade to the platform, not a prerequisite for the current phase.
+The horizon beyond catalogue growth is durable cross-crew orchestration. A coordination layer that treats individual crews as composable steps in longer pipelines: suspend and resume across restarts, fan out and fan in across crews, pause for human decisions without losing state. It does not change how individual crews are built or deployed; it adds a new surface above them — and it is where the platform's long-term commercial wedge lives. The current event model is a deliberate starting point, not an end state. Durable orchestration is a planned upgrade, not a prerequisite for the work in flight.
+
+The compounding bet, across all four phases, is the same: **above the model, where orchestration, memory, evidence, and governance accumulate value with every run.** A better model raises the floor for a single call; a better runtime raises the floor for every call, forever.

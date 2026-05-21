@@ -311,6 +311,23 @@ Currently configured servers:
 
 **Testing:** `vi.mock` calls go at the top of the file before imports; re-import the subject after. Use `satisfies` on factory helpers for type-safe mocks. Test handlers via `app.request()`. New workflow branches (escalation, loop cap, deduplication) require unit tests; agent integration tests are not required per PR.
 
+## Documentation
+
+Product and delivery artefacts live in `docs/`. Start with [`docs/README.md`](docs/README.md).
+
+| Area | Path |
+|------|------|
+| Product strategy, roadmap, backlog | `docs/product/` |
+| Solution architecture | `architecture/solution.md` |
+| ADRs | `architecture/decisions/` |
+| Crew flow contracts | `docs/crew-flows/` |
+| Work-package designs | `docs/work/{wp}/` |
+| Research and ideas | [Confluence CREW space](https://carinyaparc.atlassian.net/wiki/spaces/CREW/pages/753668/03+Research) (`docs/research/README.md` redirect) |
+| Delivery conventions | `docs/conventions/` |
+| Runbooks | `docs/runbook/` |
+
+The former `crew-space` repository is **decommissioned**; do not add new artefacts there.
+
 ## Pre-merge checklist
 
 - `pnpm typecheck` passes.

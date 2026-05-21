@@ -1,73 +1,80 @@
 ---
-type: Solution
+type: Solution Architecture
 scope: product
 stage: full
-version: '1.0'
+version: '2.0'
 owner: daddia
-status: Draft
-last_updated: 2026-05-06
+status: Current
+last_updated: 2026-05-21
 related:
   - docs/product/product.md
-  - docs/product/backlog.md
-  - docs/crew-flows/delivery-build.md
-  - docs/crew-flows/delivery-qa.md
-  - docs/crew-flows/delivery-review.md
-  - AGENTS.md
 ---
 
-# Solution -- Crew
+# Solution Architecture -- Crew
 
-Architecture for the Crew platform across the **Now / Next / Later / Future**
-phases in [`product.md`](../product/product.md). The thesis: a shared runtime
-and a growing catalogue of deployable agent crews, each independently operable
-and composable into pipelines. The software delivery pipeline (build → QA →
-review) is the first vertical on the platform; it demonstrates the runtime
-contract, not the limit of the architecture.
+Architecture for the Crew platform across the **Now / Next / Later / Future** phases in [`product.md`](../product/product.md). The thesis (per `product.md` §3, §8): a shared runtime hosts a growing **catalogue** of deployable crews; each crew is independently operable and composable into pipelines; the platform compounds value **above the model** through memory, evidence, evaluation, and orchestration that no single foundation-model call can match. The delivery vertical (build → QA → review) is the first proof of the runtime contract, not the limit of the architecture.
 
-Sprint-level designs live in `docs/work/{wp}/design.md`. Current-state
-conventions are authoritative in `AGENTS.md`.
+Two further constraints flow from `product.md` v2.0 and shape this document:
+
+1. **Compounding surface.** Memory, evidence, evaluation policy, model routing, and orchestration are first-class platform concerns — not afterthoughts. The Pro-tier managed control plane (shipped in `@daddia/crew` v0.4.0) is where these compound across runs and crews.
+2. **Legible to agents.** Crew is extended by AI agents, including Crew itself. Building blocks, contracts, and conventions must be reasonable over by an agent, not only by a human — names are explicit, side effects are local, and module boundaries match the words an agent would search for.
+3. **Agent SDK-agnostic.** Crew is a runtime and deployment layer on top of *an* agent SDK, not a specific one. The SDK in use today resolves sessions, executes tools, and exposes a post-tool-use hook surface; any SDK that exposes that contract can be wired in without changing the runtime API. Crew's value lives above the SDK, not inside it.
+
+Sprint-level designs live in `docs/work/{wp}/design.md`. Current-state conventions are authoritative in `AGENTS.md`.
 
 ## 1. Context and scope
 
 ### 1.1 System context
 
-The platform thesis: any work source feeds a growing catalogue of deployable
-agent crews; each crew writes to any system of record; the shared runtime
-provides the guarantees that make every crew safe to run unattended. Delivery
-is the first vertical on the platform, not the definition of the platform.
+Any work source feeds a growing catalogue of deployable agent crews; each crew writes to any system of record; the shared runtime provides the guarantees that make every crew safe to run unattended; the **compounding surface** (memory, evidence, evaluation, routing) is where the platform's commercial wedge accumulates with use. Delivery is the first vertical on the platform, not the definition of the platform.
 
 ```text
                         [Operator / Reviewer]
                                  |
-         ┌───────────────────────┴──────────────────────────┐
-         │                  Crew Platform                    │
-         │                                                   │
-Work     │  ── Delivery vertical (Now) ──────────────────    │  Systems of
-sources  │    delivery-build ──► delivery-qa                │  record
-         │                     ──► delivery-review  ────────┼─► VCS host
-· Jira ─►│                                                   │    (GitLab / GitHub
-· CI    ─►│  ── Code review vertical (Next) ───────────────  │    MRs, pipelines)
-· cron  ─►│    code-reviewer  (CLI, published to npm) ──────┼─► PR comments
-· ...   ─►│                                                   │
-         │  ── Roadmap verticals ─────────────────────────   │  · Jira (status)
-         │    product-crew      [Later]                      │  · Slack / email
-         │    architecture-crew [Later]                      │  · ...
-         │    discovery-crew    [Later]                      │
-         │    feedback-crew     [Later]                      │
-         │                                                   │
-         │  ── Shared foundation ─────────────────────────   │
-         │    @daddia/crew runtime                           │
-         │    Foundation model API  (Anthropic)              │
-         │    MCP server fabric     (Atlassian, GitLab, ...) │
-         │    Audit + Observability (per-crew SQLite / OTel) │
-         └───────────────────────────────────────────────────┘
+         ┌───────────────────────┴──────────────────────────────┐
+         │                    Crew Platform                      │
+         │                                                       │
+Work     │  ── Composition layer (Future) ─────────────────────  │
+sources  │    Cross-Crew Orchestrator                            │  Systems of
+         │      durable pipelines, fan-out, suspend / resume     │  record
+· Jira ─►│                                                       │  · VCS host
+· GitLab │  ── Crew catalogue ─────────────────────────────────  │    (GitLab/
+  webhook│    Delivery vertical (Now)                            │     GitHub —
+· CI    ─►│      delivery-build ─► delivery-qa ─► delivery-review│     MRs,
+· cron  ─►│                                              ────────┼─►   pipelines)
+· ...   ─►│    Code review vertical (Next)                       │  · Jira
+         │      code-reviewer  (CLI, npm)               ────────┼─►   (status,
+         │    Roadmap verticals (Later/Future)                   │     comments)
+         │      product / architecture / discovery / refine      │  · Slack
+         │                                                       │  · …
+         │  ── Compounding surface (Pro tier, control plane) ──  │
+         │    Project memory · Cross-run evidence                │
+         │    Evaluation policy · Model routing                  │
+         │    Server-side request construction (v0.4.0)          │
+         │                                                       │
+         │  ── Shared runtime ─────────────────────────────────  │
+         │    @daddia/crew  (state, workflow, webhooks, config,  │
+         │                   audit hooks, bounded-loop guards)   │
+         │                                                       │
+         │  ── Foundation (pluggable) ─────────────────────────  │
+         │    Agent SDK             session create / resume,     │
+         │                          tool execution, hook surface │
+         │    Foundation model      provider-agnostic; routable  │
+         │                          per Pro tier                 │
+         │    MCP server fabric     Atlassian, GitLab, …         │
+         │    Audit / Observability per-crew SQLite; OTel sink   │
+         └───────────────────────────────────────────────────────┘
 ```
 
-In the **Future** phase a Cross-Crew Orchestrator sits above the catalogue and
-treats each crew as a composable, durable step in a longer pipeline:
+The Foundation layer is pluggable on two axes: the **Agent SDK** (any SDK that exposes session lifecycle, tool execution, and a post-tool-use hook) and the **foundation model provider** (selected per task by the Pro-tier router). The runtime above this layer does not encode a specific SDK or provider.
+
+Two layers sit *above* the individual crew. Together they encode the "compound above the model" thesis from `product.md`:
+
+- **Compounding surface (Pro tier, available today in v0.4.0).** Project memory, cross-run evidence, evaluation policy, and model routing live in a managed control plane. The local runtime stays usable without it (free tier); the control plane is what makes runs cheaper and more accurate over time.
+- **Composition layer (Future phase).** The cross-crew orchestrator treats each crew as a composable, durable step in a longer pipeline — suspend, resume, fan-out, and human gates without coupling individual crews:
 
 ```text
-[Trigger]  ──►  [Orchestrator]  ──►  [Crew A]  ──►  [Crew B]  ──►  ...
+[Trigger]  ──►  [Orchestrator]  ──►  [Crew A]  ──►  [Crew B]  ──►  …
                       │                   ^              ^
                       └── suspend / resume / fan-out ────┘
 ```
@@ -76,69 +83,66 @@ treats each crew as a composable, durable step in a longer pipeline:
 
 **Crew owns:**
 
-- The runtime contract: `Agent`, `AgentCrew`, `AgentInput`, `AgentResult`, and
-  the `@daddia/crew` library that implements it.
+- The runtime contract: `Agent`, `AgentCrew`, `AgentInput`, `AgentResult`, and the `@daddia/crew` library that implements it. The contract is **SDK-agnostic** — it names sessions, hooks, and bounded loops without naming a vendor.
 - The two first-class deployment topologies a crew can adopt:
-  - **Server-shaped** — a long-lived Hono service that owns SQLite state,
-    polls a work source, and receives inbound webhooks. Used for stateful,
-    multi-step workflows (all three delivery crews).
-  - **CLI-shaped** — an ephemeral package published to npm and invoked in CI.
-    Runs to completion, writes results to the system of record, exits. No
-    persistent state. Used for stateless one-shots (code-reviewer, next).
-- Inbound webhook security primitives (`@daddia/crew/webhooks`), typed config
-  (`@daddia/crew/config`), and the bounded-loop / audit-hook / escalation
-  guarantees that apply uniformly across both topologies.
+  - **Server-shaped** — a long-lived Hono service that owns SQLite state, polls a work source, and receives inbound webhooks. Used for stateful, multi-step workflows (all three delivery crews).
+  - **CLI-shaped** — an ephemeral package published to npm and invoked in CI. Runs to completion, writes results to the system of record, exits. No persistent state. Used for stateless one-shots (code-reviewer, next).
+- Inbound webhook security primitives (`@daddia/crew/webhooks`), typed config (`@daddia/crew/config`), and the bounded-loop / audit-hook / escalation guarantees that apply uniformly across both topologies.
+- The **managed control plane** (Pro tier, shipped in v0.4.0): server-side request construction, persona policy resolution, contract schema registry, evaluation policy, and routing decisions. Local fallback is always available; the control plane is the compounding lever, not a hard dependency for any single run.
 - The future cross-crew orchestration layer (Future phase).
 
 **Crew does not own:**
 
-- The foundation model or the agent SDK — Crew is a runtime layer on top of
-  the Claude Agent SDK, not a replacement for it.
-- External domain models (Jira issue structure, GitLab MR schema) — consumed
-  via thin idempotent integration clients; each crew owns its own clients.
-- Tool implementations exposed via MCP — Crew configures servers; it does not
-  ship them.
-- The operator's workflow definition — each crew owns its own `workflow.ts`,
-  personas, prompts, and definition of done.
+- **The agent SDK or the foundation model.** Crew is a runtime layer on top of *an* agent SDK, not a specific one. Today the codebase is wired to a single SDK because that is what was needed to ship; the runtime contract was designed so a second SDK could be wired in by writing an adapter, not by refactoring crews. Foundation model selection is a Pro-tier routing decision — never a runtime assumption.
+- External domain models (Jira issue structure, GitLab MR schema) — consumed via thin idempotent integration clients; each crew owns its own clients.
+- Tool implementations exposed via MCP — Crew configures servers; it does not ship them.
+- The operator's workspace (product docs, conventions, skills, program mirrors). Crew reads from a documented filesystem surface; the workspace layer is out of scope for this product (see `product.md` §4).
+- The operator's workflow definition — each crew owns its own `workflow.ts`, personas, prompts, and definition of done.
 
 ### 1.3 Upstream and downstream systems
 
-- **Upstream — Work source (Jira today; pluggable).** Provides the work queue
-  and lifecycle states for server-shaped crews. CLI-shaped crews receive
-  context from CI env vars or invocation arguments instead. State transitions
-  are idempotent in both topologies.
-- **Upstream — Foundation model + MCP servers.** Provide reasoning and tool
-  surfaces. Cost and latency budgets are enforced at the crew runtime.
-- **Downstream — System of record.** VCS host (branches, MRs, pipeline status)
-  for delivery crews; PR comment threads for the code-reviewer; other surfaces
-  for future verticals.
-- **Downstream — Audit + observability sinks.** Structured logs, OTel traces
-  (planned), cost-per-run metrics, and the per-step audit trail.
-- **Future bidirectional — Cross-crew orchestrator.** Triggers crews via the
-  same event surface they accept today; consumes `ready-for-*` handoff events
-  to advance long-running pipelines.
+- **Upstream — Work source (Jira today; pluggable).** Provides the work queue and lifecycle states for server-shaped crews. CLI-shaped crews receive context from CI env vars or invocation arguments instead. State transitions are idempotent in both topologies.
+- **Upstream — Agent SDK + foundation model + MCP servers.** Provide session lifecycle, reasoning, and tool surfaces. The SDK is pluggable behind Crew's runtime contract; the model provider is selected per task by the Pro-tier router. Cost and latency budgets are enforced at the crew runtime, regardless of which SDK or model is in use.
+- **Upstream / bidirectional — Managed control plane (Pro tier).** Resolves persona policies, evaluation rubrics, and routing decisions server-side; ingests every run's evidence into the cross-run memory store. Crews call out at session start and at policy-decision points; degrade-to-local on control-plane unreachability is a first-class behaviour.
+- **Downstream — System of record.** VCS host (branches, MRs, pipeline status) for delivery crews; PR comment threads for the code-reviewer; other surfaces for future verticals.
+- **Downstream — Audit + observability sinks.** Structured logs, OTel traces (planned), cost-per-run metrics, and the per-step audit trail.
+- **Downstream — Evidence layer (Pro tier).** Provenance, evaluator verdicts, and cost telemetry feed the cross-run learning loop. Same audit envelope; different consumer.
+- **Future bidirectional — Cross-crew orchestrator.** Triggers crews via the same event surface they accept today; consumes `ready-for-*` handoff events to advance long-running pipelines.
 
 ## 2. Quality goals and constraints
 
-### 2.1 Quality goals (top 5, ordered)
+### 2.1 Quality goals (top 6, ordered)
 
 1. **Auditability.** Every crew action is reconstructible from the per-crew
    audit trail without consulting the operator. The audit trail is the
    product (see [`product.md`](../product/product.md) §8).
-2. **Bounded operation.** Every loop has a cap, every external call a timeout,
-   every run a cost ceiling. Unbounded automation is unbounded spend.
+2. **Bounded operation.** Every loop has a cap, every external call a
+   timeout, every run a cost ceiling. Unbounded automation is unbounded
+   spend.
 3. **Autonomy with clean escalation.** When a crew cannot proceed with
-   confidence it escalates to a human with full context — silent failure is
-   worse than visible escalation. The escalation path is a feature.
+   confidence it escalates to a human with full context — silent failure
+   is worse than visible escalation. The escalation path is a feature.
 4. **Reproducible deployability.** A new crew goes from blank slate to
    deployed service by writing workflow + personas + prompts only.
    "Time to first crew" is the leverage metric.
-5. **Composability.** Crews are independent at the unit and composable at the
-   orchestration layer. A crew that runs correctly in isolation must continue
-   to run correctly when a pipeline is added around it. Independence is the
-   precondition; composition is the value. The delivery pipeline (three
-   independent crews coordinated by state transitions) is the first proof of
-   this property.
+5. **Composability.** Crews are independent at the unit and composable at
+   the orchestration layer. A crew that runs correctly in isolation must
+   continue to run correctly when a pipeline is added around it.
+   Independence is the precondition; composition is the value. The delivery
+   pipeline (three independent crews coordinated by state transitions) is
+   the first proof of this property.
+6. **Compounding value above the model.** Cost per accepted artefact must
+   trend down, and recall across runs must trend up, as the platform
+   accumulates evidence and memory — independently of any single model
+   release. Architecture choices that prevent compounding (per-run
+   isolation, no shared learning surface, opaque evaluation) are rejected
+   by design. The control plane is the seat of this goal.
+
+A seventh consideration shapes every other decision but is not itself a
+runtime quality goal: **legibility to agents.** Module boundaries, names,
+and contracts are chosen so an AI agent — including Crew itself — can
+locate, reason about, and modify the right code without an oral handoff.
+This is an authoring constraint (`AGENTS.md`), not a runtime measurement.
 
 ### 2.2 Constraints
 
@@ -167,6 +171,9 @@ treats each crew as a composable, durable step in a longer pipeline:
 | 4   | **Idempotent fire-and-forget now; durable orchestration later.** Handlers verify, deduplicate, return 200, run the workflow async. The Future-phase orchestrator sits above crews — it doesn't change how they receive events.                                                                                                                                                                                         | A crashed partial run is recovered by a per-crew startup scan, not an external scheduler; acceptable until the second crew ships.                    | Autonomy with clean escalation  |
 | 5   | **One process per tenant, one tenant per process.** Each instance is single-tenant by construction; the operational unit is the container (server) or the process invocation (CLI). Fleet management lives above the crew, not inside it.                                                                                                                                                                              | Horizontal scale = more containers, not more threads; rewarded by trivial blast-radius isolation.                                                    | Composability                   |
 | 6   | **Runtime shape pluralism.** The `Agent` / `AgentCrew` contract is shape-agnostic. A crew deploys as a **server** (long-lived, stateful, polls + receives webhooks) for multi-step workflows, a **CLI package** (ephemeral, published to npm, invoked in CI) for stateless one-shots, or a **scheduled batch** (cron-triggered) for periodic work. Same audit, bounded-loop, and escalation guarantees in every shape. | The shared runtime API must remain topology-neutral; server-only helpers (`verifySignature`, crash recovery) cannot be imported by CLI-shaped crews. | Reproducible deployability      |
+| 7   | **Local-first runtime, managed compounding.** Every crew runs end-to-end with local-only config (free tier). The managed control plane (Pro tier, v0.4.0) layers compounding capabilities — memory, evidence ingestion, evaluation policy, model routing — server-side. Crews call out at session start and at policy points and **degrade to local** on control-plane unreachability. The contract is one-way: local works without managed; managed enhances local without owning it. | Two code paths to keep consistent; rewarded by free-tier credibility and a clear commercial moat that does not break self-host.                      | Compounding value above the model |
+| 8   | **Legible to agents.** Module boundaries, file names, and contracts are chosen so an AI agent can locate the right code on the first search and modify it without an oral handoff. Names are explicit (no clever abbreviations); side effects are local to the file that names them; cross-module coupling goes through named exports, never via global mutation.                                                      | Slightly more verbose code and more files than a human-only codebase would warrant; rewarded by Crew being extended by Crew safely.                  | Authoring constraint (see §2.1) |
+| 9   | **Agent SDK-agnostic, model-agnostic.** The `Agent` contract names sessions, tool execution, and a post-tool-use hook surface — never a specific SDK. The foundation model is selected per task by the Pro-tier router (or pinned in config); no crew imports a vendor SDK directly. Today the codebase is wired to one SDK because shipping demanded it; a second SDK is an adapter, not a refactor. | A small abstraction tax at the runtime boundary; rewarded by insulation from any single vendor's roadmap, deprecation, or pricing shift.             | Compounding value above the model |
 
 ## 4. Building block view
 
@@ -186,6 +193,13 @@ treats each crew as a composable, durable step in a longer pipeline:
                                          discovery-crew    [TBD]
                                          feedback-crew     [TBD]
 
+  ── Compounding surface (Pro tier; managed control plane, v0.4.0) ────────
+     Server-side request construction   persona policy + skill resolution
+     Project memory                     cross-run context retrieval
+     Evaluation policy                  rubrics + divergence thresholds
+     Model routing                      provider selection per task
+     Evidence ingestion                 every run feeds the next
+
   ── Shared runtime ────────────────────────────────────────────────────────
      @daddia/crew  (main)      Agent, AgentCrew, AgentInput, AgentResult
                                resolveSession, buildAuditHook, boundedIterGuard
@@ -195,14 +209,23 @@ treats each crew as a composable, durable step in a longer pipeline:
      @daddia/crew/config       loadEnv, loadYaml, Secret brand, redact
      @daddia/crew/state        StateStore interface, createSqliteStateStore
      @daddia/crew/workflow     WorkflowEngine, WorkflowPlan, FailurePolicy
+     @daddia/crew/control      [Pro] control-plane client + local fallback
      @daddia/crew/events       [Future] typed cross-crew event contracts
 
-  ── Foundation ────────────────────────────────────────────────────────────
-     Claude Agent SDK          session create / resume, tool execution
+  ── Foundation (pluggable) ────────────────────────────────────────────────
+     Agent SDK                 session create / resume, tool execution,
+                               post-tool-use hook surface. Wired to one
+                               SDK today; adapter pattern for additional
+                               SDKs without runtime API change.
      MCP server fabric         Atlassian, GitLab, and crew-specific servers
-     Foundation model API      Anthropic
+     Foundation model          provider-agnostic; selected per task by
+                               Pro-tier routing (or pinned in config)
      Audit / Observability     per-crew SQLite today; OTel sink (planned)
 ```
+
+The compounding surface is **optional at runtime** and **commercial at the business model**. A crew with no Pro-tier configuration executes its workflow locally with the same correctness guarantees; the control plane adds cost reduction and quality lift, not gating.
+
+The Foundation tier is **pluggable but not abstracted prematurely**. The runtime contract names what every SDK must expose (sessions, tool execution, a hook surface); a second SDK is added by writing one adapter, not by changing crew code. This is principle 9 (§3) made operational.
 
 ### 4.2 Crew layouts — two first-class topologies
 
@@ -394,7 +417,11 @@ direct database coupling.
 | **Webhook security** _(server-shaped only)_ | `verifySignature()` + `checkReplayWindow()` + dedup store, all from `@daddia/crew/webhooks`, before body parse. CLI crews have no inbound surface.                                                                                    |
 | **Observability**                           | Structured logs today; OTel traces + cost-per-run metrics planned (CREW-55-001). One boot log answers "what config is this running with?"                                                                                             |
 | **Crash recovery** _(server-shaped only)_   | Startup scan resumes interrupted SDK sessions or escalates; completes before HTTP server and poller start. CLI crews are retried by CI at the job level.                                                                              |
-| **Project memory**                          | Personas seed project memory at run start; reduces repeated context cost across runs.                                                                                                                                                 |
+| **Project memory**                          | Personas seed project memory at run start; reduces repeated context cost across runs. Pro-tier control plane serves memory server-side and ingests results back into the cross-run store.                                             |
+| **Control plane (Pro tier)**                | `@daddia/crew/control` resolves persona policy, evaluation rubric, model routing, and request shape at session start. Every call carries a local fallback; a control-plane outage degrades runs to local resolution, never blocks them. |
+| **Evidence ingestion (Pro tier)**           | Every run emits a provenance envelope (`run id`, persona, cost, verdict, tools, contract validation result). Server crews flush asynchronously after each step; CLI crews flush at exit. Same envelope, two transports.               |
+| **Evaluation policy**                       | Self-evaluation runs on every persona output against a rubric. Pro-tier crews ship divergence thresholds and multi-model evaluation; free tier ships single-model rubric only.                                                        |
+| **Model routing (Pro tier)**                | Per-task model selection (e.g. cheap model for triage, strong model for implementation) routed through `@daddia/crew/control`. Provider credentials remain in the crew's typed config.                                                |
 | **Testing**                                 | Vitest unit + integration tests per package and per crew; one `pnpm test` runs everything.                                                                                                                                            |
 
 ## 8. Deployment and environments
@@ -402,24 +429,41 @@ direct database coupling.
 One deployment unit per crew; the unit's shape follows the crew's topology.
 
 **Server-shaped crews** deploy as containers on a managed runtime (Railway
-today) with SQLite on a named volume; secrets are injected as service env vars.
-Local: `pnpm dev` per crew or `docker compose up` for full-container smoke
-(`docs/runbook/container.md`). One container per crew, end to end.
+today) with SQLite on a named volume; secrets are injected as service env
+vars. Local: `pnpm dev` per crew or `docker compose up` for full-container
+smoke (`docs/runbook/container.md`). One container per crew, end to end.
 
-**CLI-shaped crews** publish to public npm via Changesets on merge to `main`;
-consumers invoke the crew with `npx @daddia/crew-{name}` in their CI pipeline
-(or pin the version in their job config). No persistent runtime; each invocation
-opens a session, runs to completion, ships an audit envelope (§6.1) to the
-configured sink, and exits. Local: `pnpm dev` runs the CLI against a fixture.
+**CLI-shaped crews** publish to public npm via Changesets on merge to
+`main`; consumers invoke the crew with `npx @daddia/crew-{name}` in their CI
+pipeline (or pin the version in their job config). No persistent runtime;
+each invocation opens a session, runs to completion, ships an audit
+envelope (§6.1) to the configured sink, and exits. Local: `pnpm dev` runs
+the CLI against a fixture.
 
-**Both topologies depend on `@daddia/crew` from the public npm registry** — the
-runtime contract is identical. CI runs `pnpm lint && typecheck && test && build`
-on every PR (GitHub Actions, planned in CREW-64).
+**Both topologies depend on `@daddia/crew` from the public npm registry** —
+the runtime contract is identical. CI runs
+`pnpm lint && typecheck && test && build` on every PR (GitHub Actions,
+planned in CREW-64).
 
-Future-phase additions: a durable orchestration service subscribing to
-`ready-for-*` events; a fleet manifest mapping tenants → crew instances; an
-OTel collector for unified traces; a managed audit sink to replace per-tenant
-sink configuration.
+**Managed control plane (Pro tier, v0.4.0).** A hosted service that resolves
+persona policy, evaluation rubric, model routing, and contract schema
+server-side, and ingests evidence from every run. Crews authenticate with
+a licence key configured via `@daddia/crew/config`. The plane is operated
+by daddia today; tenant isolation is by licence-scoped namespace. Crews
+**must not** require the plane to be reachable for correctness — every
+control-plane call has a local fallback that produces an identical run
+shape with reduced compounding (no routing, single-model evaluation, local
+memory only). This is enforced by integration tests in `packages/crew`
+that exercise both code paths.
+
+**Future-phase additions:**
+
+- Durable orchestration service subscribing to `ready-for-*` events.
+- Fleet manifest mapping tenants → crew instances (`fleet.yaml`).
+- OTel collector for unified traces.
+- Managed audit sink to replace per-tenant sink configuration.
+- Multi-region control-plane deployment once compliance-driven adopters
+  require data residency.
 
 ## 9. Architectural decisions (ADR log)
 
@@ -437,6 +481,10 @@ is itself a graduation candidate (see §11).
 | ADR-006 | Typed config in one file per crew; `process.env` lint-banned elsewhere                                                                                        | _(Not yet written)_ |
 | ADR-007 | Fire-and-forget handoff events now; durable cross-crew orchestration deferred to Future phase                                                                 | _(Not yet written)_ |
 | ADR-008 | Two first-class deployment topologies (server-shaped container, CLI-shaped npm package); scheduled-batch and others deferred until a concrete crew needs them | _(Not yet written)_ |
+| ADR-009 | Managed control plane is the Pro-tier surface; every control-plane call has a local fallback that produces a valid run with reduced compounding              | _(Not yet written)_ |
+| ADR-010 | Authoring constraint: code, contracts, and conventions optimised for AI-agent reasoning (legibility-to-agents) alongside human readability                    | _(Not yet written)_ |
+| ADR-011 | Evidence envelope is uniform across topologies and tiers; storage and consumer vary, schema does not                                                          | _(Not yet written)_ |
+| ADR-012 | Agent SDK is pluggable behind the `Agent` contract; foundation model is selected by Pro-tier routing; no crew imports a vendor SDK directly                   | _(Not yet written)_ |
 
 ## 10. Risks, technical debt, and open questions
 
@@ -444,13 +492,18 @@ is itself a graduation candidate (see §11).
 
 | ID  | Risk                                                                              | Likelihood | Impact | Mitigation                                                                                                                                                                                                    |
 | --- | --------------------------------------------------------------------------------- | ---------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| R1  | Foundation model cost drift makes autonomous runs uneconomic                      | Medium     | High   | Per-run cost cap; cost-per-run reported per crew; alert on rising trend.                                                                                                                                      |
+| R1  | Foundation model cost drift makes autonomous runs uneconomic                      | Medium     | High   | Per-run cost cap; cost-per-run reported per crew; alert on rising trend. Pro-tier model routing selects cheaper models for low-complexity tasks; compaction and memory reduce per-run token spend.            |
 | R2  | Fire-and-forget event model loses a handoff between crews                         | Medium     | Medium | Polling fallback on every consuming crew until durable orchestrator ships.                                                                                                                                    |
 | R3  | Shared runtime API churn breaks deployed crews silently                           | Low        | High   | Semver via Changesets; crews pin a minor; integration tests on every release.                                                                                                                                 |
 | R4  | Single-container deployment becomes a bottleneck at server-shaped fleet scale     | Low        | Medium | Defer until second server-shaped crew is in production; revisit topology then.                                                                                                                                |
 | R5  | Audit trail volume outpaces local SQLite                                          | Low        | Medium | Plan shipping audit events to an external sink in the Next phase.                                                                                                                                             |
 | R6  | CLI-shaped crew loses run audit if invoked without a remote audit sink configured | Medium     | High   | Fail fast at CLI startup if `AUDIT_SINK_URL` (or equivalent) is unset; tested in `crews/{name}/tests/cli.boot.test.ts`. The audit trail is the product — running without it is not a permitted degraded mode. |
 | R7  | CLI-shaped crew double-acts on the same target across two CI invocations          | Medium     | Medium | The system of record is the dedup store: the workflow checks for its prior write at the same key (e.g. existing AI-bot comment on the MR at the same SHA) before acting. Tested per crew.                     |
+| R8  | Control-plane outage blocks Pro-tier runs                                         | Medium     | High   | Every control-plane call has a typed local fallback; integration tests cover both code paths; outages degrade runs (no routing, single-model evaluation, local memory only) but never block them.             |
+| R9  | Frontier-model capability jump commoditises the runtime layer                     | Medium     | High   | The compounding surface (memory, evidence, evaluation, routing) is the moat — orthogonal to model capability. CrewBench validates that Crew + a current model beats raw current model on cost and recall.    |
+| R10 | "Legible to agents" erodes over time as patches and shortcuts accumulate          | Medium     | Medium | `AGENTS.md` is authoritative; pre-merge checklist requires that an AI agent can describe the change without an oral handoff. Refactor budget per quarter to repay clarity debt.                                |
+| R11 | Catalogue growth outpaces shared-runtime test coverage                            | Low        | Medium | Each new crew adopts the runtime contract test suite at scaffolding time; runtime fixes ship with backport tests that exercise every catalogued crew.                                                         |
+| R12 | Single-SDK wiring becomes de-facto vendor lock as crews multiply                  | Medium     | Medium | The `Agent` contract is SDK-agnostic and tested independently of any one SDK; adding a second SDK is gated on a real driver (second model provider, capability gap, or pricing event) — not done speculatively, but the contract stays adapter-shaped so the second SDK is one file, not a refactor. |
 
 ### 10.2 Technical debt
 
@@ -468,15 +521,25 @@ is itself a graduation candidate (see §11).
    Owner: daddia. **Blocks: code-reviewer (the first CLI-shaped crew) ship.**
    Required output is the `@daddia/crew/audit` API surface plus one
    reference-implementation transport.
-2. **Where does the cross-crew orchestrator live?** A new top-level `crews/`
-   service, a separate package, or a managed offering (e.g. Temporal,
-   Inngest)? Owner: daddia. Blocks: nothing in Now/Next phases; required
-   before Future phase.
+2. **Where does the cross-crew orchestrator live?** A new top-level
+   `crews/` service, a separate package, or a managed offering (e.g.
+   Temporal, Inngest)? Owner: daddia. Blocks: nothing in Now/Next phases;
+   required before Future phase.
 3. **What is the second crew?** Identifying it is required to validate the
-   "shared runtime, crew-owned policy" principle empirically. Owner: daddia.
-   Blocks: graduation of any pattern under §11.
+   "shared runtime, crew-owned policy" principle empirically. Owner:
+   daddia. Blocks: graduation of any pattern under §11.
 4. **How is multi-crew cost reported?** Per-crew is solved; portfolio-level
    roll-up is unowned. Owner: daddia. Blocks: portfolio-scope reporting.
+5. **What is the control-plane contract version policy?** Server-side
+   schemas need to evolve without breaking deployed crews pinned to an
+   older `@daddia/crew`. Candidates: versioned endpoints, content
+   negotiation, or shadow-mode rollout with both schemas live. Owner:
+   daddia. Blocks: a published control-plane SLO and second Pro-tier
+   feature.
+6. **Where do cross-run memory boundaries sit?** Per-crew, per-tenant,
+   per-licence, or per-vertical? Affects evidence-layer schema and
+   retrieval semantics. Owner: daddia. Blocks: cross-vertical learning
+   experiments (Later phase).
 
 ## 11. Graduation candidates
 
@@ -497,7 +560,10 @@ Nothing graduates speculatively. Each row lifts only when the trigger fires.
 
 **Platform-level patterns** (lift when the platform itself warrants the abstraction):
 
-| Pattern                    | Current home                                | Graduate to                                         | Trigger                                                                                                                                            |
-| -------------------------- | ------------------------------------------- | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Crew catalogue / discovery | Implicit in `crews/` directory listing      | `@daddia/crew/catalogue` (manifest + discovery API) | Five or more crews exist and a new crew needs to locate another crew's entry point or event schema programmatically.                               |
-| Fleet manifest             | Manual deployment of one container per crew | `fleet.yaml` (crew type → instance count mapping)   | A tenant needs to run more than one instance of the same crew type simultaneously (e.g. two delivery-build instances for different Jira projects). |
+| Pattern                    | Current home                                                                 | Graduate to                                         | Trigger                                                                                                                                            |
+| -------------------------- | ---------------------------------------------------------------------------- | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Crew catalogue / discovery | Implicit in `crews/` directory listing                                       | `@daddia/crew/catalogue` (manifest + discovery API) | Five or more crews exist and a new crew needs to locate another crew's entry point or event schema programmatically.                               |
+| Fleet manifest             | Manual deployment of one container per crew                                  | `fleet.yaml` (crew type → instance count mapping)   | A tenant needs to run more than one instance of the same crew type simultaneously (e.g. two delivery-build instances for different Jira projects). |
+| Control-plane fallback     | Inlined within `@daddia/crew/control` (per-feature switch)                   | Documented degradation matrix in `docs/runbook/`    | Second Pro-tier feature ships and the matrix of "what works without managed?" stops fitting in a single inline comment.                            |
+| Evidence schema            | Inlined in `@daddia/crew` step records (server) and CLI audit envelope (§6.1) | `@daddia/crew/evidence` (typed envelope + emitter)  | Second consumer of the evidence stream lands (e.g. a dashboard or external benchmark ingester).                                                    |
+| Multi-model evaluation     | Persona-level self-eval inside each crew                                     | `@daddia/crew/evaluation` (rubrics + divergence)    | Pro-tier multi-model evaluation needs to apply to a second persona or crew.                                                                        |
