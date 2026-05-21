@@ -1,10 +1,4 @@
-export type {
-  PersonaName,
-  AgentInput,
-  AgentResult,
-  Agent,
-  AgentDefinition,
-} from './agent.js';
+export type { PersonaName, AgentInput, AgentResult, Agent, AgentDefinition } from './agent.js';
 
 export type { AgentCrew } from './unit.js';
 
