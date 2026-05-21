@@ -480,7 +480,7 @@ summarises the outcome.
 | CREW-50     | Engineer + senior-engineer SDK wiring                         | Done      | `memory: 'project'`, `buildAuditHook()`, subagent paths, project memory seeding                                                                                                                                                                                                                                                                                                                                                                |
 | CREW-54     | AGENTS.md + tooling cleanup                                   | Done      | Package names normalised                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | CREW-55     | Deferred runtime concerns                                     | Deferred  | OTel tracing, Turbo remote cache deferred to Next phase                                                                                                                                                                                                                                                                                                                                                                                        |
-| CREW-56     | `@daddia/crew` consolidation                                  | Done      | Main entry + `./webhooks` subpath                                                                                                                                                                                                                                                                                                                                                                                                              |
+| CREW-56     | `@daddia/crew` consolidation                                  | Done      | Main entry + `./webhooks` subpath. Extended in v0.4.0 (PR #12): `./state` (`StateStore` interface + `createSqliteStateStore`), `./workflow` (`WorkflowEngine`, `WorkflowPlan`, `FailurePolicy`, `createWorkflowEngine`), and `Orchestrator` / `AgentRegistry` types on the main entry. See `packages/crew/CHANGELOG.md`.                                                                                                                       |
 | CREW-60     | Jira polling trigger                                          | Done      | `searchIssues`, `setInterval` poller, dedup against state + in-flight set                                                                                                                                                                                                                                                                                                                                                                      |
 | CREW-61     | Workflow sequence alignment                                   | Done      | `context-seed → assess-clarification → implement → peer-review → open-mr → ci-check → in-qa`; `CI_RETRY_CAP`/`CI_POLL_INTERVAL_MS`; `In QA` handoff; `sessionId` wired into `state.startStep`                                                                                                                                                                                                                                                  |
 | CREW-62     | Clarification HITL                                            | Done      | `assess-clarification` engineer task; `getComments` poller resume; `CLARIFICATION_TIMEOUT_HOURS`                                                                                                                                                                                                                                                                                                                                               |
@@ -559,5 +559,28 @@ fan-out, fan-in, and pipelines that span hours or days. This sits above
 `delivery-build`, `delivery-qa`, and `delivery-review` rather than inside any
 of them.
 
+The `Orchestrator` interface in `@daddia/crew` is the type contract for this
+layer: `plan(request, registry) → WorkflowPlan`. Implementations can be
+deterministic (hard-coded plan) or Claude-assisted (reasons over the registry
+to assemble a plan dynamically). The type surface is in place; the runtime
+machinery (suspend/resume, fan-out, pipeline state) is Future work.
+
 **Priority.** Future phase. Out of scope until at least three crews are in
 production.
+
+---
+
+### F-06 -- Migrate delivery-build to `@daddia/crew/state`
+
+`crews/delivery-build/src/state.ts` currently hand-rolls its own SQLite layer.
+Replace it with `createSqliteStateStore(dbPath)` from `@daddia/crew/state`.
+The schema, WAL configuration, and crash-recovery conventions are identical —
+this is a behaviour-preserving migration that removes ~150 lines of
+crew-specific SQLite boilerplate and anchors the crew to the shared runtime
+convention.
+
+**Acceptance.** All existing `delivery-build` state tests pass against the
+shared implementation. `state.ts` is reduced to initialisation and `Step` type
+definition only.
+
+**Priority.** Next — natural follow-on after CREW-67-005. Blocks no critical path.

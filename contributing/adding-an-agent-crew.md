@@ -65,33 +65,60 @@ Only `workflow.ts` imports persona modules. Personas never import each other. Cr
 
 ## 4. Write the workflow
 
-`workflow.ts` owns the sequence. The pattern for each phase is:
+**Option A — use `createWorkflowEngine()`** (recommended for new crews):
+
+```typescript
+import { createWorkflowEngine } from '@daddia/crew/workflow';
+import type { WorkflowPlan } from '@daddia/crew/workflow';
+
+const engine = createWorkflowEngine({
+  store,
+  logger: log,
+  async onEscalate(issueKey, step, reason) {
+    await commentOnIssue(issueKey, `Escalating at ${step}: ${reason}`);
+    await transitionIssue(issueKey, 'Needs human review');
+  },
+});
+
+const plan: WorkflowPlan = {
+  issueKey,
+  steps: [
+    { name: 'implement', agent: engineer },
+    { name: 'peer-review', agent: seniorEngineer, onFailure: 'continue' },
+    { name: 'address-feedback', agent: engineer },
+    { name: 'open-mr', agent: engineer },
+  ],
+};
+
+await engine.run(plan, { task: issueKey });
+```
+
+The engine writes `upsertStory` + `startStep` / `finishStep` for you, accumulates step artefacts into a shared context, and calls `onEscalate` on failure.
+
+**Option B — hand-roll the sequence** (matches the `delivery-build` pattern):
 
 ```typescript
 // 1. Record intent before calling the agent (crash-recovery anchor).
-state.upsertStory(issueKey, "<phase>");
-state.startPhase(issueKey, "<phase>");
+state.upsertStory(issueKey, 'implement');
 
-// 2. Call the persona with the context it needs.
-const result = await <persona>.run({
-  ...input,
-  context: { task: "<phase>", /* phase-specific data */ },
-});
+// 2. Call the persona.
+const result = await engineer.run({ ...input, context: { task: 'implement' } });
 
 // 3. Record the outcome.
-state.finishPhase(issueKey, "<phase>", {
+state.startStep(issueKey, 'implement', result.artefacts?.sessionId);
+state.finishStep(issueKey, 'implement', {
   costUsd: result.costUsd,
-  verdict: result.success ? "ok" : "failed",
+  verdict: result.success ? 'ok' : 'failed',
 });
 
 // 4. Escalate or continue.
 if (!result.success) {
-  await escalateToHumanReview(issueKey, "<reason>", []);
+  await escalateToHumanReview(issueKey, 'implement failed', []);
   return;
 }
 ```
 
-Write `state.startPhase` **before** `agent.run()`. This is the crash-recovery anchor: on restart, scan for phases with `started_at` set and `finished_at` null to identify incomplete runs.
+Write `state.upsertStory` **before** `agent.run()`. This is the crash-recovery anchor: on restart, scan for stories whose `current_step` has no matching finished `steps` row to identify incomplete runs.
 
 ### Feedback loops
 
@@ -117,12 +144,15 @@ Bind the cap to an env var (`LOOP_CAP`, default `2`) so it can be tuned without 
 
 Every failure and every loop-cap breach must call `commentOnIssue` and `transitionIssue("Needs human review")` before returning. Never let the workflow throw to its caller.
 
-## 5. Defining phases in state.ts
+## 5. Setting up state.ts
 
-Add every phase name to the `Phase` union:
+Import `createSqliteStateStore` from `@daddia/crew/state` — it provisions the standard three-table schema (`stories`, `steps`, `webhook_events`), configures WAL mode, and enforces the crash-recovery conventions automatically. Your crew's `state.ts` is the initialisation point, not a schema definition:
 
 ```typescript
-export type Phase =
+import { createSqliteStateStore } from '@daddia/crew/state';
+import type { StateStore } from '@daddia/crew/state';
+
+export type Step =
   | 'implement'
   | 'open-mr'
   | 'peer-review'
@@ -130,9 +160,13 @@ export type Phase =
   | 'final-review'
   | 'done'
   | 'needs-human-review';
+
+export function createStore(dbPath: string): StateStore {
+  return createSqliteStateStore(dbPath);
+}
 ```
 
-Phases must be stable strings — they are stored in SQLite and used for crash-recovery lookups.
+Export a `Step` union that lists every step name the workflow uses. Step values are stable strings stored in SQLite and used for crash-recovery lookups — never rename them without a migration.
 
 ## 6. Context passed between phases
 
@@ -156,9 +190,10 @@ Each persona must declare a minimal `allowedTools` list. A reviewer should have 
 
 - [ ] `package.json` name is `@daddia/crew-<name>`
 - [ ] `Dockerfile` builds from workspace root
-- [ ] Phase sequence is documented in a comment at the top of `workflow.ts`
-- [ ] `Phase` union in `state.ts` covers every phase name used in `workflow.ts`
-- [ ] `state.startPhase` is called before every `agent.run()` call
+- [ ] Step sequence is documented in a comment at the top of `workflow.ts`
+- [ ] `Step` union in `state.ts` covers every step name used in `workflow.ts`
+- [ ] `state.ts` uses `createSqliteStateStore()` from `@daddia/crew/state`
+- [ ] `state.upsertStory` is called before every `agent.run()` call
 - [ ] Every failure path calls `escalateToHumanReview` and returns — no throws
 - [ ] Feedback loops are bounded by a `LOOP_CAP` env var (default `2`)
 - [ ] Reviewer and gatekeeper personas have no write tools in `allowedTools`

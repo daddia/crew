@@ -60,12 +60,14 @@ pnpm install --frozen-lockfile
 pnpm build
 ```
 
-Confirm `packages/crew/dist/` exists and contains `index.js`,
-`index.d.ts`, `webhooks/index.js`, and `webhooks/index.d.ts`.
+Confirm `packages/crew/dist/` exists and contains all subpath outputs:
 
 ```sh
 ls packages/crew/dist/
 ls packages/crew/dist/webhooks/
+ls packages/crew/dist/config/
+ls packages/crew/dist/state/
+ls packages/crew/dist/workflow/
 ```
 
 ---
@@ -112,23 +114,24 @@ npm init -y
 npm install @daddia/crew@0.1.0
 ```
 
-Confirm both entry points resolve:
+Confirm all entry points resolve:
 
 ```sh
 node --input-type=module <<'EOF'
 import { resolveSession } from "@daddia/crew";
 import { verifySignature } from "@daddia/crew/webhooks";
+import { loadEnv } from "@daddia/crew/config";
+import { createSqliteStateStore } from "@daddia/crew/state";
+import { createWorkflowEngine } from "@daddia/crew/workflow";
 console.log("resolveSession:", typeof resolveSession);
 console.log("verifySignature:", typeof verifySignature);
+console.log("loadEnv:", typeof loadEnv);
+console.log("createSqliteStateStore:", typeof createSqliteStateStore);
+console.log("createWorkflowEngine:", typeof createWorkflowEngine);
 EOF
 ```
 
-Expected:
-
-```
-resolveSession: function
-verifySignature: function
-```
+Expected: all five values print as `function`.
 
 ---
 
