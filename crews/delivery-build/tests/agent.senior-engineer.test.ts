@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { SDKSession } from '@anthropic-ai/claude-agent-sdk';
+import type { AgentSession } from '@daddia/crew';
 import type { SDKResultMessage } from '@daddia/crew';
 import type { AgentInput } from '@daddia/crew';
 
@@ -50,7 +50,7 @@ function makeResultMessage(overrides: Partial<SDKResultMessage> = {}): SDKResult
   } as SDKResultMessage;
 }
 
-function makeSession(messages: SDKResultMessage[] = []): SDKSession {
+function makeSession(messages: SDKResultMessage[] = []): AgentSession {
   return {
     sessionId: 'sess-se-123',
     send: vi.fn().mockResolvedValue(undefined),

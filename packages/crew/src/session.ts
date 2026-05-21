@@ -1,9 +1,11 @@
+import { randomUUID } from 'node:crypto';
 import { access } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import {
-  unstable_v2_createSession,
-  unstable_v2_resumeSession,
-  type SDKSession,
+  query,
+  type Options,
+  type Query,
+  type SDKMessage,
   type SettingSource,
 } from '@anthropic-ai/claude-agent-sdk';
 import type { AgentDefinition, AgentInput } from './agent.js';
@@ -31,21 +33,63 @@ export interface SessionOptions {
   auditHook?: PostToolUseHandler;
 }
 
+/**
+ * Live handle for a single agent turn. Call {@link send} once, then iterate
+ * {@link stream} until a result message arrives.
+ */
+export interface AgentSession {
+  readonly sessionId: string;
+  send(prompt: string): Promise<void>;
+  stream(): AsyncIterable<SDKMessage>;
+  [Symbol.asyncDispose](): Promise<void>;
+}
+
 export interface ActiveSession {
   sessionId: string;
   isResumed: boolean;
-  /**
-   * The live SDK session handle. Callers use this to send messages and
-   * stream responses. Must be disposed when the run completes.
-   */
-  session: SDKSession;
+  session: AgentSession;
+}
+
+class QueryBackedSession implements AgentSession {
+  readonly sessionId: string;
+  private readonly isResumed: boolean;
+  private readonly baseOptions: Options;
+  private queryHandle: Query | null = null;
+
+  constructor(sessionId: string, isResumed: boolean, baseOptions: Options) {
+    this.sessionId = sessionId;
+    this.isResumed = isResumed;
+    this.baseOptions = baseOptions;
+  }
+
+  async send(prompt: string): Promise<void> {
+    if (this.queryHandle) {
+      throw new Error('AgentSession.send() must only be called once');
+    }
+    const options: Options = {
+      ...this.baseOptions,
+      ...(this.isResumed ? { resume: this.sessionId } : { sessionId: this.sessionId }),
+    };
+    this.queryHandle = query({ prompt, options });
+  }
+
+  stream(): AsyncIterable<SDKMessage> {
+    if (!this.queryHandle) {
+      throw new Error('AgentSession.stream() requires send() first');
+    }
+    return this.queryHandle;
+  }
+
+  async [Symbol.asyncDispose](): Promise<void> {
+    this.queryHandle?.close();
+  }
 }
 
 /**
  * Resolve whether to start a new Claude session or resume an existing one.
- * Calls unstable_v2_createSession when no prior sessionId exists, and
- * unstable_v2_resumeSession when one does. Errors from the SDK are
- * propagated directly to the caller.
+ * Returns a session handle; call {@link AgentSession.send} then iterate
+ * {@link AgentSession.stream}. Errors from the SDK are propagated on send or
+ * while streaming.
  *
  * Subagent definitions listed in AgentDefinition.subagentPaths are validated
  * before the session is created. Missing files are skipped with a warning.
@@ -59,8 +103,6 @@ export async function resolveSession(
 ): Promise<ActiveSession> {
   const { resumeWithinMs, model, definition, auditHook } = options;
 
-  // Check all subagent files in parallel; warn and skip any that are absent.
-  // The SDK subprocess loads the valid ones via settingSources: ['project'].
   const results = await Promise.all(
     definition.subagentPaths.map(async (p) => {
       try {
@@ -74,14 +116,10 @@ export async function resolveSession(
   );
   const validSubagentPaths = results.filter((p): p is string => p !== null);
 
-  // Set cwd to the agent's own directory so the SDK subprocess resolves
-  // project-scoped agent configuration from the expected tree under that cwd.
-  // Note: SDKSessionOptions.cwd was silently ignored in SDK <0.2.77 (issue
-  // anthropics/claude-code#39731). Verify with a smoke test after upgrading.
   const cwd = dirname(definition.promptPath);
   const settingSources: SettingSource[] = validSubagentPaths.length > 0 ? ['project'] : [];
 
-  const sdkOptions = {
+  const baseOptions: Options = {
     model,
     allowedTools: definition.allowedTools,
     cwd,
@@ -95,11 +133,12 @@ export async function resolveSession(
       : {}),
   };
 
-  if (previousSessionId && resumeWithinMs > 0) {
-    const session = unstable_v2_resumeSession(previousSessionId, sdkOptions);
-    return { sessionId: previousSessionId, isResumed: true, session };
-  }
+  const shouldResume = Boolean(previousSessionId && resumeWithinMs > 0);
+  const sessionId = shouldResume ? previousSessionId! : randomUUID();
 
-  const session = unstable_v2_createSession(sdkOptions);
-  return { sessionId: session.sessionId, isResumed: false, session };
+  return {
+    sessionId,
+    isResumed: shouldResume,
+    session: new QueryBackedSession(sessionId, shouldResume, baseOptions),
+  };
 }

@@ -1,34 +1,30 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { SDKSession } from '@anthropic-ai/claude-agent-sdk';
+import type { SDKMessage } from '@anthropic-ai/claude-agent-sdk';
 
 vi.mock('@anthropic-ai/claude-agent-sdk', () => ({
-  unstable_v2_createSession: vi.fn(),
-  unstable_v2_resumeSession: vi.fn(),
+  query: vi.fn(),
 }));
 
 vi.mock('node:fs/promises', () => ({
   access: vi.fn(),
 }));
 
-import {
-  unstable_v2_createSession,
-  unstable_v2_resumeSession,
-} from '@anthropic-ai/claude-agent-sdk';
+import { query } from '@anthropic-ai/claude-agent-sdk';
 import { access } from 'node:fs/promises';
 import { resolveSession } from '../src/session.js';
 import type { SessionOptions } from '../src/session.js';
 
-const mockCreate = vi.mocked(unstable_v2_createSession);
-const mockResume = vi.mocked(unstable_v2_resumeSession);
+const mockQuery = vi.mocked(query);
 const mockAccess = vi.mocked(access);
 
-function makeSession(sessionId: string): SDKSession {
+function makeQuery(messages: SDKMessage[] = []) {
   return {
-    sessionId,
-    send: vi.fn(),
-    stream: vi.fn(),
     close: vi.fn(),
-    [Symbol.asyncDispose]: vi.fn(),
+    async *[Symbol.asyncIterator]() {
+      for (const msg of messages) {
+        yield msg;
+      }
+    },
   };
 }
 
@@ -49,110 +45,110 @@ function makeOptions(overrides: Partial<SessionOptions> = {}): SessionOptions {
   };
 }
 
+async function startSession(
+  options: SessionOptions,
+  previousSessionId?: string,
+  prompt = 'test prompt',
+) {
+  const active = await resolveSession(options, previousSessionId);
+  await active.session.send(prompt);
+  return active;
+}
+
 describe('resolveSession', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Default: files are accessible.
     mockAccess.mockResolvedValue(undefined as never);
+    mockQuery.mockReturnValue(makeQuery() as ReturnType<typeof query>);
   });
 
   describe('create path', () => {
-    it('calls unstable_v2_createSession when no previousSessionId is given', async () => {
-      const fakeSession = makeSession('sdk-session-new');
-      mockCreate.mockReturnValue(fakeSession);
+    it('calls query when send runs and no previousSessionId is given', async () => {
+      await startSession(makeOptions());
 
-      await resolveSession(makeOptions());
-
-      expect(mockCreate).toHaveBeenCalledOnce();
-      expect(mockCreate).toHaveBeenCalledWith({
-        model: 'claude-test',
-        allowedTools: ['Read', 'Edit'],
-        cwd: '/fake',
+      expect(mockQuery).toHaveBeenCalledOnce();
+      expect(mockQuery).toHaveBeenCalledWith({
+        prompt: 'test prompt',
+        options: expect.objectContaining({
+          model: 'claude-test',
+          allowedTools: ['Read', 'Edit'],
+          cwd: '/fake',
+          sessionId: expect.any(String),
+        }),
       });
-      expect(mockResume).not.toHaveBeenCalled();
+      const options = mockQuery.mock.calls[0]?.[0].options as Record<string, unknown>;
+      expect(options).not.toHaveProperty('resume');
     });
 
-    it('returns sessionId from the SDK session and isResumed false', async () => {
-      const fakeSession = makeSession('sdk-session-abc');
-      mockCreate.mockReturnValue(fakeSession);
+    it('returns a new sessionId and isResumed false', async () => {
+      const active = await resolveSession(makeOptions());
 
-      const result = await resolveSession(makeOptions());
-
-      expect(result.sessionId).toBe('sdk-session-abc');
-      expect(result.isResumed).toBe(false);
-      expect(result.session).toBe(fakeSession);
+      expect(active.sessionId).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+      );
+      expect(active.isResumed).toBe(false);
     });
 
     it('creates a new session even when previousSessionId exists but resumeWithinMs is 0', async () => {
-      const fakeSession = makeSession('sdk-session-fresh');
-      mockCreate.mockReturnValue(fakeSession);
+      const active = await startSession(makeOptions({ resumeWithinMs: 0 }), 'old-session-id');
 
-      const result = await resolveSession(makeOptions({ resumeWithinMs: 0 }), 'old-session-id');
-
-      expect(mockCreate).toHaveBeenCalledOnce();
-      expect(mockResume).not.toHaveBeenCalled();
-      expect(result.isResumed).toBe(false);
+      expect(active.isResumed).toBe(false);
+      const options = mockQuery.mock.calls[0]?.[0].options as Record<string, unknown>;
+      expect(options['sessionId']).not.toBe('old-session-id');
+      expect(options).not.toHaveProperty('resume');
     });
   });
 
   describe('resume path', () => {
-    it('calls unstable_v2_resumeSession when a previousSessionId exists', async () => {
-      const fakeSession = makeSession('sess_abc');
-      mockResume.mockReturnValue(fakeSession);
+    it('calls query with resume when a previousSessionId exists', async () => {
+      await startSession(makeOptions(), 'sess_abc');
 
-      await resolveSession(makeOptions(), 'sess_abc');
-
-      expect(mockResume).toHaveBeenCalledOnce();
-      expect(mockResume).toHaveBeenCalledWith('sess_abc', {
-        model: 'claude-test',
-        allowedTools: ['Read', 'Edit'],
-        cwd: '/fake',
+      expect(mockQuery).toHaveBeenCalledWith({
+        prompt: 'test prompt',
+        options: expect.objectContaining({
+          resume: 'sess_abc',
+          model: 'claude-test',
+          allowedTools: ['Read', 'Edit'],
+          cwd: '/fake',
+        }),
       });
-      expect(mockCreate).not.toHaveBeenCalled();
+      const options = mockQuery.mock.calls[0]?.[0].options as Record<string, unknown>;
+      expect(options).not.toHaveProperty('sessionId');
     });
 
     it('returns the previousSessionId and isResumed true', async () => {
-      const fakeSession = makeSession('sess_abc');
-      mockResume.mockReturnValue(fakeSession);
+      const active = await startSession(makeOptions(), 'sess_abc');
 
-      const result = await resolveSession(makeOptions(), 'sess_abc');
-
-      expect(result.sessionId).toBe('sess_abc');
-      expect(result.isResumed).toBe(true);
-      expect(result.session).toBe(fakeSession);
+      expect(active.sessionId).toBe('sess_abc');
+      expect(active.isResumed).toBe(true);
     });
   });
 
   describe('error propagation', () => {
-    it('re-throws SDK errors on the create path and does not return a random UUID', async () => {
-      const sdkError = new Error('Network error during session creation');
-      mockCreate.mockImplementation(() => {
-        throw sdkError;
+    it('re-throws SDK errors on the create path', async () => {
+      mockQuery.mockImplementation(() => {
+        throw new Error('Network error during session creation');
       });
 
-      await expect(resolveSession(makeOptions())).rejects.toThrow(
+      const active = await resolveSession(makeOptions());
+      await expect(active.session.send('test')).rejects.toThrow(
         'Network error during session creation',
       );
     });
 
     it('re-throws SDK errors on the resume path', async () => {
-      const sdkError = new Error('Session not found');
-      mockResume.mockImplementation(() => {
-        throw sdkError;
+      mockQuery.mockImplementation(() => {
+        throw new Error('Session not found');
       });
 
-      await expect(resolveSession(makeOptions(), 'missing-session')).rejects.toThrow(
-        'Session not found',
-      );
+      const active = await resolveSession(makeOptions(), 'missing-session');
+      await expect(active.session.send('test')).rejects.toThrow('Session not found');
     });
   });
 
   describe('subagent loading', () => {
     it('checks each subagent path for existence when non-empty', async () => {
-      const fakeSession = makeSession('sdk-session-sub');
-      mockCreate.mockReturnValue(fakeSession);
-
-      await resolveSession(
+      await startSession(
         makeOptions({
           definition: {
             name: 'engineer',
@@ -174,10 +170,7 @@ describe('resolveSession', () => {
     });
 
     it("passes settingSources: ['project'] when valid subagent paths exist", async () => {
-      const fakeSession = makeSession('sdk-session-sub');
-      mockCreate.mockReturnValue(fakeSession);
-
-      await resolveSession(
+      await startSession(
         makeOptions({
           definition: {
             name: 'engineer',
@@ -190,34 +183,31 @@ describe('resolveSession', () => {
         }),
       );
 
-      expect(mockCreate).toHaveBeenCalledWith(
+      expect(mockQuery).toHaveBeenCalledWith(
         expect.objectContaining({
-          cwd: '/agent',
-          settingSources: ['project'],
+          options: expect.objectContaining({
+            cwd: '/agent',
+            settingSources: ['project'],
+          }),
         }),
       );
     });
 
     it('does not set settingSources when subagentPaths is empty', async () => {
-      const fakeSession = makeSession('sdk-session-no-sub');
-      mockCreate.mockReturnValue(fakeSession);
-
-      await resolveSession(makeOptions());
+      await startSession(makeOptions());
 
       expect(mockAccess).not.toHaveBeenCalled();
-      const callArg = mockCreate.mock.calls[0]?.[0] as Record<string, unknown>;
-      expect(callArg).not.toHaveProperty('settingSources');
+      const options = mockQuery.mock.calls[0]?.[0].options as Record<string, unknown>;
+      expect(options).not.toHaveProperty('settingSources');
     });
 
     it('warns and skips a subagent path that cannot be accessed', async () => {
-      const fakeSession = makeSession('sdk-session-partial');
-      mockCreate.mockReturnValue(fakeSession);
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       const enoent = Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
       mockAccess.mockRejectedValueOnce(enoent);
 
-      await resolveSession(
+      await startSession(
         makeOptions({
           definition: {
             name: 'engineer',
@@ -236,16 +226,12 @@ describe('resolveSession', () => {
     });
 
     it('starts the session with remaining subagents after skipping a missing one', async () => {
-      const fakeSession = makeSession('sdk-session-partial');
-      mockCreate.mockReturnValue(fakeSession);
       vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       const enoent = Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
-      mockAccess
-        .mockRejectedValueOnce(enoent) // first path: missing
-        .mockResolvedValueOnce(undefined as never); // second path: exists
+      mockAccess.mockRejectedValueOnce(enoent).mockResolvedValueOnce(undefined as never);
 
-      await resolveSession(
+      await startSession(
         makeOptions({
           definition: {
             name: 'engineer',
@@ -258,21 +244,17 @@ describe('resolveSession', () => {
         }),
       );
 
-      // One valid path remains, so settingSources is still set.
-      expect(mockCreate).toHaveBeenCalledWith(
-        expect.objectContaining({ settingSources: ['project'] }),
-      );
+      const options = mockQuery.mock.calls[0]?.[0].options as Record<string, unknown>;
+      expect(options['settingSources']).toEqual(['project']);
     });
 
     it('does not set settingSources when all subagent paths are missing', async () => {
-      const fakeSession = makeSession('sdk-session-all-missing');
-      mockCreate.mockReturnValue(fakeSession);
       vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       const enoent = Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
       mockAccess.mockRejectedValue(enoent);
 
-      await resolveSession(
+      await startSession(
         makeOptions({
           definition: {
             name: 'engineer',
@@ -285,33 +267,28 @@ describe('resolveSession', () => {
         }),
       );
 
-      const callArg = mockCreate.mock.calls[0]?.[0] as Record<string, unknown>;
-      expect(callArg).not.toHaveProperty('settingSources');
+      const options = mockQuery.mock.calls[0]?.[0].options as Record<string, unknown>;
+      expect(options).not.toHaveProperty('settingSources');
     });
   });
 
   describe('audit hook wiring', () => {
     it('passes a PostToolUse hook to the SDK when auditHook is provided', async () => {
-      const fakeSession = makeSession('sdk-session-hook');
-      mockCreate.mockReturnValue(fakeSession);
       const handler = vi.fn();
 
-      await resolveSession(makeOptions({ auditHook: handler }));
+      await startSession(makeOptions({ auditHook: handler }));
 
-      const callArg = mockCreate.mock.calls[0]?.[0] as Record<string, unknown>;
-      expect(callArg).toHaveProperty('hooks');
-      const hooks = callArg['hooks'] as Record<string, unknown>;
+      const options = mockQuery.mock.calls[0]?.[0].options as Record<string, unknown>;
+      expect(options).toHaveProperty('hooks');
+      const hooks = options['hooks'] as Record<string, unknown>;
       expect(hooks).toHaveProperty('PostToolUse');
     });
 
     it('does not add a hooks field when auditHook is not provided', async () => {
-      const fakeSession = makeSession('sdk-session-no-hook');
-      mockCreate.mockReturnValue(fakeSession);
+      await startSession(makeOptions());
 
-      await resolveSession(makeOptions());
-
-      const callArg = mockCreate.mock.calls[0]?.[0] as Record<string, unknown>;
-      expect(callArg).not.toHaveProperty('hooks');
+      const options = mockQuery.mock.calls[0]?.[0].options as Record<string, unknown>;
+      expect(options).not.toHaveProperty('hooks');
     });
   });
 });

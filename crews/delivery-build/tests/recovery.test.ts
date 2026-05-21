@@ -5,7 +5,7 @@ vi.mock('../src/observability.js', () => ({
 }));
 
 vi.mock('@anthropic-ai/claude-agent-sdk', () => ({
-  unstable_v2_resumeSession: vi.fn(),
+  getSessionInfo: vi.fn(),
 }));
 
 vi.mock('../src/agents/engineer/agent.js', () => ({
@@ -20,7 +20,7 @@ vi.mock('../src/memory.js', () => ({
 
 import { recoverInterruptedSteps } from '../src/workflow.js';
 import type { WorkflowCtxBase } from '../src/workflow.js';
-import { unstable_v2_resumeSession } from '@anthropic-ai/claude-agent-sdk';
+import { getSessionInfo } from '@anthropic-ai/claude-agent-sdk';
 import { log } from '../src/observability.js';
 import { engineer } from '../src/agents/engineer/agent.js';
 import { seniorEngineer } from '../src/agents/senior-engineer/agent.js';
@@ -28,7 +28,7 @@ import type { StateStore, StepRow } from '../src/state.js';
 import type { JiraClient } from '../src/integrations/jira.js';
 import type { GitlabClient } from '../src/integrations/gitlab.js';
 
-const mockResumeSession = vi.mocked(unstable_v2_resumeSession);
+const mockGetSessionInfo = vi.mocked(getSessionInfo);
 const mockLogInfo = vi.mocked(log.info);
 const mockLogWarn = vi.mocked(log.warn);
 const mockLogError = vi.mocked(log.error);
@@ -109,6 +109,11 @@ function makeState(interrupted: StepRow[] = []): StateStore {
 describe('recoverInterruptedSteps', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetSessionInfo.mockResolvedValue({
+      sessionId: 'sess_default',
+      summary: 'test',
+      lastModified: 0,
+    });
   });
 
   it('completes silently when there are no interrupted steps', async () => {
@@ -117,23 +122,25 @@ describe('recoverInterruptedSteps', () => {
 
     await recoverInterruptedSteps(state, ctxBase);
 
-    expect(mockResumeSession).not.toHaveBeenCalled();
+    expect(mockGetSessionInfo).not.toHaveBeenCalled();
     expect(mockLogWarn).not.toHaveBeenCalled();
     expect(mockLogInfo).not.toHaveBeenCalledWith('recovery.session-resumed', expect.anything());
   });
 
-  it('calls unstable_v2_resumeSession with the stored sessionId', async () => {
+  it('calls getSessionInfo with the stored sessionId', async () => {
     const ctxBase = makeCtxBase();
+    mockGetSessionInfo.mockResolvedValue({
+      sessionId: 'sess_abc',
+      summary: 'test',
+      lastModified: 0,
+    });
     mockEngineer.mockResolvedValue(makeSuccessResult());
     mockSeniorEngineer.mockResolvedValue(makeSuccessResult());
     const state = makeState([makeInterruptedRow({ sessionId: 'sess_abc' })]);
 
     await recoverInterruptedSteps(state, ctxBase);
 
-    expect(mockResumeSession).toHaveBeenCalledWith(
-      'sess_abc',
-      expect.objectContaining({ model: expect.any(String) }),
-    );
+    expect(mockGetSessionInfo).toHaveBeenCalledWith('sess_abc', { dir: '/project' });
   });
 
   it('emits an info log with issueKey, step, and sessionId on successful resume', async () => {
@@ -168,11 +175,9 @@ describe('recoverInterruptedSteps', () => {
     expect(ctxBase.jira.transitionIssue).toHaveBeenCalledWith('CREW-63-001', 'In QA');
   });
 
-  it('emits a warn log and escalates when unstable_v2_resumeSession throws', async () => {
+  it('emits a warn log and escalates when getSessionInfo throws', async () => {
     const ctxBase = makeCtxBase();
-    mockResumeSession.mockImplementation(() => {
-      throw new Error('session not found');
-    });
+    mockGetSessionInfo.mockRejectedValue(new Error('session not found'));
     const state = makeState([
       makeInterruptedRow({ issueKey: 'CREW-63-001', sessionId: 'sess_gone' }),
     ]);
@@ -201,18 +206,16 @@ describe('recoverInterruptedSteps', () => {
 
     await recoverInterruptedSteps(state, ctxBase);
 
-    expect(mockResumeSession).toHaveBeenCalledTimes(2);
-    expect(mockResumeSession).toHaveBeenCalledWith('sess_1', expect.anything());
-    expect(mockResumeSession).toHaveBeenCalledWith('sess_2', expect.anything());
+    expect(mockGetSessionInfo).toHaveBeenCalledTimes(2);
+    expect(mockGetSessionInfo).toHaveBeenCalledWith('sess_1', { dir: '/project' });
+    expect(mockGetSessionInfo).toHaveBeenCalledWith('sess_2', { dir: '/project' });
   });
 
   it('continues to the next row after one row fails', async () => {
     const ctxBase = makeCtxBase();
-    mockResumeSession
-      .mockImplementationOnce(() => {
-        throw new Error('gone');
-      })
-      .mockReturnValueOnce(undefined as any);
+    mockGetSessionInfo
+      .mockRejectedValueOnce(new Error('gone'))
+      .mockResolvedValueOnce({ sessionId: 'sess_ok', summary: 'ok', lastModified: 0 });
     mockEngineer.mockResolvedValue(makeSuccessResult());
     mockSeniorEngineer.mockResolvedValue(makeSuccessResult());
     const state = makeState([
@@ -234,9 +237,7 @@ describe('recoverInterruptedSteps', () => {
 
   it('emits workflow.complete with success: false when crash recovery escalates', async () => {
     const ctxBase = makeCtxBase();
-    mockResumeSession.mockImplementation(() => {
-      throw new Error('session not found');
-    });
+    mockGetSessionInfo.mockResolvedValue(undefined);
     const state = makeState([
       makeInterruptedRow({ issueKey: 'CREW-63-001', sessionId: 'sess_gone' }),
     ]);
@@ -253,11 +254,9 @@ describe('recoverInterruptedSteps', () => {
 
   it('continues to the next row when escalation itself throws', async () => {
     const ctxBase = makeCtxBase();
-    mockResumeSession
-      .mockImplementationOnce(() => {
-        throw new Error('session gone');
-      })
-      .mockReturnValueOnce(undefined as any);
+    mockGetSessionInfo
+      .mockRejectedValueOnce(new Error('session gone'))
+      .mockResolvedValueOnce({ sessionId: 'sess_ok', summary: 'ok', lastModified: 0 });
     // First row's escalation fails (e.g. Jira unreachable)
     ctxBase.jira.commentOnIssue.mockRejectedValueOnce(new Error('Jira unreachable'));
     mockEngineer.mockResolvedValue(makeSuccessResult());

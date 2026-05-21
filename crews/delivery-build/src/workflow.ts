@@ -1,4 +1,4 @@
-import { unstable_v2_resumeSession } from '@anthropic-ai/claude-agent-sdk';
+import { getSessionInfo } from '@anthropic-ai/claude-agent-sdk';
 import { type AgentInput } from '@daddia/crew';
 import { engineer } from './agents/engineer/agent.js';
 import { seniorEngineer } from './agents/senior-engineer/agent.js';
@@ -370,8 +370,6 @@ async function escalateToHumanReview(
   }
 }
 
-const DEFAULT_RECOVERY_MODEL = 'claude-opus-4-5';
-
 /**
  * Scan for agent steps that started a session but never finished (process
  * crash mid-run). For each interrupted row, attempt to reconnect the SDK
@@ -391,9 +389,10 @@ export async function recoverInterruptedSteps(
     const { issueKey, step, sessionId } = row;
 
     try {
-      unstable_v2_resumeSession(sessionId!, {
-        model: ctxBase.behaviour.anthropicModel ?? DEFAULT_RECOVERY_MODEL,
-      });
+      const sessionInfo = await getSessionInfo(sessionId!, { dir: ctxBase.projectDir });
+      if (!sessionInfo) {
+        throw new Error(`Session not found: ${sessionId}`);
+      }
       log.info('recovery.session-resumed', { issueKey, step, sessionId });
       await runStory({ issueKey, state, ...ctxBase });
     } catch (err) {
