@@ -3,7 +3,7 @@ export type { PersonaName, AgentInput, AgentResult, Agent, AgentDefinition } fro
 export type { AgentCrew } from './unit.js';
 
 export { resolveSession } from './session.js';
-export type { SessionOptions, ActiveSession, AgentSession } from './session.js';
+export type { SessionOptions, ActiveSession } from './session.js';
 export type { SDKMessage, SDKResultMessage } from '@anthropic-ai/claude-agent-sdk';
 
 export { readPromptFile, readSkillsDir, readSubagentsDir } from './loaders.js';
@@ -20,3 +20,5 @@ export { createLogger, initTracing, createTracer } from './observability/index.j
 export type { Logger, LogLevel, LogRecord, TracingOptions, Tracer } from './observability/index.js';
 
 export { seedProjectMemory, memoryPath } from './memory/index.js';
+
+export type { Orchestrator, OrchestratorRequest, AgentRegistry } from './orchestrator.js';
