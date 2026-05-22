@@ -1,20 +1,21 @@
 ---
 type: Runbook
-version: '0.1'
+version: '0.2'
 status: Active
-last_updated: 2026-05-12
+last_updated: 2026-05-21
 related:
   - crews/delivery-build/README.md
   - docs/design/crew-flows/delivery-build.md
   - docs/runbook/container.md
 ---
 
-# Operations Runbook -- delivery-build
+# Operations Runbook — `delivery-build`
 
 The `delivery-build` crew picks up assigned Jira stories, implements them via
 the `engineer` and `senior-engineer` personas, opens a GitLab MR, monitors CI,
-and transitions the ticket to "In QA". The canonical delivery sequence is
-documented in [`docs/design/crew-flows/delivery-build.md`](../design/crew-flows/delivery-build.md).
+and transitions the ticket to "In QA". The canonical flow contract:
+[`docs/design/crew-flows/delivery-build.md`](../design/crew-flows/delivery-build.md).
+Env var reference (canonical): [`crews/delivery-build/README.md`](../../crews/delivery-build/README.md).
 
 ---
 
@@ -53,7 +54,7 @@ pnpm diagnose
 
 Expected output when all checks pass:
 
-```
+```text
 ✓ Jira API reachability: https://yourorg.atlassian.net is reachable
 ✓ Jira project key: project CREW exists
 ✓ Jira transitions: all four required transitions present
@@ -100,18 +101,11 @@ so the Docker build context must be the **repository root**.
 
 ### 2.2 Environment variables
 
-Set all variables in the Railway service dashboard. For the description and
-validation rules for each variable, see the env var table in
-[`crews/delivery-build/README.md`](../../crews/delivery-build/README.md).
-
-**Required:** `ANTHROPIC_API_KEY`, `ATLASSIAN_EMAIL`, `ATLASSIAN_API_TOKEN`,
-`ATLASSIAN_BASE_URL`, `JIRA_PROJECT_KEY`, `JIRA_ASSIGNEE_ACCOUNT_ID`,
-`GITLAB_PERSONAL_ACCESS_TOKEN`, `GITLAB_API_URL`, `GITLAB_PROJECT_ID`,
-`JIRA_WEBHOOK_SECRET`, `GITLAB_WEBHOOK_SECRET`, `DB_PATH`, `PROJECT_DIR`.
-
-**Optional:** `ANTHROPIC_MODEL`, `POLL_INTERVAL_MS`, `REFACTOR_LOOP_CAP`,
-`CI_RETRY_CAP`, `CI_POLL_INTERVAL_MS`, `CLARIFICATION_TIMEOUT_HOURS`,
-`ATLASSIAN_ACCOUNT_ID`, `DIFF_FILE_CAP`, `DIFF_SIZE_CAP_BYTES`.
+Set every variable from the canonical reference in
+[`crews/delivery-build/README.md`](../../crews/delivery-build/README.md) on the
+Railway service dashboard. That table is the single source of truth for which
+variables are required vs optional and what each one accepts; do not duplicate
+the list here.
 
 ### 2.3 Persistent volume
 
@@ -256,12 +250,7 @@ beginning of `runStory`. If reconnection fails, the story is transitioned to
 1. Check the `recovery.session-failed` log entry for `issueKey` and `sessionId`.
 2. Review the Jira ticket; the escalation comment names the cause.
 3. Resolve the root cause (e.g. transient SDK outage).
-4. In the Railway SQLite console or via an SSH session, clear the interrupted row:
-
-```sql
-DELETE FROM steps WHERE issue_key = '<ISSUE_KEY>' AND finished_at IS NULL;
-```
-
+4. In the Railway SQLite console or via an SSH session, clear the interrupted row (`DELETE FROM steps WHERE issue_key = '<ISSUE_KEY>' AND finished_at IS NULL;`).
 5. Transition the Jira issue back to "To Do". The next poll tick re-picks it.
 
 ### 5.2 Clarification timeout
@@ -362,7 +351,7 @@ these values to baseline cost per story type and calibrate the caps above.
 
 Example structured log query (if shipping logs to a log aggregator):
 
-```
+```text
 event = "workflow.complete" AND success = true
 | stats avg(totalCostUsd), max(totalCostUsd), avg(durationMs) by terminalStep
 ```

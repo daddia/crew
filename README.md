@@ -53,4 +53,4 @@ Full doc index: [`docs/README.md`](docs/README.md).
 
 ## Licence
 
-Copyright (c) 2026 daddia. All rights reserved. Released under the [MIT Licence](LICENCE).
+Copyright (c) 2026 daddia. All rights reserved. Released under the [MIT Licence](LICENSE).

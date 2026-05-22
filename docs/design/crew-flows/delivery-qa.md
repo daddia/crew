@@ -1,35 +1,44 @@
 # Delivery QA (`delivery-qa`)
 
+Forward-looking contract. Not yet scaffolded in code. Planned for the Next phase — see [`../../product/roadmap.md`](../../product/roadmap.md).
+
 ```ts
 /**
- * Run the delivery QA sequence for one story.
+ * Run the delivery-qa sequence for one story.
  *
  * Trigger:
- *   `ready-for-qa` event from delivery-build crew
- *   (also: scheduled polling of jira board for tickets in `in qa` as fallback)
+ *   A) `ready-for-qa` event from delivery-build (primary)
+ *   B) Scheduled polling of Jira for tickets in `in qa` (fallback)
+ *
+ * Scope: MR is CI-green and assigned to QA → defect-free QA pass → ticket
+ *   transitioned to "In Review". Code review and merge are handled by
+ *   delivery-review.
  *
  * Sequence:
- *   → qa-engineer deploys MR branch to QA environment
- *   → qa-engineer runs automated suite (e2e, integration, regression against mocked externals)
- *   → qa-engineer runs exploratory / manual pass
+ *   → qa-engineer deploys the MR branch to the QA environment
+ *   → qa-engineer runs the automated suite (e2e, integration, regression against mocked externals)
+ *   → qa-engineer runs an exploratory / manual pass
  *   → qa-engineer runs external integration tests (e.g. payment sandbox, third-party APIs)
  *       → defects found:
  *           → qa-engineer documents defects as Jira comments
  *           → bounded defect loop (cap: QA_DEFECT_LOOP_CAP):
  *               → status update: `in qa` → `in remediation`
  *               → apply label: `qa-remediation`
- *               → emit `remediation-required` event (handoff signal to delivery-build crew)
+ *               → emit `remediation-required` event (handoff to delivery-build)
  *               → HUMAN-IN-THE-LOOP PAUSE: await `ready-for-qa` event from delivery-build
- *                   → timeout: REMEDIATION_TIMEOUT_HOURS → emit `blocked` event, notify tech-lead → halt
+ *                   → timeout: REMEDIATION_TIMEOUT_HOURS → escalateToHumanReview, halt
  *               → re-run automated suite + targeted defect verification
- *           → cap exceeded → emit `blocked` event, notify tech-lead → halt
+ *           → cap exceeded → escalateToHumanReview, halt
  *   → all checks pass, no defects outstanding
  *   → status update: `in qa` → `in review`
- *   → emit `ready-for-review` event (explicit handoff signal to delivery-review crew)
+ *   → emit `ready-for-review` event (handoff to delivery-review)
  *   → done
  *
- * Loop caps:
- *   QA_DEFECT_LOOP_CAP       - max remediation cycles before escalation
- *   REMEDIATION_TIMEOUT_HOURS - max wait for engineer remediation before escalation
+ * Caps and timers:
+ *   QA_DEFECT_LOOP_CAP        — max remediation cycles before escalation
+ *   REMEDIATION_TIMEOUT_HOURS — max wait for engineer remediation before escalation
+ *
+ * Failure handling: same contract as every crew — escalateToHumanReview on
+ * unrecoverable failure; the workflow does not throw to the caller.
  */
 ```

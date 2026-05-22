@@ -1,15 +1,15 @@
 ---
 type: Architecture Decision Register
 product: crew
-owner: Engineering
+owner: daddia
 status: Current
 last_updated: 2026-05-21
 ---
 
 # Architecture Decision Register — Crew
 
-ADRs live in `architecture/decisions/` in this repo. Use the template at
-[`adr-template.md`](adr-template.md). Target length 40–80 lines per ADR.
+ADRs live in [`architecture/decisions/`](.) in this repo. Use the template at
+[`adr-template.md`](adr-template.md). Target length 40–80 lines per ADR. Candidate decisions inferred from the current codebase are listed in [`../solution.md`](../solution.md) §9 — they graduate to this register when contested, revisited, or about to be revised.
 
 ## Status legend
 

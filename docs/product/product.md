@@ -98,10 +98,9 @@ Crew is evaluated on three levels. This document names the outcomes; numeric thr
 
 ## 8. Product principles
 
+These are the strategic positions Crew commits to as a product. They differ from the design and operational principles that govern the runtime — those live in [`architecture/principles.md`](../../architecture/principles.md) and are cited from here rather than restated.
+
 - **Deploying a crew should be the easy part.** The substrate absorbs operational complexity so a new crew is a question of workflow, personas, and prompts — not infrastructure.
-- **Escalate rather than fail silently.** A visible handoff to a human with context is always preferred to an invisible failure. Trust is built by showing where automation stops.
-- **Bounded everything.** Every loop has a cap, every external call a timeout, every run a cost ceiling. Unbounded automation is unbounded spend and unbounded risk.
-- **The audit trail is the product.** Every action a crew takes is reconstructible after the fact. Accountability requires visibility, and visibility is non-negotiable.
 - **Conservative defaults, configurable limits.** Crews ship narrow. Operators expand autonomy explicitly; the platform never assumes permission it was not granted.
 - **Independent crews, composable pipelines.** Crews run correctly alone. Coordination is added at the orchestration layer, never wired into crew internals — so independence is preserved as the catalogue grows.
 - **Compound above the model.** The commercial value of Crew lives in what cannot be matched by a single model call: orchestration, memory, evidence, evaluation, and governance. The runtime invests where compounding is possible.

@@ -1,6 +1,6 @@
 # Adding an Agent Crew
 
-An agent crew is a deployable agent service containing two or more personas that hand off work in a defined sequence. The delivery crew (`engineer → senior-engineer → tech-lead`) is the canonical example.
+An agent crew is a deployable agent service containing two or more personas that hand off work in a defined sequence. The `delivery-build` crew (`engineer → senior-engineer`) is the canonical reference layout; the planned `delivery-review` crew (`tech-lead + product-manager (HITL)`) is its smaller sibling.
 
 Use an agent crew when:
 
@@ -27,18 +27,18 @@ Keep the roster minimal. A two-persona team (producer + gatekeeper) covers most 
 ## 2. Scaffold the crew
 
 ```bash
-cp -r crews/delivery crews/<name>
+cp -r crews/delivery-build crews/<name>
 ```
 
-Update `package.json` to set `"name": "@daddia/crew-<name>"`.
+Update `package.json` to set `"name": "@daddia/crew-<name>"` and reset the version.
 
-`pnpm-workspace.yaml` already globs `crews/*`, so no workspace change is needed. Copy and adapt the delivery crew's `Dockerfile` — the build context must be the workspace root so `packages/*` are available. Add a build and test job for the new crew in the pipeline.
+`pnpm-workspace.yaml` already globs `crews/*`, so no workspace change is needed. Copy and adapt the `delivery-build` `Dockerfile` — the build context must be the workspace root so `packages/*` are available. Add a build and test job for the new crew in CI.
 
 ## 3. Directory layout
 
 Each persona gets its own directory under the crew's `agents/` folder:
 
-```
+```text
 crews/<crew>/src/
   agents/
     <producer>/
@@ -95,7 +95,7 @@ await engine.run(plan, { task: issueKey });
 
 The engine writes `upsertStory` + `startStep` / `finishStep` for you, accumulates step artefacts into a shared context, and calls `onEscalate` on failure.
 
-**Option B — hand-roll the sequence** (matches the `delivery-build` pattern):
+**Option B — hand-roll the sequence** (the current `delivery-build` pattern; valid but verbose):
 
 ```typescript
 // 1. Record intent before calling the agent (crash-recovery anchor).

@@ -1,12 +1,16 @@
 ---
 type: Runbook
-version: '0.1'
+version: '0.2'
 status: Active
+last_updated: 2026-05-21
+related:
+  - packages/crew/package.json
+  - .github/workflows/release.yml
 ---
 
-# Publish Runbook
+# Publish Runbook — `@daddia/crew`
 
-Manual publish steps for `@daddia/crew`.
+Two paths: the **Changesets-driven release pipeline** is the day-to-day path (§Changesets workflow below); the **manual steps** are an exceptional fallback when the pipeline is unavailable. Pick one — never run both for the same version.
 
 ---
 
@@ -97,9 +101,9 @@ npm publish --access public
 
 Expected output:
 
-```
+```text
 npm notice Publishing to https://registry.npmjs.org/ with tag latest and public access
-+ @daddia/crew@0.1.0
++ @daddia/crew@<version-in-package.json>
 ```
 
 ---
@@ -111,7 +115,7 @@ From a separate directory (outside the monorepo):
 ```sh
 mkdir /tmp/crew-verify && cd /tmp/crew-verify
 npm init -y
-npm install @daddia/crew@0.1.0
+npm install @daddia/crew@latest
 ```
 
 Confirm all entry points resolve:

@@ -6,14 +6,16 @@ Personas are the team members inside an agent crew. Each persona owns a prompt, 
 
 Create a new directory under the crew's `agents/` folder:
 
-```
-crews/delivery/src/agents/<name>/
+```text
+crews/{crew}/src/agents/<name>/
   agent.ts       # exports const <name>: Agent
   prompt.md      # system prompt — no code
   .claude/
     skills/      # SKILL.md files loaded via readSkillsDir()
     agents/      # subagent .md files loaded via readSubagentsDir()
 ```
+
+`{crew}` is the target crew folder (e.g. `delivery-build`). The `delivery-build` crew is the canonical reference layout — copy a persona under [`crews/delivery-build/src/agents/`](../crews/delivery-build/src/agents/) if you need a template.
 
 ## Steps
 
