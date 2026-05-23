@@ -1,10 +1,10 @@
 ---
 type: Product Strategy
 scope: product
-version: '2.0'
+version: '2.1'
 owner: daddia
 status: Current
-last_updated: 2026-05-21
+last_updated: 2026-05-24
 ---
 
 # Product -- Crew
@@ -42,12 +42,16 @@ The delivery vertical is the first proof and the most demanding workload — mul
 
 When a crew reaches the limit of what it can resolve autonomously, it hands back to a human with full context. Autonomy and oversight are designed together, not traded against each other.
 
+Above the runtime, a **compounding surface** accumulates value with every run: project memory reduces repeated context cost, cross-run evidence feeds evaluation policy, model routing selects the cheapest model that meets the quality bar per task type, and specialised optimisers propose improvements to prompts, context assembly, and escalation thresholds based on observed outcomes. A better foundation model raises the floor for a single call; the compounding surface raises the floor for every call, permanently. This is where the platform's commercial defensibility lives — the workspace artefacts and accumulated working knowledge that no model vendor can reach.
+
+Crew expects the projects it operates on to provide a **minimum workspace contract**: a product strategy, solution architecture, and product roadmap at known paths in the repo. These steering docs are what crews read at context-seed time to understand what they are building and why. If any is missing, the crew escalates rather than guesses.
+
 In the future phase, individual crews become composable steps in longer pipelines. Coordination moves above the crew: triggering one crew when another finishes, fanning out from a single event, pausing on a human decision, resuming exactly where it stopped. Crews stay independently deployable; the orchestration layer connects them without coupling them. This is what turns a catalogue into a platform.
 
 ## 4. Rabbit holes
 
 - **Building a general-purpose agent framework.** Crew is a runtime and deployment layer on top of an agent SDK, not a replacement for one. Model selection, prompt orchestration internals, and tool-call semantics belong to the SDK and the model provider.
-- **Owning the operator's workspace.** Crew reads from artefact-centric workspaces it does not own — product docs, designs, conventions, program mirrors. Workspace tooling, scaffolders, and skill libraries are outside this product. The runtime contract is the boundary.
+- **Owning the operator's workspace.** Crew reads from artefact-centric workspaces it does not own — product docs, designs, conventions, program mirrors. The workspace contract defines the minimum surface a project must provide (steering docs at known paths); workspace tooling, scaffolders, and skill libraries are outside this product.
 - **Making every step autonomous.** Escalation is a feature, not a failure mode. Crews handle what they can handle well and hand off the rest cleanly. Forcing autonomy past confidence is how trust collapses.
 - **One platform, every deployment target.** Multi-region, multi-tenant, and serverless deployment patterns are deferred until the single-container model is proven across more than one crew.
 - **Shipping every integration.** Each crew owns the integrations it needs. The platform provides the pattern and the security primitives, not an integration catalogue.
@@ -68,7 +72,7 @@ In the future phase, individual crews become composable steps in longer pipeline
 
 **Primary — operators of repetitive knowledge work beyond delivery.** Teams that run a consistent multi-step workflow — code review, documentation, release notes, customer-issue triage — and want it to run autonomously on schedule or on event. They care about cost per run and autonomy rate. Success: the workflow runs overnight; they review the output in the morning and move on.
 
-**Secondary — technical leaders evaluating autonomous knowledge work for a larger organisation.** They want to redirect headcount away from rote work toward higher-leverage work. They care about cost per accepted artefact, escalation rate, and audit quality as management metrics. Not daily operators; they set policy and read weekly summaries.
+**Secondary — technical leaders evaluating autonomous knowledge work for a larger organisation.** They want to redirect headcount away from rote work toward higher-leverage work. They care about cost per accepted artefact, escalation rate, and audit quality as management metrics — but also about risk exposure (what happens when the system makes a mistake), compliance posture (what the audit trail proves), and whether the platform compounds value independently of any single model vendor. Not daily operators; they set policy, review weekly summaries, and make the build-vs-buy decision.
 
 **Out of scope — enterprises with mandatory multi-reviewer approval chains or change advisory boards.** Crew is designed for teams that trust autonomous operation within configured bounds.
 
@@ -80,25 +84,25 @@ Crew is evaluated on three levels. This document names the outcomes; numeric thr
 
 **Platform level (applies to every crew).**
 
-- **Autonomy rate.** Share of runs completed without human intervention. The primary signal of platform health.
-- **Cost per accepted artefact.** Total spend divided by outputs accepted by humans or downstream gates. The primary commercial metric; the wedge against running a raw model or point agent on the same work.
-- **Time to first crew.** For a new domain, how long from blank slate to a deployed, running crew. Measures the leverage of the shared substrate.
-- **Audit completeness.** Share of runs reconstructible from the audit trail without consulting the operator. The trust metric.
+- **Autonomy rate.** Share of runs completed without human intervention. The primary signal of platform health. Should be stable or trending up at maturity; a declining trend signals degrading input quality or runtime regression.
+- **Cost per accepted artefact.** Total spend divided by outputs accepted by humans or downstream gates. The primary commercial metric; the wedge against running a raw model or point agent on the same work. Must be lower than the equivalent manual cost, and trending down as the compounding surface matures.
+- **Time to first crew.** For a new domain, how long from blank slate to a deployed, running crew. Measures the leverage of the shared substrate. Target: measured in hours or days, not weeks.
+- **Audit completeness.** Share of runs reconstructible from the audit trail without consulting the operator. The trust metric. Target: 100% — the audit trail is the product; partial coverage is a defect, not a trade-off.
 
 **Vertical level (delivery first; every later vertical inherits the shape).**
 
-- **Cycle time end to end.** Trigger to accepted output. For delivery: story pickup to merged MR.
+- **Cycle time end to end.** Trigger to accepted output. For delivery: story pickup to merged MR. Baseline established in the Now phase; improvement expected as memory and routing land.
 - **Escalation rate.** Share of runs that hand off to a human. Stable or trending down at maturity; spiking means the runtime or the input has degraded.
-- **Recall across runs.** Share of recurring context retrieved correctly from prior runs without re-prompting. Compounds with project memory and cross-run learning.
+- **Recall across runs.** Share of recurring context retrieved correctly from prior runs without re-prompting. Compounds with project memory and cross-run learning. Near zero at launch; trending up is the compounding proof.
 
 **Compounding level (the long-term thesis).**
 
-- **Cost-and-recall trajectory.** Cost per accepted artefact trending down and recall trending up after compaction, memory, and routing land. The proof that the platform improves with use, independently of any single model release.
+- **Cost-and-recall trajectory.** Cost per accepted artefact trending down and recall trending up after compaction, memory, and routing land. The proof that the platform improves with use, independently of any single model release. Measured relative to the CrewBench baseline, not an absolute number.
 - **Catalogue breadth.** Number of independently deployable crews running real workloads. The signal that the substrate has earned its name.
 
 ## 8. Product principles
 
-These are the strategic positions Crew commits to as a product. They differ from the design and operational principles that govern the runtime — those live in [`architecture/principles.md`](../../architecture/principles.md) and are cited from here rather than restated.
+These are the strategic positions Crew commits to as a product. They differ from the design and operational principles that govern the runtime — those live in [`architecture/principles.md`](../architecture/principles.md) and are cited from here rather than restated.
 
 - **Deploying a crew should be the easy part.** The substrate absorbs operational complexity so a new crew is a question of workflow, personas, and prompts — not infrastructure.
 - **Conservative defaults, configurable limits.** Crews ship narrow. Operators expand autonomy explicitly; the platform never assumes permission it was not granted.
@@ -122,12 +126,8 @@ Solo-operated today. The RACI expands as crews are operated by or for other team
 
 ## 10. Relationship to the parent
 
-Crew is a standalone product. It has no portfolio parent today, and the long-term thesis does not require one.
+Crew is a standalone product with no portfolio parent. The delivery vertical is the proof point for the platform — the most demanding crew that could be built. Once hardened, the catalogue opens: code review, documentation, discovery, triage. Each new vertical reuses the substrate; only intent changes.
 
-The delivery vertical is the proof point for the platform. It is the most demanding crew that could be built — multi-persona, multi-phase, external integrations, bounded feedback loops, human gates. Shipping it demonstrates the substrate can support anything else built on top.
+The long-term horizon is durable cross-crew orchestration — a coordination layer that treats individual crews as composable steps in longer pipelines. This does not change how crews are built; it adds a surface above them, and it is where the platform's commercial wedge lives.
 
-Once delivery is hardened, the catalogue opens. Candidates for the second and third verticals are identified where well-defined workflows, clear definitions of done, and high repetition create the most leverage — code review, documentation, discovery cycles, customer-issue triage. Each new vertical reuses the substrate end to end; only intent (workflow, personas, prompts) changes.
-
-The horizon beyond catalogue growth is durable cross-crew orchestration. A coordination layer that treats individual crews as composable steps in longer pipelines: suspend and resume across restarts, fan out and fan in across crews, pause for human decisions without losing state. It does not change how individual crews are built or deployed; it adds a new surface above them — and it is where the platform's long-term commercial wedge lives. The current event model is a deliberate starting point, not an end state. Durable orchestration is a planned upgrade, not a prerequisite for the work in flight.
-
-The compounding bet, across all four phases, is the same: **above the model, where orchestration, memory, evidence, and governance accumulate value with every run.** A better model raises the floor for a single call; a better runtime raises the floor for every call, forever.
+The compounding bet, across all four phases: **above the model, where orchestration, memory, evidence, and governance accumulate value with every run.** A better model raises the floor for a single call; a better runtime raises the floor for every call, forever.
