@@ -9,7 +9,8 @@ The hierarchy of reference, in order: **Product strategy → Solution architectu
 | Product strategy — what Crew is, why, for whom | [`product/product.md`](product/product.md) |
 | Solution architecture — how Crew is built and operated | [`../architecture/solution.md`](../architecture/solution.md) |
 | Roadmap — phases (Now / Next / Later / Future) and exit criteria | [`product/roadmap.md`](product/roadmap.md) |
-| Active backlog | Jira (`CREW` project) |
+| Product backlog — epic breakdown, dependencies, risks | [`product/backlog.md`](product/backlog.md) |
+| Active story-level backlog | Jira (`CREW` project) |
 
 ## Supporting docs
 

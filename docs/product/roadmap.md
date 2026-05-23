@@ -12,7 +12,7 @@ related:
 
 # Roadmap -- Crew
 
-Phases follow [`product.md`](product.md) §2. Calendar dates are not committed; a phase opens when the previous phase exits cleanly. The architectural anchor for every phase is [`architecture/solution.md`](../../architecture/solution.md); the active backlog is in Jira.
+Phases follow [`product.md`](product.md) §2. Calendar dates are not committed; a phase opens when the previous phase exits cleanly. The architectural anchor for every phase is [`architecture/solution.md`](../../architecture/solution.md); epic breakdown and dependencies live in [`backlog.md`](backlog.md); the active story-level backlog is in Jira.
 
 ## Now — prove delivery on the platform
 
