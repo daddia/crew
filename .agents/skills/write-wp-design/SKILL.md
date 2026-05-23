@@ -24,7 +24,7 @@ this work package belongs to:
 | ----------------------------- | -------------------------------------- |
 | Under a domain                | `domain/{d}/solution.md`               |
 | Under a portfolio sub-product | `product/{p}/architecture/solution.md` |
-| Under a single product        | `architecture/solution.md`             |
+| Under a single product        | `docs/architecture/solution.md`        |
 
 References to "solution.md" throughout this skill mean the parent solution
 for this work package's context.

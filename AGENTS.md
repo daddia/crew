@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Code conventions for AI agents (and humans) writing code in this repository. This is the **current-state, operational** reference. For the why behind these conventions, read [`architecture/solution.md`](architecture/solution.md); for what is being built next, read [`docs/product/roadmap.md`](docs/product/roadmap.md).
+Code conventions for AI agents (and humans) writing code in this repository. This is the **current-state, operational** reference. For the why behind these conventions, read [`docs/architecture/solution.md`](docs/architecture/solution.md); for what is being built next, read [`docs/product/roadmap.md`](docs/product/roadmap.md).
 
 ## What this repo is
 
@@ -75,7 +75,7 @@ Every persona module implements `Agent`. Every deployable service satisfies `Age
 | `@daddia/crew/workflow` | `WorkflowPlan`, `WorkflowStep`, `FailurePolicy`, `WorkflowEngine`, `WorkflowEngineOptions`, `createWorkflowEngine(options)`. | New crews — prefer the engine over hand-rolled run loops. |
 | `@daddia/crew/config` | `loadEnv`, `loadYaml`, `Secret`, `redact`, `SchemaValidationError`, `ConfigNotFoundError`. | Every crew (typed config schema). |
 
-`@daddia/crew/control` (Pro-tier managed control plane) is described in [`architecture/solution.md`](architecture/solution.md) as a future surface. It is **not** shipped yet.
+`@daddia/crew/control` (Pro-tier managed control plane) is described in [`docs/architecture/solution.md`](docs/architecture/solution.md) as a future surface. It is **not** shipped yet.
 
 ## Crew conventions
 
@@ -105,7 +105,7 @@ crews/{name}/
 
 A solo crew (single persona, no team) uses the same shape and omits `agents/{persona}/`.
 
-CLI-shaped crews follow the equivalent shape minus `handlers/`, the SQLite state store, and the Dockerfile; they expose a `cli.ts` entry point and publish to npm. See [`architecture/solution.md`](architecture/solution.md) §4.2 for the topology contract.
+CLI-shaped crews follow the equivalent shape minus `handlers/`, the SQLite state store, and the Dockerfile; they expose a `cli.ts` entry point and publish to npm. See [`docs/architecture/solution.md`](docs/architecture/solution.md) §4.2 for the topology contract.
 
 ## Persona conventions
 
@@ -249,16 +249,14 @@ Start with [`docs/README.md`](docs/README.md). The hierarchy:
 
 | Layer | Where |
 |-------|-------|
-| Product strategy | [`docs/product/product.md`](docs/product/product.md) |
-| Solution architecture | [`architecture/solution.md`](architecture/solution.md) |
+| Product strategy | [`docs/product/strategy.md`](docs/product/strategy.md) |
+| Solution architecture | [`docs/architecture/solution.md`](docs/architecture/solution.md) |
 | Roadmap | [`docs/product/roadmap.md`](docs/product/roadmap.md) |
 | Active backlog | Jira (`CREW` project) |
-| Guiding principles | [`architecture/principles.md`](architecture/principles.md) |
-| ADRs | [`architecture/decisions/`](architecture/decisions/) |
+| Guiding principles | [`docs/architecture/principles.md`](docs/architecture/principles.md) |
+| ADRs | [`docs/architecture/decisions/`](docs/architecture/decisions/) |
 | Crew flow contracts | [`docs/design/crew-flows/`](docs/design/crew-flows/) |
-| Delivery approach | [`docs/delivery/approach.md`](docs/delivery/approach.md) |
+| Delivery approach | [`docs/design/delivery/approach.md`](docs/design/delivery/approach.md) |
 | Runbooks | [`docs/runbook/`](docs/runbook/) |
 | Contributor guides | [`contributing/`](contributing/) |
 | Research and ideas | [Confluence CREW space](https://carinyaparc.atlassian.net/wiki/spaces/CREW/pages/753668/03+Research) |
-
-The former `crew-space` repository is decommissioned; do not add new artefacts there.

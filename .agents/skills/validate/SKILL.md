@@ -45,8 +45,8 @@ You need the following for the target epic:
 | Requirements          | `work/{EPIC_ID}/requirements.md` | If exists   |
 | Design                | `work/{EPIC_ID}/design.md`       | If exists   |
 | Application code      | `{repo}:src/`                    | Yes         |
-| Solution architecture | `architecture/solution.md`       | If relevant |
-| ADRs                  | `architecture/decisions/`        | If relevant |
+| Solution architecture | `docs/architecture/solution.md` | If relevant |
+| ADRs                  | `docs/architecture/decisions/`  | If relevant |
 
 ## Steps
 

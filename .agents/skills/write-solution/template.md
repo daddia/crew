@@ -27,7 +27,7 @@ DO NOT INCLUDE in solution.md:
 {Name} solution design. Captures the architecture, cross-cutting concepts,
 data contracts, and key decisions that apply across work packages.
 For product context, problem statement, and commercial scope see
-[`product.md`](product.md).
+[`strategy.md`](../product/strategy.md).
 
 ## 1. Context and scope
 

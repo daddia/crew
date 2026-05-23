@@ -1,6 +1,6 @@
 # Delivery Final Review Crew (`delivery-final-review`)
 
-> **Scaffold** — implements the planned `delivery-review` flow contract. The folder name will be rationalised to `delivery-review` once the implementation is live; until then, the contract in [`docs/design/crew-flows/delivery-review.md`](../../docs/design/crew-flows/delivery-review.md) and the catalogue in [`architecture/solution.md`](../../architecture/solution.md) refer to it as `delivery-review`.
+> **Scaffold** — implements the planned `delivery-review` flow contract. The folder name will be rationalised to `delivery-review` once the implementation is live; until then, the contract in [`docs/design/crew-flows/delivery-review.md`](../../docs/design/crew-flows/delivery-review.md) and the catalogue in [`docs/architecture/solution.md`](../../docs/architecture/solution.md) refer to it as `delivery-review`.
 
 The final review and merge crew runs after `delivery-qa` has emitted a `ready-for-review` event. It is the last stop before code lands on `main`.
 

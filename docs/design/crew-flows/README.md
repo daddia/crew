@@ -1,6 +1,6 @@
 # Crew flow contracts
 
-Per-crew delivery sequences. Forward-looking specs: the contract a crew must satisfy, not necessarily the current code state. Supports [`../../product/roadmap.md`](../../product/roadmap.md) and [`../../delivery/approach.md`](../../delivery/approach.md).
+Per-crew delivery sequences. Forward-looking specs: the contract a crew must satisfy, not necessarily the current code state. Supports [`../../product/roadmap.md`](../../product/roadmap.md) and [`../delivery/approach.md`](../delivery/approach.md).
 
 | Crew | Contract | Status |
 |------|----------|--------|

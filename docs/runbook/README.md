@@ -3,13 +3,13 @@ type: Runbooks
 status: Current
 last_updated: 2026-05-21
 related:
-  - docs/product/product.md
+  - docs/product/strategy.md
   - docs/product/roadmap.md
 ---
 
 # Operating crews
 
-Step-by-step procedures for running deployed crews. Supports [`roadmap.md`](../product/roadmap.md) (Next: unattended operation). The runtime contract these runbooks operate against lives in [`architecture/solution.md`](../../architecture/solution.md).
+Step-by-step procedures for running deployed crews. Supports [`roadmap.md`](../product/roadmap.md) (Next: unattended operation). The runtime contract these runbooks operate against lives in [`../architecture/solution.md`](../architecture/solution.md).
 
 ## Operating model
 

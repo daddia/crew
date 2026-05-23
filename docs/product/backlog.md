@@ -6,20 +6,20 @@ owner: daddia
 status: Draft
 last_updated: 2026-05-23
 related:
-  - docs/product/product.md
+  - docs/product/strategy.md
   - docs/product/roadmap.md
-  - architecture/solution.md
+  - docs/architecture/solution.md
 ---
 
 # Backlog — Crew
 
-- **Product strategy:** [`product.md`](product.md)
-- **Solution architecture:** [`../../architecture/solution.md`](../../architecture/solution.md)
+- **Product strategy:** [`strategy.md`](strategy.md)
+- **Solution architecture:** [`../architecture/solution.md`](../architecture/solution.md)
 - **Phases and gates:** [`roadmap.md`](roadmap.md)
 
 ## 1. Summary
 
-**Objective.** Deliver the Crew platform from proof-of-concept to a hardened, commercially available runtime and catalogue — starting with software delivery as the first vertical proof, then broadening to additional crews, and eventually exposing the compounding surface (memory, evaluation, routing) that differentiates the platform from raw model calls. The bet is stated in [`product.md`](product.md) §3: a shared runtime hosts a growing catalogue of independently deployable crews; each crew reuses the substrate without reimplementing it.
+**Objective.** Deliver the Crew platform from proof-of-concept to a hardened, commercially available runtime and catalogue — starting with software delivery as the first vertical proof, then broadening to additional crews, and eventually exposing the compounding surface (memory, evaluation, routing) that differentiates the platform from raw model calls. The bet is stated in [`strategy.md`](strategy.md) §3: a shared runtime hosts a growing catalogue of independently deployable crews; each crew reuses the substrate without reimplementing it.
 
 **Delivery approach.** Prove the hardest thing first (`delivery-build` is the most demanding crew). Every later crew inherits a runtime that has already earned crash recovery, audit, bounded loops, and escalation. Once the first vertical is unattended-production-safe, open the catalogue.
 
@@ -34,9 +34,9 @@ related:
 **Prerequisites (required before core work can ship).**
 
 - CREW-2 must be fully production-safe (CREW-3 gates everything in Next).
-- Remote audit sink (`@daddia/crew/audit`) must ship before the first CLI-shaped crew (`code-reviewer`) can land — it is the only open blocker identified in [`architecture/solution.md`](../../architecture/solution.md) §10.3.
+- Remote audit sink (`@daddia/crew/audit`) must ship before the first CLI-shaped crew (`code-reviewer`) can land — it is the only open blocker identified in [`solution.md`](../architecture/solution.md) §10.3.
 
-**Out of scope.** The canonical no-gos live in [`product.md`](product.md) §5. Phase-gated deferrals live in [`roadmap.md`](roadmap.md) §Later and §Future.
+**Out of scope.** The canonical no-gos live in [`strategy.md`](strategy.md) §5. Phase-gated deferrals live in [`roadmap.md`](roadmap.md) §Later and §Future.
 
 ## 2. Conventions
 
@@ -160,4 +160,4 @@ CREW-1  ────────────────────────
 | R4 | Commercial foundations (CREW-9) take longer than runtime work, compressing the market window | Low | High | Scope licence gating as a thin wrapper; defer pricing UI; ship the mechanism not the full product |
 | R5 | The second crew (CREW-5) surfaces shared-runtime gaps that require a `@daddia/crew` version bump and re-pin across all crews | Medium | Medium | Accept this as expected graduation work; CREW-2 is already the reference; the bump cost is mechanical |
 
-Technical and architecture risks are authoritative in [`../../architecture/solution.md`](../../architecture/solution.md) §10.1 and are not duplicated here.
+Technical and architecture risks are authoritative in [`../architecture/solution.md`](../architecture/solution.md) §10.1 and are not duplicated here.

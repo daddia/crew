@@ -4,13 +4,13 @@ version: '1.5'
 status: Current
 last_updated: 2026-05-21
 related:
-  - docs/product/product.md
+  - docs/product/strategy.md
   - docs/product/roadmap.md
 ---
 
 # Delivery approach
 
-How work flows from strategy to merge inside Crew. Supports [`product.md`](../product/product.md) and [`roadmap.md`](../product/roadmap.md). One sentence:
+How work flows from strategy to merge inside Crew. Supports [`strategy.md`](../product/strategy.md) and [`roadmap.md`](../product/roadmap.md). One sentence:
 
 > Write enough down to reduce ambiguity before building, build by working the queue, and refine what you wrote based on what you learned.
 
@@ -23,7 +23,7 @@ Strategy → Architecture → Discovery → Delivery → Refine
 
 | Track | Question | Repo artefacts |
 |-------|----------|----------------|
-| Strategy | What and why? | [`product/product.md`](../product/product.md), [`product/roadmap.md`](../product/roadmap.md) |
+| Strategy | What and why? | [`product/strategy.md`](../product/strategy.md), [`product/roadmap.md`](../product/roadmap.md) |
 | Architecture | Is the structure sound? | [`architecture/solution.md`](../../architecture/solution.md), [`architecture/principles.md`](../../architecture/principles.md), ADRs |
 | Discovery | Ready to build? | Work-package requirements and `design.md` (when used) |
 | Delivery | Done to standard? | Code, MR, review — crews in [`crews/`](../../crews/) |

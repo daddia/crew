@@ -8,7 +8,7 @@ last_updated: 2026-05-21
 
 # Architecture Decision Register — Crew
 
-ADRs live in [`architecture/decisions/`](.) in this repo. Use the template at
+ADRs live in [`docs/architecture/decisions/`](.) in this repo. Use the template at
 [`adr-template.md`](adr-template.md). Target length 40–80 lines per ADR. Candidate decisions inferred from the current codebase are listed in [`../solution.md`](../solution.md) §9 — they graduate to this register when contested, revisited, or about to be revised.
 
 ## Status legend
@@ -42,10 +42,10 @@ Write the ADR before starting implementation of the blocking feature.
 ## Adding a new ADR
 
 ```bash
-cp architecture/decisions/adr-template.md architecture/decisions/ADR-{####}-{short-title}.md
+cp docs/architecture/decisions/adr-template.md docs/architecture/decisions/ADR-{####}-{short-title}.md
 ```
 
 1. Set status to `Proposed`. Open a PR for discussion.
 2. On acceptance: update status to `Accepted`, add a row above.
 
-**Placement rule:** Runtime and crew-specific decisions live in this repo (`architecture/decisions/`). Product strategy and roadmap live in `docs/product/`; active backlog in Jira.
+**Placement rule:** Runtime and crew-specific decisions live in this repo (`docs/architecture/decisions/`). Product strategy and roadmap live in `docs/product/`; active backlog in Jira.

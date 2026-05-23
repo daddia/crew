@@ -22,7 +22,7 @@ Scope is passed as `$0`, stage as `--stage` (not applicable for portfolio scope)
 
 - `portfolio` — the workspace contains multiple distinct products. Writes the
   top-level binding document at `product/product.md`. No stage flag.
-- `product` — a single product strategy. Saves to `product/product.md` in a
+- `product` — a single product strategy. Saves to `docs/product/strategy.md` in a
   single-product workspace, or `product/{name}/product.md` within a portfolio.
 - `domain` — a bounded context within a product. Saves to
   `domain/{name}/product.md` (or `product/{name}/domain/{name}/product.md`).
@@ -137,7 +137,7 @@ Write as a Markdown file with YAML frontmatter including `type: Product Strategy
 and `scope: portfolio|product|domain`.
 
 - Portfolio scope: save as `product/product.md`
-- Product scope (single-product workspace): save as `product/product.md`
+- Product scope (single-product workspace): save as `docs/product/strategy.md`
 - Product scope (within a portfolio): save as `product/{name}/product.md`
 - Domain scope: save as `domain/{name}/product.md`
 

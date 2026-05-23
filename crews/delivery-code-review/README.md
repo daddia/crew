@@ -27,4 +27,4 @@ This sits **outside** the `delivery-build → delivery-qa → delivery-review` p
 
 The senior-engineer in `delivery-build` already runs peer code review **inside** the build loop. That keeps the loop tight when the engineer and reviewer are the same crew. The post-MR `code-reviewer` is for a different audience: external consumers of the package who want autonomous code review on every MR without standing up a server-shaped crew. Both can co-exist; neither replaces the other.
 
-See [`architecture/solution.md`](../../architecture/solution.md) §4.1 for the catalogue context and §10.3 for the open question about the audit-sink contract that gates this crew.
+See [`docs/architecture/solution.md`](../../docs/architecture/solution.md) §4.1 for the catalogue context and §10.3 for the open question about the audit-sink contract that gates this crew.

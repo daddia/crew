@@ -18,7 +18,7 @@ architecture of a domain legible to engineers, adjacent squads, and AI agents.
 Scope is passed as `$0`, stage as `--stage`:
 
 - `portfolio` — cross-product solution overview (`architecture/solution.md`)
-- `product <name>` — single-product solution (in portfolio: `product/{name}/architecture/solution.md`; in single-product workspace: `architecture/solution.md`)
+- `product <name>` — single-product solution (in portfolio: `product/{name}/docs/architecture/solution.md`; in single-product workspace: `docs/architecture/solution.md`)
 - `domain <name>` — domain-scoped solution (`domain/{name}/solution.md`)
 
 Stage:
@@ -44,14 +44,14 @@ The solution.md MUST NOT contain:
 
 <artifacts>
 [Provided by the caller:
-  Stub stage: product.md, architecture principles, known system boundary
-  Full stage: product.md, work/{wp}/design.md (walking-skeleton), emergent ADRs,
+  Stub stage: strategy.md (or product.md), architecture principles, known system boundary
+  Full stage: strategy.md (or product.md), work/{wp}/design.md (walking-skeleton), emergent ADRs,
   contracts.md, metrics.md]
 </artifacts>
 
 ## Steps (stub stage)
 
-1. Read product.md and any architecture principles provided
+1. Read strategy.md (or product.md in portfolio layouts) and any architecture principles provided
 2. Write §1 "Context and scope" — system boundary, C4 Level 1 diagram (ASCII),
    what this domain owns vs does not own, upstream/downstream systems
 3. Write §2 "Quality goals and constraints" — top 3–5 NFRs ordered by priority,
@@ -84,7 +84,7 @@ The solution.md MUST NOT contain:
 - §11 must state the trigger for graduation, not just the pattern name
 - Every cross-cutting pattern in §7 must reference a domain behaviour, not just name a tool
 - Full stage: 8–12 pages. Stub stage: ≤2 pages.
-- Do not repeat business context from product.md — reference it with a link
+- Do not repeat business context from strategy.md (or product.md) — reference it with a link
 - **Delete the `<!-- DO NOT INCLUDE -->` comment block before saving the output file.** It is a drafting aide only; it must not appear in the committed document.
 
 ## Output format
@@ -94,7 +94,7 @@ Write as a Markdown file with YAML frontmatter.
 | Scope                                    | Save path                                 |
 | ---------------------------------------- | ----------------------------------------- |
 | `portfolio`                              | `architecture/solution.md`                |
-| `product` (single-product workspace)     | `architecture/solution.md`                |
+| `product` (single-product workspace)     | `docs/architecture/solution.md`           |
 | `product <name>` (portfolio sub-product) | `product/{name}/architecture/solution.md` |
 | `domain <name>`                          | `domain/{name}/solution.md`               |
 

@@ -37,15 +37,15 @@ Depth (`--depth`) applies to portfolio/product/domain scope only:
 
 <artifacts>
 [Provided by the caller:
-  Portfolio/product/domain scope: product.md, roadmap.md, solution.md, contracts.md
+  Portfolio/product/domain scope: strategy.md (or product.md in portfolio layouts), roadmap.md, solution.md, contracts.md
   Work-package scope: parent backlog.md (the owning epic entry),
   work/{wp}/design.md (work-package), solution.md, contracts.md]
 </artifacts>
 
 ## Steps (portfolio / product / domain scope)
 
-1. Read product.md, roadmap.md, and solution.md before writing anything
-2. Write a summary: objective, delivery approach, prerequisites (complete + required), out-of-scope pointer (reference `product.md §5` and `roadmap.md §Later` — do not restate them)
+1. Read strategy.md (or product.md in portfolio layouts), roadmap.md, and solution.md before writing anything
+2. Write a summary: objective, delivery approach, prerequisites (complete + required), out-of-scope pointer (reference `strategy.md §5` and `roadmap.md §Later` — do not restate them)
 3. Define conventions table: epic ID format, story ID format, status values, priority levels, estimation method
 4. Build the epic breakdown table:
    - Now-phase rows: full columns (ID, title, phase, priority, deps, points, WP path, status)
@@ -77,7 +77,7 @@ Depth (`--depth`) applies to portfolio/product/domain scope only:
 - Every Gherkin scenario must have `Given / When / Then` structure
 - Every story must have at least two EARS statements and one Gherkin scenario
 - Domain delivery risks must not duplicate technical risks already in `solution.md §10.1`
-- Out-of-scope: reference `product.md §5` and `roadmap.md §Later` rather than restating items
+- Out-of-scope: reference `strategy.md §5` and `roadmap.md §Later` rather than restating items
 
 ## Output format
 

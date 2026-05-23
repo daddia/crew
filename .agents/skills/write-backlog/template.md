@@ -6,7 +6,7 @@ owner: <!-- team or squad name -->
 status: Draft
 last_updated: <!-- YYYY-MM-DD -->
 related:
-  - <!-- product.md -->
+  - <!-- strategy.md (or product.md in portfolio layouts) -->
   - <!-- solution.md -->
   - <!-- roadmap.md -->
 ---
@@ -15,7 +15,7 @@ related:
 DRAFTING AIDE — DELETE THIS BLOCK BEFORE SAVING THE OUTPUT FILE.
 DO NOT INCLUDE in backlog.md:
   - Architecture patterns, module boundaries, or technical rationale → solution.md
-  - Business strategy, positioning, or target users                  → product.md
+  - Business strategy, positioning, or target users                  → strategy.md (or product.md)
   - Phase dates, milestones, or delivery sequencing prose            → roadmap.md
   - API shapes, schemas, type aliases, or code fences                → contracts.md
   - Implementation detail for the active epic                        → design.md
@@ -29,8 +29,8 @@ Work-package scope: §3 is a story list with EARS + Gherkin AC; §4 is traceabil
 <!-- Domain scope: {Name} domain-level epic backlog.
      Work-package scope: story-level backlog for the {Epic-ID} work package. -->
 
-- **Product:** [`product.md`](product.md)
-- **Solution:** [`solution.md`](solution.md)
+- **Product:** [`strategy.md`](strategy.md)
+- **Solution:** [`../architecture/solution.md`](../architecture/solution.md)
 - **Phases and gates:** [`roadmap.md`](roadmap.md)
 
 ## 1. Summary
@@ -47,7 +47,7 @@ Work-package scope: §3 is a story list with EARS + Gherkin AC; §4 is traceabil
 
 - <!-- what must be resolved before the first epic or story can complete -->
 
-**Out of scope.** The canonical list of no-gos lives in [`product.md`](product.md) §5.
+**Out of scope.** The canonical list of no-gos lives in [`strategy.md`](strategy.md) §5.
 Phase-gated deferrals live in [`roadmap.md`](roadmap.md) §Later.
 
 ## 2. Conventions

@@ -26,8 +26,7 @@ The server starts on `PORT` (default `3000`). Point a Jira webhook (issue transi
 | [`crews/`](crews/) | Deployable agent crews. One container or one published CLI per crew. |
 | [`packages/`](packages/) | Shared libraries — published to npm. |
 | [`tooling/`](tooling/) | Shared ESLint, Prettier, TypeScript, and Vitest configs. |
-| [`docs/`](docs/) | Product strategy, roadmap, delivery approach, flow contracts, runbooks. |
-| [`architecture/`](architecture/) | Solution architecture, guiding principles, ADRs. |
+| [`docs/`](docs/) | Product strategy, roadmap, solution architecture, delivery approach, flow contracts, runbooks, ADRs. |
 | [`contributing/`](contributing/) | Step-by-step guides for adding personas and crews. |
 
 Boundaries: crews depend on packages; packages never depend on crews; no crew imports another crew. Enforced by `pnpm lint`.
@@ -44,8 +43,8 @@ CI runs the same gates on every PR.
 
 ## Where to next
 
-- **What is Crew, why now, for whom** → [`docs/product/product.md`](docs/product/product.md)
-- **How Crew is built and operated** → [`architecture/solution.md`](architecture/solution.md)
+- **What is Crew, why now, for whom** → [`docs/product/strategy.md`](docs/product/strategy.md)
+- **How Crew is built and operated** → [`docs/architecture/solution.md`](docs/architecture/solution.md)
 - **What ships when** → [`docs/product/roadmap.md`](docs/product/roadmap.md)
 - **Coding agents working in this repo** → [`AGENTS.md`](AGENTS.md)
 
