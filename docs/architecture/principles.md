@@ -1,20 +1,20 @@
 ---
 type: Guiding Principles
 scope: product
-version: '1.1'
+version: '1.2'
 owner: daddia
 status: Current
-last_updated: 2026-05-21
+last_updated: 2026-05-24
 related:
-  - docs/product/product.md
-  - architecture/solution.md
+  - docs/product/strategy.md
+  - docs/architecture/solution.md
 ---
 
 # Guiding principles
 
-The constraints and priorities that shape how Crew is designed, built, and operated. Product strategy ([`../docs/product/product.md`](../docs/product/product.md)) is the why; solution architecture ([`solution.md`](solution.md)) is the how. This document is the **how it must hold true** — the principles every workflow, persona, and runtime decision must satisfy.
+The constraints and priorities that shape how Crew is designed, built, and operated. Product strategy ([`../product/strategy.md`](../product/strategy.md)) is the why; solution architecture ([`solution.md`](solution.md)) is the how. This document is the **how it must hold true** — the principles every workflow, persona, and runtime decision must satisfy.
 
-The product principles in `product.md` §8 cite this document rather than restate it; do not duplicate engineering principles into product strategy.
+The product principles in `strategy.md` §8 cite this document rather than restate it; do not duplicate engineering principles into product strategy.
 
 ## Agentic-first process
 
@@ -24,13 +24,17 @@ The product principles in `product.md` §8 cite this document rather than restat
 - **Validate before build.** Evidence kills bad ideas cheap; sprints kill them expensive. Discovery, walking-skeleton designs, and prototypes precede committed delivery. The cost of a wrong direction is paid in days at the start, not in weeks at the end.
 - **Small slices, fast signals.** Ship the smallest thing that proves the outcome, then iterate. Walking skeletons before TDD. End-to-end before complete. Feedback loops are measured in hours, not weeks.
 
+## Workspace contract
+
+- **Steering docs are a prerequisite, not an afterthought.** Every project Crew operates on must provide a product strategy, solution architecture, and product roadmap at known paths in the repo. These are what crews read at context-seed time to understand what they are building and why. If any is missing or empty, the crew escalates rather than guesses. The workspace contract is what makes "deploying a crew should be the easy part" structurally true.
+
 ## Crew design and operation
 
 - **Specialised by design.** One crew, one step, one purpose. No crew spans a track or owns work across phases. Composition is event-driven across the catalogue; specialisation is preserved as the platform grows.
 - **Context is seeded, not remembered.** Every crew reads what it needs at start; nothing is assumed or carried over from a previous run. Memory is an artefact retrieved deliberately, not state held in process. A crew that loses its session loses nothing important.
 - **Resolve ambiguity before acting.** Clarifying questions are raised at context-seed time, not mid-implementation. If a story is unclear, the crew escalates to a human and pauses — it never guesses. Ambiguity surfaces early, or it surfaces as a defect.
 - **Stateless by default.** Crews complete their task, hand off, and stop. No polling for completion, no waiting on external systems, no hanging context across reruns. Server-shaped crews hold only what they need for crash recovery; everything else lives in the system of record.
-- **Orchestrators poll, agents don't.** Schedulers, webhooks, and pipelines trigger crews; agents never wait on infrastructure. The pattern scales: an orchestrator above the crew is replaceable; a crew that polls inside its own logic is rewritten.
+- **Orchestrators poll, agents don't.** Schedulers, webhooks, and pipelines trigger crews; agents never wait on infrastructure. An agent that polls is holding state and context across intervals, violating statelessness and making the agent harder to replace. The pattern scales because an orchestrator above the crew is replaceable; a crew that polls inside its own logic is rewritten.
 - **Deterministic toolchain first.** CI, SAST, unit tests, linters, and type checks run before agents touch a review. Don't spend tokens on what a tool can catch. Determinism is cheaper than reasoning, every time.
 - **Bounded everything.** Every loop has a cap, every external call a timeout, every run a cost ceiling. Unbounded automation is unbounded spend and unbounded risk. Escalation to a human is always cheaper than an unattended runaway.
 - **Escalate rather than fail silently.** A visible handoff to a human with context is always preferred to an invisible failure. Trust is built by showing where automation stops.
