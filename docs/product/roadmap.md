@@ -1,18 +1,18 @@
 ---
 type: Product Roadmap
 scope: product
-version: '1.1'
+version: '1.2'
 owner: daddia
 status: Current
-last_updated: 2026-05-21
+last_updated: 2026-05-24
 related:
-  - docs/product/product.md
-  - architecture/solution.md
+  - docs/product/strategy.md
+  - docs/architecture/solution.md
 ---
 
 # Roadmap -- Crew
 
-Phases follow [`product.md`](product.md) §2. Calendar dates are not committed; a phase opens when the previous phase exits cleanly. The architectural anchor for every phase is [`architecture/solution.md`](../../architecture/solution.md); epic breakdown and dependencies live in [`backlog.md`](backlog.md); the active story-level backlog is in Jira.
+Phases follow [`strategy.md`](strategy.md) §2. Calendar dates are not committed; a phase opens when the previous phase exits cleanly. The architectural anchor for every phase is [`solution.md`](../architecture/solution.md); the active story-level backlog is in Jira.
 
 ## Now — prove delivery on the platform
 
@@ -26,7 +26,7 @@ Phases follow [`product.md`](product.md) §2. Calendar dates are not committed; 
 | `delivery-build` crew | `crews/delivery-build` — engineer + senior-engineer; Jira poll + GitLab webhooks |
 | `delivery-review` crew | Scaffolded as `crews/delivery-final-review` — full implementation deferred until build slice validates |
 | `code-reviewer` crew (CLI-shaped) | Scaffolded as `crews/delivery-code-review` — full implementation deferred |
-| Solution architecture | [`architecture/solution.md`](../../architecture/solution.md) |
+| Solution architecture | [`solution.md`](../architecture/solution.md) |
 | Build flow contract | [`docs/design/crew-flows/delivery-build.md`](../design/crew-flows/delivery-build.md) |
 
 **Exit criteria.**
@@ -46,6 +46,8 @@ Phases follow [`product.md`](product.md) §2. Calendar dates are not committed; 
 - `delivery-qa` and `delivery-review` crews operational; handoff events (`ready-for-qa`, `ready-for-review`) wired.
 - OTel tracing across crews.
 - First CLI-shaped crew (`code-reviewer`) ships — requires the remote audit sink (`@daddia/crew/audit`).
+- **Outcome telemetry wired.** GitLab merge/revert webhooks and Jira story-reopen events captured and attributed to originating runs. `model_id`, `task_type`, and `escalation_cause` taxonomy added to the audit hook. Every run from this point is a data point the optimisation layer will learn from. See [CrewTelemetry](https://carinyaparc.atlassian.net/wiki/spaces/CREW/pages/1671200) (Confluence research).
+- **Event stream infrastructure.** Single-emission OTel-compliant events, durable stream (RabbitMQ or equivalent), fan-out to Honeycomb (filtered, runtime health) and a data warehouse (full payload — Postgres + JSONB to start). The warehouse is the shared read surface for CrewBench, the future optimisation layer, and any downstream consumer.
 - Commercial foundations: licence gating and the first surface of the managed control plane sketched.
 
 **Exit criteria.**
@@ -53,6 +55,7 @@ Phases follow [`product.md`](product.md) §2. Calendar dates are not committed; 
 1. Overnight run completes without operator intervention; morning report shows autonomy rate and cost per story.
 2. Downstream crews pick up handoffs without manual re-trigger.
 3. CrewBench baseline populated; cost-per-accepted-feature trend is visibly improving release over release.
+4. Outcome telemetry pipeline operational: a completed story's run can be joined to its MR outcome and its cost breakdown in a single warehouse query.
 
 ## Later — open the catalogue
 
@@ -64,18 +67,23 @@ Phases follow [`product.md`](product.md) §2. Calendar dates are not committed; 
 - Discovery crews (PM, Architect) feeding ready stories into delivery.
 - Customer-issue triage crew.
 - Full Pro-tier compounding surface: project memory, evaluation policy, model routing.
+- **First optimiser ships** — model selector, as the highest-leverage specialist. Pro-tier value proposition with a measurable outcome. See [CrewOptimiser](https://carinyaparc.atlassian.net/wiki/spaces/CREW/pages/1703940) (Confluence research).
 
 ## Future — durable cross-crew orchestration
 
 **Outcome.** Pipelines that survive process restarts: suspend / resume, fan-out from a single trigger, human gates mid-pipeline. Coordination lives above the crew, never inside it. The `Orchestrator` contract in `@daddia/crew` is the entry point; individual crews remain independently deployable.
 
-See [`product.md`](product.md) §2 Future and [`architecture/solution.md`](../../architecture/solution.md) §1.1.
+See [`strategy.md`](strategy.md) §2 Future and [`solution.md`](../architecture/solution.md) §1.1.
 
 ## Commercial release gate (Next → market)
 
-- Pro tier purchasable; licence module validated end-to-end.
-- CrewBench proof pack with documented wins and at least one documented loss.
-- Cost-per-accepted-feature trend improving after runtime optimisations land.
+The following must be resolved before the Pro tier is purchasable:
+
+- **Pricing model.** Per-crew, per-run, per-accepted-artefact, or seat-based. Pricing must align with the value metric customers understand (cost per accepted artefact) and the platform metric Crew controls (routing, memory, evaluation).
+- **Free vs. Pro boundary.** Every crew runs end-to-end on local-only config (free tier). The Pro tier adds compounding capabilities — memory, evidence, evaluation policy, model routing — that reduce cost and improve quality with use. The boundary must be clear to both customers and agents.
+- **Licence enforcement.** Licence key provisioning, validation at session start, degradation behaviour on expiry or unreachability.
+- **CrewBench proof pack.** Documented wins and at least one documented loss. Cost-per-accepted-feature trend improving after runtime optimisations.
+- **Control-plane availability.** SLO defined and tested. Every control-plane call degrades to local on unreachability — this must be proven, not assumed.
 
 ## Review cadence
 
