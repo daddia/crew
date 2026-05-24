@@ -1,0 +1,31 @@
+project:
+  name: Crew
+  key: CREW
+  description: Crew. Autonomous knowledge work agent teams.
+
+workspace:
+  path: .
+  work: docs/design/{feature}/{taskId}/
+
+sources:
+  repo:
+    provider: github
+    path: daddia/crew
+    url: https://github.com/daddia/crew
+
+  issues:
+    provider: jira
+    base_url: https://carinyaparc.atlassian.net/jira
+    project_key: CREW
+    project_url: https://carinyaparc.atlassian.net/browse/CREW
+
+  docs:
+    provider: confluence
+    base_url: https://carinyaparc.atlassian.net/wiki
+    space_key: CREW
+    space_url: https://carinyaparc.atlassian.net/wiki/spaces/CREW
+
+  chat:
+    provider: slack
+    workspace: https://carinyaparc.slack.com
+    channel: '#crew'
