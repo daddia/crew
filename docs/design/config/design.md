@@ -4,7 +4,7 @@ scope: work-package
 mode: walking-skeleton
 work_package: workspace-config
 epic: TBD
-version: '0.1'
+version: '0.2'
 owner: daddia
 status: Draft
 last_updated: 2026-05-24
@@ -46,23 +46,31 @@ from env via `loadEnv`; nothing in the runtime call path depends on
 
 ```text
 packages/crew/src/config/
-  workspace-schema.ts        NEW     Zod schema + WorkspaceConfig type; v0.1.0 only
-  workspace-config.ts        NEW     loadWorkspaceConfig(cwd) helper; composes
-                                     detectWorkspace + loadYaml + post-validation
+  workspace-schema.ts        NEW     Zod schema + WorkspaceConfig type; v0.1.0 only;
+                                     includes .refine() for ref/provider consistency
+  workspace-config.ts        NEW     workspaceConfigPath(root), loadWorkspaceConfig(cwd);
+                                     composes detectWorkspace + loadYaml + post-validation;
+                                     normalises base_url trailing slashes; checks steering
+                                     paths exist and are non-empty
   parse-ref.ts               NEW     parseRef("gh:daddia/crew") -> { scheme, provider, key };
-                                     supports gh|gl|github|gitlab schemes
-  index.ts                   EVOLVE  re-export loadWorkspaceConfig, parseRef,
-                                     WorkspaceConfig, ParsedRef, RefScheme types
+                                     supports gh|gl|github|gitlab; normalises shorthand to
+                                     long form (gh->github, gl->gitlab)
+  index.ts                   EVOLVE  re-export workspaceConfigPath, loadWorkspaceConfig,
+                                     parseRef, WorkspaceConfig, ParsedRef, RefScheme types
   detect-workspace.ts        KEEP    no change
   load-yaml.ts               KEEP    no change
-  errors.ts                  KEEP    reuse ConfigNotFoundError, SchemaValidationError
+  errors.ts                  EVOLVE  add readonly code discriminators to ConfigNotFoundError
+                                     and SchemaValidationError (CODE = 'CONFIG_NOT_FOUND' |
+                                     'SCHEMA_VALIDATION'); no breaking change to existing
+                                     callers
 
 packages/crew/tests/config/
-  workspace-config.test.ts   NEW     happy path; missing file; invalid YAML;
-                                     schema_version mismatch; missing steering file;
-                                     base_url trailing-slash normalisation
+  workspace-config.test.ts   NEW     happy path (live crew/.crew/config); missing file;
+                                     invalid YAML; schema_version mismatch; missing steering
+                                     file; base_url trailing-slash normalisation; ref/provider
+                                     mismatch (via schema refine)
   parse-ref.test.ts          NEW     gh/gl shorthand; github/gitlab long form;
-                                     malformed ref; mismatch with provider field
+                                     malformed ref (no colon); unsupported scheme
 
 packages/crew/.changeset/
   workspace-config.md        NEW     minor bump; new exports listed
@@ -114,16 +122,23 @@ Log namespace follows the dot-namespaced convention from
 
 ### 3.3 Error path exercised
 
-Four typed error surfaces, each reusing existing primitives from
-`@daddia/crew/config` ([`solution.md`](../../architecture/solution.md) §4.1):
+Five typed error surfaces. All errors are subclasses of the shared `CrewError`
+base and carry a `readonly code` string discriminator — enabling structured
+telemetry tagging and stable wire-format codes without inspecting
+`err.constructor.name`.
 
-| Trigger                                              | Error                  | Message includes              |
-|------------------------------------------------------|------------------------|-------------------------------|
-| No `.crew/config` found between `cwd` and `/`        | `ConfigNotFoundError`  | search start dir              |
-| File present but invalid YAML                        | `SchemaValidationError`| `path: ""`, `invalid YAML`    |
-| `schema_version` outside supported range (`0.1.x`)   | `SchemaValidationError`| supported range, found value  |
-| Required `steering.*` path missing or empty on disk  | `SchemaValidationError`| missing steering key + path   |
-| `source.repo.ref` malformed or scheme/provider clash | `SchemaValidationError`| ref string + expected schemes |
+| Trigger | Error | `code` | Message includes |
+|---------|-------|--------|-----------------|
+| No `.crew/config` found between `cwd` and `/` | `ConfigNotFoundError` | `'CONFIG_NOT_FOUND'` | search start dir |
+| File present but invalid YAML | `SchemaValidationError` | `'SCHEMA_VALIDATION'` | `path: ""`, `invalid YAML` |
+| `schema_version` outside supported range (`0.1.x`) | `SchemaValidationError` | `'SCHEMA_VALIDATION'` | supported range, found value |
+| Required `steering.*` path missing or empty on disk | `SchemaValidationError` | `'SCHEMA_VALIDATION'` | missing steering key + path |
+| `source.repo.ref` scheme/provider clash | `SchemaValidationError` | `'SCHEMA_VALIDATION'` | ref string + expected schemes |
+
+The ref/provider clash is enforced at **schema level** via Zod `.refine()` —
+not as a post-validation step — so it surfaces alongside any other field
+validation errors in a single `SchemaValidationError`. This is the same pattern
+as v1's `LlmConfigSchema.refine()` for `default_model` consistency.
 
 All errors surface via the typed exception layer; nothing throws raw `Error`.
 
@@ -190,6 +205,19 @@ All errors surface via the typed exception layer; nothing throws raw `Error`.
   YAML. Callers can rely on `${base_url}/path` concatenation.
 - **`workspace.path: .` is retained** but not yet used; reserved for monorepo
   sub-root cases handled in a later WP.
+- **`workspace.runs` not added.** v1 had a `runs:` path for per-run state
+  output. Dropped here -- per-crew SQLite (via `@daddia/crew/state`) is the
+  canonical run-state store; workspace config describes identity, not runtime
+  paths. Revisit only if a repo-local skill needs to write run artefacts to a
+  workspace-declared location.
+- **Optional source sub-blocks activate capability by presence.** No `enabled:`
+  flag -- a block's presence is the signal. Nested field defaults are applied
+  via Zod `.default()` so the resolved object is always fully populated and
+  consumers never check `cfg.x ?? fallback` for defined fields.
+- **`workspaceConfigPath(root)` is a first-class export.** Keeps the
+  `.crew/config` path computed in one place; CLI tools, test setup, and the
+  loader all call this rather than hand-rolling `join(root, '.crew', 'config')`.
+  Pattern from v1 `projectConfigPath()`.
 
 ## 6. Handoff to next WP
 
@@ -218,3 +246,10 @@ Two follow-on WPs unlock from here:
    loader so generated artefact paths (e.g. `docs/design/{feature}/{taskId}/`)
    and steering references resolve from `WorkspaceConfig.workspace.work` and
    `WorkspaceConfig.steering.*` instead of skill-local string literals.
+
+`loadWorkspaceConfig` is also the foundation for a future
+**override-chain resolver** (modelled on v1's `loadConfig({ workspacePath,
+personaName, taskName })`) that assembles the full persona + rubric + skill
+bundle for a run. That capability is explicitly out of scope for this WP; the
+contracts introduced here (`WorkspaceConfig`, `workspaceConfigPath`,
+`loadWorkspaceConfig`) are designed to compose into it without modification.
