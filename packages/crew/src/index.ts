@@ -10,11 +10,17 @@ export { readPromptFile, readSkillsDir, readSubagentsDir } from './loaders.js';
 
 export {
   buildAuditHook,
+  buildToolAllowlistGuard,
   toSDKHookCallback,
   boundedIterGuard,
   IterationCapReached,
 } from './hooks.js';
-export type { ToolUseEvent, PostToolUseHandler } from './hooks.js';
+export type {
+  ToolUseEvent,
+  PostToolUseHandler,
+  ToolDenialEvent,
+  ToolDenialHandler,
+} from './hooks.js';
 
 export { createLogger, initTracing, createTracer } from './observability/index.js';
 export type { Logger, LogLevel, LogRecord, TracingOptions, Tracer } from './observability/index.js';

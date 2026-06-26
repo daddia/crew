@@ -1,4 +1,9 @@
-import type { HookCallback, HookInput, HookJSONOutput } from '@anthropic-ai/claude-agent-sdk';
+import type {
+  CanUseTool,
+  HookCallback,
+  HookInput,
+  HookJSONOutput,
+} from '@anthropic-ai/claude-agent-sdk';
 
 export interface ToolUseEvent {
   tool: string;
@@ -9,11 +14,18 @@ export interface ToolUseEvent {
 
 export type PostToolUseHandler = (event: ToolUseEvent) => void;
 
+export interface ToolDenialEvent {
+  tool: string;
+  input: unknown;
+  reason: string;
+}
+
+export type ToolDenialHandler = (event: ToolDenialEvent) => void;
+
 /**
  * Adapt a PostToolUseHandler to the SDK's HookCallback shape so it can be
  * attached to SDKSessionOptions.hooks.PostToolUse. Calls the handler with a
- * normalised ToolUseEvent; if the handler throws (disallowed tool), the error
- * propagates to the SDK subprocess and the tool call is blocked.
+ * normalised ToolUseEvent for audit logging after a tool completes.
  */
 export function toSDKHookCallback(handler: PostToolUseHandler): HookCallback {
   return async (input: HookInput): Promise<HookJSONOutput> => {
@@ -30,19 +42,39 @@ export function toSDKHookCallback(handler: PostToolUseHandler): HookCallback {
 }
 
 /**
- * Build a PostToolUse hook that logs every tool invocation and enforces
- * the per-agent allowed-tools list. Throws if the agent calls a disallowed tool
- * (belt-and-suspenders on top of the SDK-level allowedTools filter).
+ * Build a canUseTool callback that denies tool calls outside the per-agent
+ * allowlist before execution. Invokes onDeny for audit logging when a call
+ * is blocked.
+ */
+export function buildToolAllowlistGuard(
+  allowedTools: string[],
+  onDeny?: ToolDenialHandler,
+): CanUseTool {
+  const allowed = new Set(allowedTools);
+  return async (toolName, input) => {
+    if (!allowed.has(toolName)) {
+      const reason = `Tool "${toolName}" is not in the allowed list for this agent`;
+      onDeny?.({ tool: toolName, input, reason });
+      return { behavior: 'deny', message: reason };
+    }
+    return { behavior: 'allow' };
+  };
+}
+
+/**
+ * Build a PostToolUse hook that logs every completed tool invocation.
+ * Allowlist enforcement is handled by {@link buildToolAllowlistGuard} at the
+ * pre-execution boundary; this hook is audit-only.
  */
 export function buildAuditHook(
-  allowedTools: string[],
-  log: (event: ToolUseEvent) => void,
+  logOrAllowedTools: ((event: ToolUseEvent) => void) | string[],
+  maybeLog?: (event: ToolUseEvent) => void,
 ): PostToolUseHandler {
-  const allowed = new Set(allowedTools);
+  const log =
+    typeof logOrAllowedTools === 'function'
+      ? logOrAllowedTools
+      : (maybeLog ?? (() => {}));
   return (event) => {
-    if (!allowed.has(event.tool)) {
-      throw new Error(`Tool "${event.tool}" is not in the allowed list for this agent`);
-    }
     log(event);
   };
 }

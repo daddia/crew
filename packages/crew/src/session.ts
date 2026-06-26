@@ -9,7 +9,12 @@ import {
   type SettingSource,
 } from '@anthropic-ai/claude-agent-sdk';
 import type { AgentDefinition, AgentInput } from './agent.js';
-import { toSDKHookCallback, type PostToolUseHandler } from './hooks.js';
+import {
+  buildToolAllowlistGuard,
+  toSDKHookCallback,
+  type PostToolUseHandler,
+  type ToolDenialHandler,
+} from './hooks.js';
 
 export interface SessionOptions {
   definition: AgentDefinition;
@@ -28,9 +33,14 @@ export interface SessionOptions {
   /**
    * Optional audit hook returned by buildAuditHook(). When provided it is
    * adapted to the SDK's HookCallback shape and attached to the session's
-   * PostToolUse event so disallowed tool calls are caught at runtime.
+   * PostToolUse event for audit logging after each tool completes.
    */
   auditHook?: PostToolUseHandler;
+  /**
+   * Called when the pre-execution allowlist guard denies a tool call.
+   * Use this to record denials in the audit trail.
+   */
+  onToolDeny?: ToolDenialHandler;
 }
 
 /**
@@ -119,7 +129,7 @@ export async function resolveSession(
   options: SessionOptions,
   previousSessionId?: string,
 ): Promise<ActiveSession> {
-  const { resumeWithinMs, model, definition, auditHook } = options;
+  const { resumeWithinMs, model, definition, auditHook, onToolDeny } = options;
 
   const [validSkillPaths, validSubagentPaths] = await Promise.all([
     filterExistingPaths(definition.skillPaths, 'skill'),
@@ -133,6 +143,7 @@ export async function resolveSession(
   const baseOptions: Options = {
     model,
     allowedTools: definition.allowedTools,
+    canUseTool: buildToolAllowlistGuard(definition.allowedTools, onToolDeny),
     cwd,
     ...(settingSources.length > 0 ? { settingSources } : {}),
     ...(auditHook

@@ -398,22 +398,59 @@ describe('resolveSession', () => {
   });
 
   describe('audit hook wiring', () => {
-    it('passes a PostToolUse hook to the SDK when auditHook is provided', async () => {
+    it('passes canUseTool and a PostToolUse hook when auditHook is provided', async () => {
       const handler = vi.fn();
 
       await startSession(makeOptions({ auditHook: handler }));
 
       const options = mockQuery.mock.calls[0]?.[0].options as Record<string, unknown>;
+      expect(options).toHaveProperty('canUseTool');
+      expect(typeof options['canUseTool']).toBe('function');
       expect(options).toHaveProperty('hooks');
       const hooks = options['hooks'] as Record<string, unknown>;
       expect(hooks).toHaveProperty('PostToolUse');
     });
 
-    it('does not add a hooks field when auditHook is not provided', async () => {
+    it('passes canUseTool even when auditHook is not provided', async () => {
       await startSession(makeOptions());
 
       const options = mockQuery.mock.calls[0]?.[0].options as Record<string, unknown>;
+      expect(options).toHaveProperty('canUseTool');
+      expect(typeof options['canUseTool']).toBe('function');
       expect(options).not.toHaveProperty('hooks');
+    });
+
+    it('denies disallowed tools via canUseTool before execution', async () => {
+      const onDeny = vi.fn();
+      await startSession(
+        makeOptions({
+          onToolDeny: onDeny,
+          definition: {
+            name: 'engineer',
+            promptPath: '/fake/prompt.md',
+            skillPaths: [],
+            subagentPaths: [],
+            allowedTools: ['mcp__gitlab__push_file'],
+            mcpServerNames: ['gitlab'],
+          },
+        }),
+      );
+
+      const options = mockQuery.mock.calls[0]?.[0].options as {
+        canUseTool: (
+          toolName: string,
+          input: Record<string, unknown>,
+          ctx: { signal: AbortSignal; toolUseID: string },
+        ) => Promise<{ behavior: string; message?: string }>;
+      };
+      const result = await options.canUseTool(
+        'mcp__gitlab__merge_request',
+        { project_id: '123' },
+        { signal: new AbortController().signal, toolUseID: 'toolu_1' },
+      );
+
+      expect(result.behavior).toBe('deny');
+      expect(onDeny).toHaveBeenCalledOnce();
     });
   });
 });
