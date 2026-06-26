@@ -1,5 +1,16 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+vi.mock('../src/observability.js', () => ({
+  log: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  },
+}));
+
 import { createJiraClient, JiraApiError } from '../src/integrations/jira.js';
+import { log } from '../src/observability.js';
 
 const BASE_URL = 'https://test.atlassian.net';
 const fetchMock = vi.fn();
@@ -24,7 +35,10 @@ function mockOk(): Response {
 }
 
 describe('transitionIssue', () => {
-  beforeEach(() => fetchMock.mockReset());
+  beforeEach(() => {
+    fetchMock.mockReset();
+    vi.mocked(log.warn).mockReset();
+  });
 
   it('applies the matching transition by name', async () => {
     fetchMock
@@ -36,8 +50,9 @@ describe('transitionIssue', () => {
       )
       .mockResolvedValueOnce(mockOk());
 
-    await client.transitionIssue('ENG-1', 'In Progress');
+    const transitioned = await client.transitionIssue('ENG-1', 'In Progress');
 
+    expect(transitioned).toBe(true);
     expect(fetchMock).toHaveBeenCalledTimes(2);
     const [, postCall] = fetchMock.mock.calls as [unknown[], unknown[]][];
     const postBody = JSON.parse((postCall?.[1] as { body: string })?.body ?? '{}') as {
@@ -46,14 +61,19 @@ describe('transitionIssue', () => {
     expect(postBody.transition.id).toBe('21');
   });
 
-  it('does nothing when the transition is not available', async () => {
+  it('logs a warning and returns false when the transition is not available', async () => {
     fetchMock.mockResolvedValueOnce(
       mockTransitionsResponse([{ id: '11', name: 'Ready for Dev', to: { name: 'Ready for Dev' } }]),
     );
 
-    await client.transitionIssue('ENG-1', 'Done');
+    const transitioned = await client.transitionIssue('ENG-1', 'Done');
 
+    expect(transitioned).toBe(false);
     expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(log.warn).toHaveBeenCalledWith('jira.transition.missing', {
+      issueKey: 'ENG-1',
+      targetStatus: 'Done',
+    });
   });
 });
 
@@ -215,6 +235,43 @@ describe('searchIssues', () => {
     await expect(client.searchIssues('project = "CREW" AND status = "To Do"')).rejects.toThrow(
       JiraApiError,
     );
+    expect(fetchMock).toHaveBeenCalledTimes(4);
+  });
+});
+
+describe('jiraFetch retries', () => {
+  beforeEach(() => {
+    fetchMock.mockReset();
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('retries transient 503 errors with backoff before succeeding', async () => {
+    fetchMock
+      .mockResolvedValueOnce(new Response('Service Unavailable', { status: 503 }))
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ issues: [{ key: 'CREW-1' }] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+
+    const promise = client.searchIssues('project = "CREW"');
+    await vi.runAllTimersAsync();
+    const results = await promise;
+
+    expect(results).toEqual([{ issueKey: 'CREW-1' }]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not retry non-retryable 4xx errors', async () => {
+    fetchMock.mockResolvedValueOnce(new Response('Not Found', { status: 404 }));
+
+    await expect(client.getIssue('ENG-999')).rejects.toThrow(JiraApiError);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
 

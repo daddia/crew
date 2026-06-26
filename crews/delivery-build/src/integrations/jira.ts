@@ -6,8 +6,11 @@
  * access; this module is for the workflow's own idempotent state transitions.
  */
 
+import { log } from '../observability.js';
+
 export interface JiraClient {
-  transitionIssue(issueKey: string, targetStatusName: string): Promise<void>;
+  /** Returns `true` when the transition was applied, `false` when unavailable. */
+  transitionIssue(issueKey: string, targetStatusName: string): Promise<boolean>;
   getIssue(issueKey: string): Promise<JiraIssue>;
   commentOnIssue(issueKey: string, body: string): Promise<void>;
   getComments(issueKey: string): Promise<JiraComment[]>;
@@ -34,6 +37,22 @@ export const JIRA_JQL_SEARCH_PATH = '/search/jql';
 
 const SEARCH_PAGE_SIZE = 50;
 
+/** Initial attempt plus this many retries on transient 5xx / network errors. */
+const FETCH_MAX_RETRIES = 3;
+const FETCH_BASE_BACKOFF_MS = 250;
+
+function isRetryableStatus(status: number): boolean {
+  return status >= 500 || status === 429;
+}
+
+function backoffDelayMs(attempt: number): number {
+  return FETCH_BASE_BACKOFF_MS * 2 ** attempt;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export class JiraApiError extends Error {
   readonly statusCode: number;
   constructor(statusCode: number, message: string) {
@@ -57,20 +76,54 @@ export function createJiraClient(
 
   async function jiraFetch(path: string, init?: RequestInit): Promise<Response> {
     const url = `${baseUrl}/rest/api/3${path}`;
-    const res = await fetch(url, {
-      ...init,
-      headers: {
-        Authorization: authHeader,
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        ...(init?.headers as Record<string, string> | undefined),
-      },
-    });
-    if (!res.ok) {
-      const text = await res.text().catch(() => '');
-      throw new JiraApiError(res.status, `${init?.method ?? 'GET'} ${path}: ${text}`);
+    const method = init?.method ?? 'GET';
+    let lastError: JiraApiError | undefined;
+
+    for (let attempt = 0; attempt <= FETCH_MAX_RETRIES; attempt++) {
+      try {
+        const res = await fetch(url, {
+          ...init,
+          headers: {
+            Authorization: authHeader,
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+            ...(init?.headers as Record<string, string> | undefined),
+          },
+        });
+
+        if (res.ok) {
+          return res;
+        }
+
+        const text = await res.text().catch(() => '');
+        const error = new JiraApiError(res.status, `${method} ${path}: ${text}`);
+
+        if (isRetryableStatus(res.status) && attempt < FETCH_MAX_RETRIES) {
+          lastError = error;
+          await sleep(backoffDelayMs(attempt));
+          continue;
+        }
+
+        throw error;
+      } catch (err) {
+        if (err instanceof JiraApiError) {
+          throw err;
+        }
+
+        if (attempt < FETCH_MAX_RETRIES) {
+          lastError = new JiraApiError(
+            0,
+            `${method} ${path}: ${err instanceof Error ? err.message : String(err)}`,
+          );
+          await sleep(backoffDelayMs(attempt));
+          continue;
+        }
+
+        throw lastError ?? err;
+      }
     }
-    return res;
+
+    throw lastError ?? new JiraApiError(0, `${method} ${path}: request failed after retries`);
   }
 
   return {
@@ -82,11 +135,15 @@ export function createJiraClient(
       const transition = data.transitions.find(
         (t) => t.name === targetStatusName || t.to.name === targetStatusName,
       );
-      if (!transition) return;
+      if (!transition) {
+        log.warn('jira.transition.missing', { issueKey, targetStatus: targetStatusName });
+        return false;
+      }
       await jiraFetch(`/issue/${issueKey}/transitions`, {
         method: 'POST',
         body: JSON.stringify({ transition: { id: transition.id } }),
       });
+      return true;
     },
 
     async getIssue(issueKey) {

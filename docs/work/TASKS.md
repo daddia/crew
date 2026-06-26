@@ -214,8 +214,8 @@ and implementation of the scaffold crews' workflows beyond config hygiene.
       Then all pages are retrieved via the documented pagination mechanism
     ```
 
-- [ ] **[RH01-08] Make `transitionIssue` loud on a missing transition; add fetch retries**
-  - **Status:** Not started | **Priority:** P1 | **Estimate:** 3
+- [x] **[RH01-08] Make `transitionIssue` loud on a missing transition; add fetch retries**
+  - **Status:** Done | **Priority:** P1 | **Estimate:** 3
   - **Epic:** RH01 | **Labels:** phase:now, area:integrations, type:fix
   - **Depends on:** -
   - **Deliverable:** A requested transition that is unavailable is logged (and surfaced to the workflow) rather than silently no-oping; integration `fetch` calls retry transient 5xx/network errors with backoff. Closes review §2.10 and the no-retry note.
