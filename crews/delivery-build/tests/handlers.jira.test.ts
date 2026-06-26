@@ -8,7 +8,11 @@ vi.mock('../src/workflow.js', () => ({
 
 vi.mock('../src/observability.js', () => ({
   log: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
-  tracer: {},
+  tracer: {
+    startActiveSpan: vi.fn((_name: string, fn: (span: { setAttribute: () => void; end: () => void }) => unknown) =>
+      fn({ setAttribute: vi.fn(), end: vi.fn() }),
+    ),
+  },
 }));
 
 import { jiraHandler } from '../src/handlers/jira.js';

@@ -1,7 +1,10 @@
+import { initTracing } from '@daddia/crew';
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { log } from './observability.js';
 import { createStateStore } from './state.js';
+
+initTracing({ serviceName: 'delivery-final-review' });
 
 const PORT = parseInt(process.env['PORT'] ?? '3001', 10);
 const DB_PATH = process.env['DB_PATH'] ?? './data/delivery-review.db';

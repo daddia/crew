@@ -170,8 +170,8 @@ and implementation of the scaffold crews' workflows beyond config hygiene.
       And the story is escalated to human review with the timeout reason
     ```
 
-- [ ] **[RH01-06] Bump crews to `@daddia/crew@0.4.0`, delete tracing stubs, activate OTel**
-  - **Status:** Not started | **Priority:** P0 | **Estimate:** 3
+- [x] **[RH01-06] Bump crews to `@daddia/crew@0.4.0`, delete tracing stubs, activate OTel**
+  - **Status:** Done | **Priority:** P0 | **Estimate:** 3
   - **Epic:** RH01 | **Labels:** phase:now, area:runtime, type:fix
   - **Depends on:** -
   - **Deliverable:** All crews pin `0.4.0`; the `typeof initTracing` guard in `index.ts` and the `tracer = {}` stub in `observability.ts` are removed and replaced with real `createTracer`/`initTracing` usage. Closes review §2.7; advances `CREW-8`.

@@ -2,6 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../src/observability.js', () => ({
   log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+  tracer: {
+    startActiveSpan: vi.fn((_name: string, fn: (span: { setAttribute: () => void; end: () => void }) => unknown) =>
+      fn({ setAttribute: vi.fn(), end: vi.fn() }),
+    ),
+  },
 }));
 
 vi.mock('@anthropic-ai/claude-agent-sdk', () => ({

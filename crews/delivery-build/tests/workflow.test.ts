@@ -7,6 +7,11 @@ vi.mock('../src/memory.js', () => ({
 
 vi.mock('../src/observability.js', () => ({
   log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+  tracer: {
+    startActiveSpan: vi.fn((_name: string, fn: (span: { setAttribute: () => void; end: () => void }) => unknown) =>
+      fn({ setAttribute: vi.fn(), end: vi.fn() }),
+    ),
+  },
 }));
 
 vi.mock('../src/agents/engineer/agent.js', () => ({
@@ -18,7 +23,7 @@ vi.mock('../src/agents/senior-engineer/agent.js', () => ({
 
 import { runStory } from '../src/workflow.js';
 import type { WorkflowCtxBase } from '../src/workflow.js';
-import { log } from '../src/observability.js';
+import { log, tracer } from '../src/observability.js';
 import { engineer } from '../src/agents/engineer/agent.js';
 import { seniorEngineer } from '../src/agents/senior-engineer/agent.js';
 import type { StateStore } from '../src/state.js';
@@ -102,6 +107,20 @@ function successResult(overrides: Partial<AgentResult> = {}): AgentResult {
 describe('runStory', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it('emits a workflow.step span when context-seed completes', async () => {
+    const ctxBase = makeCtxBase();
+    mockEngineer.mockResolvedValue(successResult());
+    mockSeniorEngineer.mockResolvedValue(successResult());
+
+    const state = makeState();
+    await runStory({ issueKey: 'ENG-1', state, ...ctxBase });
+
+    expect(tracer.startActiveSpan).toHaveBeenCalledWith(
+      'workflow.step',
+      expect.any(Function),
+    );
   });
 
   it('runs the happy-path sequence: implement then peer-review then MR', async () => {

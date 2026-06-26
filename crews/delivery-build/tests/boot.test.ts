@@ -59,11 +59,16 @@ vi.mock('../src/config.js', async (importOriginal) => {
   return { ...actual, loadConfig: vi.fn(actual.loadConfig) };
 });
 
+vi.mock('@daddia/crew', () => ({
+  initTracing: vi.fn(),
+}));
+
 vi.mock('../src/observability.js', () => ({
   log: mockLog,
 }));
 
 import { boot } from '../src/index.js';
+import { initTracing } from '@daddia/crew';
 import { serve } from '@hono/node-server';
 import { loadConfig } from '../src/config.js';
 import { ConfigNotFoundError } from '@daddia/crew/config';
@@ -95,6 +100,13 @@ describe('boot – happy path', () => {
 
   afterEach(() => {
     exitSpy.mockRestore();
+  });
+
+  it('calls initTracing at boot with the crew service name', async () => {
+    await boot(VALID_ENV);
+    expect(initTracing).toHaveBeenCalledWith(
+      expect.objectContaining({ serviceName: 'delivery-build' }),
+    );
   });
 
   it('emits exactly one config.loaded log line', async () => {

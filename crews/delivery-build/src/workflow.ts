@@ -5,7 +5,7 @@ import { seniorEngineer } from './agents/senior-engineer/agent.js';
 import type { GitlabClient, PipelineStatus } from './integrations/gitlab.js';
 import type { JiraClient, JiraIssue } from './integrations/jira.js';
 import { seedEngineerMemory } from './memory.js';
-import { log } from './observability.js';
+import { log, tracer } from './observability.js';
 import type { StateStore, Step } from './state.js';
 
 export interface WorkflowContext {
@@ -34,6 +34,22 @@ const PIPELINE_SETTLING: ReadonlySet<PipelineStatus> = new Set(['created', 'pend
 
 function isPipelineSettling(status: string): boolean {
   return PIPELINE_SETTLING.has(status as PipelineStatus);
+}
+
+async function withWorkflowStepSpan<T>(
+  stepName: Step,
+  issueKey: string,
+  fn: () => Promise<T>,
+): Promise<T> {
+  return tracer.startActiveSpan('workflow.step', async (span: { setAttribute(key: string, value: string): void; end(): void }) => {
+    span.setAttribute('workflow.step', stepName);
+    span.setAttribute('issueKey', issueKey);
+    try {
+      return await fn();
+    } finally {
+      span.end();
+    }
+  });
 }
 
 type PipelineWaitResult = { status: string; timedOut: false } | { status: string; timedOut: true };
@@ -133,31 +149,33 @@ async function runStoryInner(ctx: WorkflowContext, input: AgentInput): Promise<v
   await seedEngineerMemory(projectDir);
 
   // ── Step 1: Context seed ───────────────────────────────────────────────────
-  state.upsertStory(issueKey, 'context-seed');
-  state.startStep(issueKey, 'context-seed');
-
   let ticket: JiraIssue | null = null;
   let parentTicket: JiraIssue | null = null;
 
-  try {
-    ticket = await jira.getIssue(issueKey);
-  } catch (err) {
-    log.warn('workflow.context-seed.failed', { issueKey, err: String(err) });
-  }
+  await withWorkflowStepSpan('context-seed', issueKey, async () => {
+    state.upsertStory(issueKey, 'context-seed');
+    state.startStep(issueKey, 'context-seed');
 
-  if (ticket?.parentKey) {
     try {
-      parentTicket = await jira.getIssue(ticket.parentKey);
+      ticket = await jira.getIssue(issueKey);
     } catch (err) {
-      log.warn('workflow.context-seed.parent-failed', {
-        issueKey,
-        parentKey: ticket.parentKey,
-        err: String(err),
-      });
+      log.warn('workflow.context-seed.failed', { issueKey, err: String(err) });
     }
-  }
 
-  state.finishStep(issueKey, 'context-seed', { verdict: ticket ? 'ok' : 'failed' });
+    if (ticket?.parentKey) {
+      try {
+        parentTicket = await jira.getIssue(ticket.parentKey);
+      } catch (err) {
+        log.warn('workflow.context-seed.parent-failed', {
+          issueKey,
+          parentKey: ticket.parentKey,
+          err: String(err),
+        });
+      }
+    }
+
+    state.finishStep(issueKey, 'context-seed', { verdict: ticket ? 'ok' : 'failed' });
+  });
 
   // ── Step 2: Assess clarification ──────────────────────────────────────────
   // Run before transitioning to In Progress so that an ambiguous ticket never

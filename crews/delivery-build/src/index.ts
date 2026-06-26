@@ -11,6 +11,7 @@ import { startPoller } from './poller.js';
 import { createStateStore } from './state.js';
 import { recoverInterruptedSteps } from './workflow.js';
 import { loadConfig, CONFIG_SCHEMA_VERSION, type Config } from './config.js';
+import { initTracing } from '@daddia/crew';
 import { SchemaValidationError, ConfigNotFoundError, redact } from '@daddia/crew/config';
 import type { WorkflowCtxBase } from './workflow.js';
 
@@ -46,16 +47,10 @@ export async function boot(env: NodeJS.ProcessEnv = process.env): Promise<void> 
     throw err;
   }
 
-  // initTracing is not exported by all published builds of @daddia/crew.
-  // Skip gracefully when absent rather than crashing at boot.
-  const crewPkg = (await import('@daddia/crew')) as Record<string, unknown>;
-  const initTracing = crewPkg['initTracing'];
-  if (typeof initTracing === 'function') {
-    (initTracing as (o: { serviceName: string; honeycombApiKey?: unknown }) => void)({
-      serviceName: 'delivery-build',
-      honeycombApiKey: config.secrets.honeycombApiKey,
-    });
-  }
+  initTracing({
+    serviceName: 'delivery-build',
+    honeycombApiKey: config.secrets.honeycombApiKey,
+  });
 
   const gitSha = env.RAILWAY_GIT_COMMIT_SHA ?? env.GIT_SHA ?? 'unknown';
 
