@@ -12,6 +12,7 @@ export interface JiraClient {
   transitionIssue(issueKey: string, targetStatusName: string): Promise<boolean>;
   getIssue(issueKey: string): Promise<JiraIssue>;
   commentOnIssue(issueKey: string, body: string): Promise<void>;
+  addLabel(issueKey: string, label: string): Promise<void>;
   getComments(issueKey: string): Promise<JiraComment[]>;
   searchIssues(jql: string): Promise<Array<{ issueKey: string }>>;
 }
@@ -163,6 +164,17 @@ export function createJiraClient(
             type: 'doc',
             version: 1,
             content: [{ type: 'paragraph', content: [{ type: 'text', text: body }] }],
+          },
+        }),
+      });
+    },
+
+    async addLabel(issueKey, label) {
+      await jiraFetch(`/issue/${issueKey}`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          update: {
+            labels: [{ add: label }],
           },
         }),
       });

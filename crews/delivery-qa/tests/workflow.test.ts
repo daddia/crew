@@ -14,9 +14,10 @@ vi.mock('../src/agents/qa-engineer/agent.js', () => ({
   qaEngineer: { name: 'qa-engineer', run: vi.fn() },
 }));
 
-import { runQaWorkflow } from '../src/workflow.js';
+import { runQaWorkflow, watchRemediationTimeouts } from '../src/workflow.js';
 import type { WorkflowCtxBase } from '../src/workflow.js';
 import { qaEngineer } from '../src/agents/qa-engineer/agent.js';
+import { log } from '../src/observability.js';
 import { QaWorkspaceError } from '../src/qa-workspace.js';
 import type { StateStore, Step, StepRow } from '../src/state.js';
 import type { JiraClient } from '../src/integrations/jira.js';
@@ -29,6 +30,7 @@ function makeJiraMock(): JiraClient {
   return {
     transitionIssue: vi.fn().mockResolvedValue(true),
     commentOnIssue: vi.fn().mockResolvedValue(undefined),
+    addLabel: vi.fn().mockResolvedValue(undefined),
     getIssue: vi.fn().mockResolvedValue({
       summary: 'QA Story',
       description: 'Validate the feature.',
@@ -81,14 +83,34 @@ function makeCtxBase(
   };
 }
 
-function makeState(): StateStore & { stepHistory: StepRow[] } {
+function makeState(): StateStore & { stepHistory: StepRow[]; stories: Map<string, { currentStep: Step; startedAt: number }> } {
   const stepHistory: StepRow[] = [];
+  const stories = new Map<string, { currentStep: Step; startedAt: number }>();
 
   return {
     stepHistory,
-    upsertStory: vi.fn(),
-    getStory: vi.fn(),
-    getStoriesAtStep: vi.fn().mockReturnValue([]),
+    stories,
+    upsertStory: vi.fn((issueKey: string, step: Step) => {
+      const existing = stories.get(issueKey);
+      if (!existing) {
+        stories.set(issueKey, { currentStep: step, startedAt: Date.now() });
+      } else {
+        existing.currentStep = step;
+      }
+    }),
+    getStory: vi.fn((issueKey: string) => {
+      const story = stories.get(issueKey);
+      return story ? { issueKey, currentStep: story.currentStep, startedAt: story.startedAt } : undefined;
+    }),
+    getStoriesAtStep: vi.fn((step: Step) => {
+      const results: Array<{ issueKey: string; currentStep: Step; startedAt: number }> = [];
+      for (const [issueKey, story] of stories) {
+        if (story.currentStep === step) {
+          results.push({ issueKey, currentStep: story.currentStep, startedAt: story.startedAt });
+        }
+      }
+      return results;
+    }),
     startStep: vi.fn((issueKey: string, step: Step, sessionId?: string) => {
       stepHistory.push({
         issueKey,
@@ -109,7 +131,9 @@ function makeState(): StateStore & { stepHistory: StepRow[] } {
       }
     }),
     getStepHistory: vi.fn(() => stepHistory),
-    countStepOccurrences: vi.fn().mockReturnValue(0),
+    countStepOccurrences: vi.fn((issueKey: string, step: Step) =>
+      stepHistory.filter((r) => r.issueKey === issueKey && r.step === step).length,
+    ),
     getInterruptedSteps: vi.fn().mockReturnValue([]),
     ping: vi.fn(),
     close: vi.fn(),
@@ -123,6 +147,28 @@ function passResult(overrides: Partial<AgentResult> = {}): AgentResult {
     artefacts: { sessionId: 'sess-qa-1', verdict: 'pass' },
     costUsd: 0.02,
     ...overrides,
+  };
+}
+
+const sampleDefect = {
+  id: 'DEF-1',
+  severity: 'major' as const,
+  summary: 'Login button missing',
+  stepsToReproduce: 'Open login page',
+  expected: 'Login button visible',
+  observed: 'Button not rendered',
+};
+
+function failWithDefectsResult(): AgentResult {
+  return {
+    success: false,
+    summary: 'Product test failure',
+    artefacts: {
+      sessionId: 'sess-qa-fail',
+      verdict: 'fail',
+      defects: [sampleDefect],
+    },
+    costUsd: 0.03,
   };
 }
 
@@ -225,5 +271,88 @@ describe('runQaWorkflow', () => {
 
     const finishedSteps = state.stepHistory.map((r) => r.step);
     expect(finishedSteps).not.toContain('document-defects');
+  });
+
+  it('hands off structured defects to Jira when automated-suite finds product failures', async () => {
+    const ctxBase = makeCtxBase({ qaDefectLoopCap: 2 });
+    const workspace = makeWorkspaceMock({
+      runTestCommand: vi.fn().mockResolvedValue({ exitCode: 1, output: '1 test failed' }),
+    });
+    const state = makeState();
+
+    mockQaEngineer.mockImplementation(async (input: AgentInput) => {
+      const task = input.context['task'];
+      if (task === 'run-automated-suite') {
+        return failWithDefectsResult();
+      }
+      if (task === 'document-defects') {
+        return failWithDefectsResult();
+      }
+      return passResult({ artefacts: { sessionId: `sess-${String(task)}`, verdict: 'pass' } });
+    });
+
+    await runQaWorkflow(
+      { issueKey: 'CREW-99', state, ...ctxBase },
+      { workspace, agents: { qaEngineer: { name: 'qa-engineer', run: mockQaEngineer } } },
+    );
+
+    expect(ctxBase.jira.commentOnIssue).toHaveBeenCalledWith(
+      'CREW-99',
+      expect.stringContaining('DEF-1'),
+    );
+    expect(ctxBase.jira.transitionIssue).toHaveBeenCalledWith('CREW-99', 'In Remediation');
+    expect(ctxBase.jira.addLabel).toHaveBeenCalledWith('CREW-99', 'qa-remediation');
+
+    expect(vi.mocked(log.info)).toHaveBeenCalledWith(
+      'workflow.remediation-required',
+      expect.objectContaining({ issueKey: 'CREW-99', defectCount: 1 }),
+    );
+
+    const finishedSteps = state.stepHistory.map((r) => r.step);
+    expect(finishedSteps).toContain('document-defects');
+    expect(finishedSteps).toContain('remediation-handoff');
+    expect(finishedSteps).toContain('remediation-pending');
+    expect(state.stories.get('CREW-99')?.currentStep).toBe('remediation-pending');
+  });
+
+  it('escalates when defect loop cap is zero', async () => {
+    const ctxBase = makeCtxBase({ qaDefectLoopCap: 0 });
+    const workspace = makeWorkspaceMock({
+      runTestCommand: vi.fn().mockResolvedValue({ exitCode: 1, output: '1 test failed' }),
+    });
+    const state = makeState();
+
+    mockQaEngineer.mockImplementation(async (input: AgentInput) => {
+      const task = input.context['task'];
+      if (task === 'run-automated-suite') {
+        return failWithDefectsResult();
+      }
+      return passResult({ artefacts: { sessionId: `sess-${String(task)}`, verdict: 'pass' } });
+    });
+
+    await expect(
+      runQaWorkflow(
+        { issueKey: 'CREW-99', state, ...ctxBase },
+        { workspace, agents: { qaEngineer: { name: 'qa-engineer', run: mockQaEngineer } } },
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(ctxBase.jira.transitionIssue).toHaveBeenCalledWith('CREW-99', 'Needs human review');
+    expect(ctxBase.jira.transitionIssue).not.toHaveBeenCalledWith('CREW-99', 'In Remediation');
+
+    const finishedSteps = state.stepHistory.map((r) => r.step);
+    expect(finishedSteps).not.toContain('remediation-handoff');
+  });
+
+  it('escalates remediation-pending stories after timeout', async () => {
+    const ctxBase = makeCtxBase({ remediationTimeoutHours: 48 });
+    const state = makeState();
+    const staleStartedAt = Date.now() - 49 * 60 * 60 * 1000;
+    state.stories.set('CREW-55', { currentStep: 'remediation-pending', startedAt: staleStartedAt });
+
+    await watchRemediationTimeouts({ state, ...ctxBase });
+
+    expect(ctxBase.jira.transitionIssue).toHaveBeenCalledWith('CREW-55', 'Needs human review');
+    expect(state.stories.get('CREW-55')?.currentStep).toBe('needs-human-review');
   });
 });

@@ -1,4 +1,5 @@
 import type { Agent, AgentInput, AgentResult } from '@daddia/crew';
+import { boundedIterGuard, IterationCapReached } from '@daddia/crew';
 import { qaEngineer } from './agents/qa-engineer/agent.js';
 import type { GitlabClient } from './integrations/gitlab.js';
 import type { JiraClient, JiraIssue } from './integrations/jira.js';
@@ -12,6 +13,15 @@ import type { StateStore, Step } from './state.js';
 
 /** Default model for qa-engineer runs until dedicated routing lands. */
 const QA_ENGINEER_MODEL = 'claude-sonnet-4-6';
+
+export interface QaDefect {
+  id: string;
+  severity: 'blocker' | 'major' | 'minor';
+  summary: string;
+  stepsToReproduce: string;
+  expected: string;
+  observed: string;
+}
 
 export interface WorkflowContext {
   issueKey: string;
@@ -48,6 +58,12 @@ interface QaSeedContext {
   branchName: string;
   pipelineStatus: string;
   acceptanceCriteria: string;
+}
+
+interface ValidationOutcome {
+  ok: boolean;
+  defects: QaDefect[];
+  infraReason?: string;
 }
 
 async function withWorkflowStepSpan<T>(
@@ -115,6 +131,37 @@ function qaEngineerContext(
   };
 }
 
+function isQaDefect(value: unknown): value is QaDefect {
+  if (!value || typeof value !== 'object') return false;
+  const d = value as Record<string, unknown>;
+  return (
+    typeof d['id'] === 'string' &&
+    (d['severity'] === 'blocker' || d['severity'] === 'major' || d['severity'] === 'minor') &&
+    typeof d['summary'] === 'string' &&
+    typeof d['stepsToReproduce'] === 'string' &&
+    typeof d['expected'] === 'string' &&
+    typeof d['observed'] === 'string'
+  );
+}
+
+function extractDefects(result: AgentResult): QaDefect[] {
+  const raw = result.artefacts['defects'];
+  if (!Array.isArray(raw)) return [];
+  return raw.filter(isQaDefect);
+}
+
+function formatDefectComment(defects: QaDefect[]): string {
+  let body = '*QA defects found — remediation required*\n\n';
+  for (const defect of defects) {
+    body +=
+      `*${defect.id}* (${defect.severity}): ${defect.summary}\n` +
+      `Steps: ${defect.stepsToReproduce}\n` +
+      `Expected: ${defect.expected}\n` +
+      `Observed: ${defect.observed}\n\n`;
+  }
+  return body.trimEnd();
+}
+
 async function runAgentStep(
   ctx: WorkflowContext,
   step: Step,
@@ -142,6 +189,7 @@ async function runAgentStep(
  * Sequence:
  *   context-seed → deploy-qa → automated-suite → exploratory-pass
  *   → external-integration (mock stub when mode is mock)
+ *   → defect loop on product failures (document-defects → remediation-handoff → remediation-pending)
  */
 export async function runQaWorkflow(
   ctx: WorkflowContext,
@@ -241,6 +289,244 @@ async function seedQaContext(
   });
 }
 
+async function runValidationSteps(
+  ctx: WorkflowContext,
+  qaSeed: QaSeedContext,
+  input: AgentInput,
+  agents: WorkflowAgents,
+  workspace: QaWorkspacePort,
+): Promise<ValidationOutcome> {
+  const { issueKey, state, behaviour } = ctx;
+  const collectedDefects: QaDefect[] = [];
+
+  // ── Automated suite ────────────────────────────────────────────────────────
+  state.upsertStory(issueKey, 'automated-suite');
+
+  let testOutput = '';
+  const automated = await workspace.runTestCommand(
+    ctx.qaWorkspaceDir,
+    behaviour.automatedTestCommand,
+  );
+  testOutput += automated.output;
+  const automatedFailed = automated.exitCode !== 0;
+
+  if (behaviour.e2eTestCommand) {
+    const e2e = await workspace.runTestCommand(ctx.qaWorkspaceDir, behaviour.e2eTestCommand);
+    testOutput += (testOutput.length > 0 ? '\n' : '') + e2e.output;
+    if (e2e.exitCode !== 0) {
+      state.startStep(issueKey, 'automated-suite');
+      state.finishStep(issueKey, 'automated-suite', { verdict: 'failed' });
+      const e2eResult = await runAgentStep(
+        ctx,
+        'automated-suite',
+        {
+          ...input,
+          context: qaEngineerContext(ctx, qaSeed, {
+            task: 'run-automated-suite',
+            testOutput,
+          }),
+        },
+        agents.qaEngineer,
+      );
+      const e2eDefects = extractDefects(e2eResult);
+      if (e2eDefects.length > 0) {
+        return { ok: false, defects: e2eDefects };
+      }
+      return {
+        ok: false,
+        defects: [],
+        infraReason: e2eResult.summary || 'E2E test command failed',
+      };
+    }
+  }
+
+  if (automatedFailed) {
+    state.startStep(issueKey, 'automated-suite');
+    state.finishStep(issueKey, 'automated-suite', { verdict: 'failed' });
+  }
+
+  const suiteResult = await runAgentStep(
+    ctx,
+    'automated-suite',
+    {
+      ...input,
+      context: qaEngineerContext(ctx, qaSeed, {
+        task: 'run-automated-suite',
+        testOutput,
+      }),
+    },
+    agents.qaEngineer,
+  );
+
+  if (!suiteResult.success) {
+    const suiteDefects = extractDefects(suiteResult);
+    if (suiteDefects.length > 0) {
+      collectedDefects.push(...suiteDefects);
+    } else {
+      return {
+        ok: false,
+        defects: [],
+        infraReason: suiteResult.summary || 'Automated suite QA step failed',
+      };
+    }
+  }
+
+  // ── Exploratory pass ───────────────────────────────────────────────────────
+  const exploreResult = await runAgentStep(
+    ctx,
+    'exploratory-pass',
+    {
+      ...input,
+      context: qaEngineerContext(ctx, qaSeed, { task: 'exploratory-pass' }),
+    },
+    agents.qaEngineer,
+  );
+
+  if (!exploreResult.success) {
+    const exploreDefects = extractDefects(exploreResult);
+    if (exploreDefects.length > 0) {
+      collectedDefects.push(...exploreDefects);
+    } else {
+      return {
+        ok: false,
+        defects: [],
+        infraReason: exploreResult.summary || 'Exploratory pass failed',
+      };
+    }
+  }
+
+  // ── External integration (mock stub) ─────────────────────────────────────
+  if (behaviour.externalIntegrationMode !== 'skip') {
+    state.upsertStory(issueKey, 'external-integration');
+    state.startStep(issueKey, 'external-integration');
+
+    if (behaviour.externalIntegrationMode === 'mock') {
+      log.info('workflow.external-integration.skipped', { issueKey, mode: 'mock' });
+      state.finishStep(issueKey, 'external-integration', { verdict: 'ok' });
+    } else {
+      state.finishStep(issueKey, 'external-integration', { verdict: 'failed' });
+      return {
+        ok: false,
+        defects: [],
+        infraReason: 'External integration live mode is not yet implemented',
+      };
+    }
+  }
+
+  if (collectedDefects.length > 0) {
+    return { ok: false, defects: collectedDefects };
+  }
+
+  return { ok: true, defects: [] };
+}
+
+async function handleProductDefects(
+  ctx: WorkflowContext,
+  qaSeed: QaSeedContext,
+  defects: QaDefect[],
+  input: AgentInput,
+  agents: WorkflowAgents,
+  testOutput?: string,
+): Promise<void> {
+  const { issueKey, state, jira, behaviour } = ctx;
+  const defectGuard = boundedIterGuard(behaviour.qaDefectLoopCap);
+  const priorRemediations = state.countStepOccurrences(issueKey, 'remediation-handoff');
+
+  try {
+    defectGuard(priorRemediations);
+  } catch (err) {
+    if (err instanceof IterationCapReached) {
+      const body =
+        `*Defect loop cap reached — escalating to human review.*\n\n` +
+        formatDefectComment(defects);
+      await jira.commentOnIssue(issueKey, body);
+      await escalateToHumanReview(
+        jira,
+        issueKey,
+        'Defect loop cap reached',
+        state,
+        qaSeed.mrUrl,
+      );
+      return;
+    }
+    throw err;
+  }
+
+  const docResult = await runAgentStep(
+    ctx,
+    'document-defects',
+    {
+      ...input,
+      context: qaEngineerContext(ctx, qaSeed, {
+        task: 'document-defects',
+        priorDefects: defects.map((d) => d.id),
+        ...(testOutput !== undefined ? { testOutput } : {}),
+      }),
+    },
+    agents.qaEngineer,
+  );
+
+  const documentedDefects = extractDefects(docResult);
+  const finalDefects = documentedDefects.length > 0 ? documentedDefects : defects;
+
+  if (finalDefects.length === 0) {
+    await escalateToHumanReview(
+      jira,
+      issueKey,
+      'document-defects step produced no structured defects',
+      state,
+      qaSeed.mrUrl,
+    );
+    return;
+  }
+
+  state.upsertStory(issueKey, 'remediation-handoff');
+  state.startStep(issueKey, 'remediation-handoff');
+
+  await jira.commentOnIssue(issueKey, formatDefectComment(finalDefects));
+  await jira.transitionIssue(issueKey, 'In Remediation');
+  await jira.addLabel(issueKey, 'qa-remediation');
+
+  state.finishStep(issueKey, 'remediation-handoff', { verdict: 'ok' });
+
+  log.info('workflow.remediation-required', {
+    issueKey,
+    mrUrl: qaSeed.mrUrl,
+    defectCount: finalDefects.length,
+  });
+
+  state.upsertStory(issueKey, 'remediation-pending');
+  state.startStep(issueKey, 'remediation-pending');
+
+  emitWorkflowComplete(issueKey, state, 'remediation-pending', false, qaSeed.mrUrl);
+}
+
+/**
+ * Escalate stories stuck in remediation-pending past REMEDIATION_TIMEOUT_HOURS.
+ * Intended for the poller tick (CREW-05-05); exported for unit tests.
+ */
+export async function watchRemediationTimeouts(ctx: WorkflowCtxBase & { state: StateStore }): Promise<void> {
+  const { state, jira, behaviour } = ctx;
+  const timeoutMs = behaviour.remediationTimeoutHours * 60 * 60 * 1000;
+  const now = Date.now();
+
+  const pendingStories = state.getStoriesAtStep('remediation-pending');
+  for (const story of pendingStories) {
+    if (now - story.startedAt >= timeoutMs) {
+      log.warn('workflow.remediation-timeout', {
+        issueKey: story.issueKey,
+        elapsedHours: (now - story.startedAt) / (60 * 60 * 1000),
+      });
+      await escalateToHumanReview(
+        jira,
+        story.issueKey,
+        `Remediation timeout exceeded (${behaviour.remediationTimeoutHours}h)`,
+        state,
+      );
+    }
+  }
+}
+
 async function runQaWorkflowInner(
   ctx: WorkflowContext,
   input: AgentInput,
@@ -292,109 +578,16 @@ async function runQaWorkflowInner(
     return;
   }
 
-  // ── Step 3: Automated suite ────────────────────────────────────────────────
-  state.upsertStory(issueKey, 'automated-suite');
+  const validation = await runValidationSteps(ctx, qaSeed, input, agents, workspace);
 
-  let testOutput = '';
-  const automated = await workspace.runTestCommand(qaWorkspaceDir, behaviour.automatedTestCommand);
-  testOutput += automated.output;
-
-  if (behaviour.e2eTestCommand) {
-    const e2e = await workspace.runTestCommand(qaWorkspaceDir, behaviour.e2eTestCommand);
-    testOutput += (testOutput.length > 0 ? '\n' : '') + e2e.output;
-    if (e2e.exitCode !== 0) {
-      state.startStep(issueKey, 'automated-suite');
-      state.finishStep(issueKey, 'automated-suite', { verdict: 'failed' });
-      await escalateToHumanReview(
-        jira,
-        issueKey,
-        'E2E test command failed',
-        state,
-        qaSeed.mrUrl,
-      );
-      return;
-    }
-  }
-
-  if (automated.exitCode !== 0) {
-    state.startStep(issueKey, 'automated-suite');
-    state.finishStep(issueKey, 'automated-suite', { verdict: 'failed' });
-    await escalateToHumanReview(
-      jira,
-      issueKey,
-      'Automated test command failed',
-      state,
-      qaSeed.mrUrl,
-    );
+  if (validation.infraReason) {
+    await escalateToHumanReview(jira, issueKey, validation.infraReason, state, qaSeed.mrUrl);
     return;
   }
 
-  const suiteResult = await runAgentStep(
-    ctx,
-    'automated-suite',
-    {
-      ...input,
-      context: qaEngineerContext(ctx, qaSeed, {
-        task: 'run-automated-suite',
-        testOutput,
-      }),
-    },
-    agents.qaEngineer,
-  );
-
-  if (!suiteResult.success) {
-    await escalateToHumanReview(
-      jira,
-      issueKey,
-      suiteResult.summary || 'Automated suite QA step failed',
-      state,
-      qaSeed.mrUrl,
-    );
+  if (!validation.ok && validation.defects.length > 0) {
+    await handleProductDefects(ctx, qaSeed, validation.defects, input, agents);
     return;
-  }
-
-  // ── Step 4: Exploratory pass ───────────────────────────────────────────────
-  const exploreResult = await runAgentStep(
-    ctx,
-    'exploratory-pass',
-    {
-      ...input,
-      context: qaEngineerContext(ctx, qaSeed, { task: 'exploratory-pass' }),
-    },
-    agents.qaEngineer,
-  );
-
-  if (!exploreResult.success) {
-    await escalateToHumanReview(
-      jira,
-      issueKey,
-      exploreResult.summary || 'Exploratory pass failed',
-      state,
-      qaSeed.mrUrl,
-    );
-    return;
-  }
-
-  // ── Step 5: External integration (mock stub) ───────────────────────────────
-  if (behaviour.externalIntegrationMode !== 'skip') {
-    state.upsertStory(issueKey, 'external-integration');
-    state.startStep(issueKey, 'external-integration');
-
-    if (behaviour.externalIntegrationMode === 'mock') {
-      log.info('workflow.external-integration.skipped', { issueKey, mode: 'mock' });
-      state.finishStep(issueKey, 'external-integration', { verdict: 'ok' });
-    } else {
-      // live mode deferred — escalate so operators know configuration is incomplete
-      state.finishStep(issueKey, 'external-integration', { verdict: 'failed' });
-      await escalateToHumanReview(
-        jira,
-        issueKey,
-        'External integration live mode is not yet implemented',
-        state,
-        qaSeed.mrUrl,
-      );
-      return;
-    }
   }
 
   emitWorkflowComplete(issueKey, state, 'exploratory-pass', true, qaSeed.mrUrl);
