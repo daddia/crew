@@ -245,8 +245,8 @@ context compaction; run-stream for operators; security model doc.
       Then every item maps to an existing control or a tracked gap
     ```
 
-- [ ] **[RH02-12] Research turn-level durability for long agent runs**
-  - **Status:** Not started | **Priority:** P2 | **Estimate:** 8
+- [x] **[RH02-12] Research turn-level durability for long agent runs**
+  - **Status:** Done | **Priority:** P2 | **Estimate:** 8
   - **Epic:** RH02 | **Labels:** phase:future, area:runtime, type:spike
   - **Depends on:** RH02-08
   - **Deliverable:** ADR or research note comparing step-checkpoint options for in-run tool replay; recommendation for CREW-20. No implementation required in RH02.

@@ -3,7 +3,7 @@ type: Architecture Decision Register
 product: crew
 owner: daddia
 status: Current
-last_updated: 2026-05-21
+last_updated: 2026-06-26
 ---
 
 # Architecture Decision Register — Crew
@@ -36,6 +36,7 @@ Write the ADR before starting implementation of the blocking feature.
 
 | ID  | Title | Priority | Blocks |
 | --- | ----- | -------- | ------ |
+| ADR-0001 | Turn-level checkpointing for in-run tool replay | P1 | CREW-20 implementation; informs CREW-13 orchestrator design |
 
 ---
 
