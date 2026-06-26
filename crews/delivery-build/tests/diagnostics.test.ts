@@ -103,6 +103,13 @@ describe('runDiagnostics – all checks pass', () => {
     ]);
   });
 
+  it('Jira reachability uses the non-deprecated search/jql endpoint', async () => {
+    await runDiagnostics(FIXTURE_CONFIG, injectPassing);
+    const [url] = fetchMock.mock.calls[0] as [string];
+    expect(url).toContain('/search/jql');
+    expect(url).not.toContain('/issue/search');
+  });
+
   it('Jira reachability detail names the base URL', async () => {
     const checks = await runDiagnostics(FIXTURE_CONFIG, injectPassing);
     const check = checks.find((c) => c.name === 'Jira API reachability')!;

@@ -18,6 +18,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 import type { Config } from './config.js';
+import { JIRA_JQL_SEARCH_PATH } from './integrations/jira.js';
 
 const _dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -266,15 +267,19 @@ export async function runDiagnostics(
 
   // ── Check 1: Jira API reachability ──────────────────────────────────────────
   try {
-    const res = await fetch(
-      `${baseUrl}/rest/api/3/issue/search?jql=ORDER+BY+created+DESC&fields=key&maxResults=1`,
-      { headers: jiraHeaders },
-    );
+    const searchParams = new URLSearchParams({
+      jql: 'ORDER BY created DESC',
+      fields: 'key',
+      maxResults: '1',
+    });
+    const res = await fetch(`${baseUrl}/rest/api/3${JIRA_JQL_SEARCH_PATH}?${searchParams}`, {
+      headers: jiraHeaders,
+    });
     if (!res.ok) {
       checks.push({
         name: 'Jira API reachability',
         ok: false,
-        detail: `GET /issue/search returned HTTP ${res.status}`,
+        detail: `GET ${JIRA_JQL_SEARCH_PATH} returned HTTP ${res.status}`,
       });
     } else {
       const data = (await res.json()) as { issues: Array<{ key: string }> };

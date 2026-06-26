@@ -193,8 +193,8 @@ and implementation of the scaffold crews' workflows beyond config hygiene.
 
 ### Fix soon — robustness
 
-- [ ] **[RH01-07] Verify and migrate the Jira search endpoint**
-  - **Status:** Not started | **Priority:** P1 | **Estimate:** 3
+- [x] **[RH01-07] Verify and migrate the Jira search endpoint**
+  - **Status:** Done | **Priority:** P1 | **Estimate:** 3
   - **Epic:** RH01 | **Labels:** phase:now, area:integrations, type:fix
   - **Depends on:** -
   - **Deliverable:** `searchIssues` and `diagnostics` use a non-deprecated Jira Cloud search endpoint (`/rest/api/3/search/jql` with token pagination) where the target instance requires it. Closes review §2.9.

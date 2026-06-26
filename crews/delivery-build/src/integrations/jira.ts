@@ -29,6 +29,11 @@ export interface JiraComment {
   created: string;
 }
 
+/** Non-deprecated Jira Cloud JQL search path (replaces `/search` and `/issue/search`). */
+export const JIRA_JQL_SEARCH_PATH = '/search/jql';
+
+const SEARCH_PAGE_SIZE = 50;
+
 export class JiraApiError extends Error {
   readonly statusCode: number;
   constructor(statusCode: number, message: string) {
@@ -134,10 +139,40 @@ export function createJiraClient(
     },
 
     async searchIssues(jql) {
-      const params = new URLSearchParams({ jql, fields: 'key', maxResults: '50' });
-      const res = await jiraFetch(`/issue/search?${params.toString()}`);
-      const data = (await res.json()) as { issues: Array<{ key: string }> };
-      return data.issues.map((issue) => ({ issueKey: issue.key }));
+      const results: Array<{ issueKey: string }> = [];
+      let nextPageToken: string | undefined;
+
+      do {
+        const body: {
+          jql: string;
+          maxResults: number;
+          fields: string[];
+          nextPageToken?: string;
+        } = {
+          jql,
+          maxResults: SEARCH_PAGE_SIZE,
+          fields: ['key'],
+        };
+        if (nextPageToken !== undefined) {
+          body.nextPageToken = nextPageToken;
+        }
+
+        const res = await jiraFetch(JIRA_JQL_SEARCH_PATH, {
+          method: 'POST',
+          body: JSON.stringify(body),
+        });
+        const data = (await res.json()) as {
+          issues?: Array<{ key: string }>;
+          nextPageToken?: string;
+        };
+
+        for (const issue of data.issues ?? []) {
+          results.push({ issueKey: issue.key });
+        }
+        nextPageToken = data.nextPageToken;
+      } while (nextPageToken);
+
+      return results;
     },
   };
 }

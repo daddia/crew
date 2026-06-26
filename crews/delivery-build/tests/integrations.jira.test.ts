@@ -142,7 +142,7 @@ describe('searchIssues', () => {
     expect(results).toEqual([{ issueKey: 'CREW-1' }, { issueKey: 'CREW-2' }]);
   });
 
-  it('passes the JQL as a query parameter and targets the search endpoint', async () => {
+  it('uses POST /search/jql with JQL and fields in the request body', async () => {
     fetchMock.mockResolvedValueOnce(
       new Response(JSON.stringify({ issues: [] }), {
         status: 200,
@@ -153,10 +153,48 @@ describe('searchIssues', () => {
     const jql = 'project = "CREW" AND status = "To Do"';
     await client.searchIssues(jql);
 
-    const [rawUrl] = fetchMock.mock.calls[0] as [string];
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [rawUrl, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     const url = new URL(rawUrl);
-    expect(url.pathname).toContain('/issue/search');
-    expect(url.searchParams.get('jql')).toBe(jql);
+    expect(url.pathname).toContain('/search/jql');
+    expect(init.method).toBe('POST');
+    const body = JSON.parse(String(init.body)) as {
+      jql: string;
+      fields: string[];
+      maxResults: number;
+    };
+    expect(body.jql).toBe(jql);
+    expect(body.fields).toEqual(['key']);
+    expect(body.maxResults).toBe(50);
+  });
+
+  it('retrieves all pages via nextPageToken', async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            issues: [{ key: 'CREW-1' }],
+            nextPageToken: 'page-2',
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ issues: [{ key: 'CREW-2' }] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+
+    const results = await client.searchIssues('project = "CREW"');
+
+    expect(results).toEqual([{ issueKey: 'CREW-1' }, { issueKey: 'CREW-2' }]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    const secondBody = JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body)) as {
+      nextPageToken: string;
+    };
+    expect(secondBody.nextPageToken).toBe('page-2');
   });
 
   it('returns an empty array when no issues match', async () => {
