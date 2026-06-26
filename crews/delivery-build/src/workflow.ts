@@ -2,7 +2,7 @@ import { getSessionInfo } from '@anthropic-ai/claude-agent-sdk';
 import { type AgentInput } from '@daddia/crew';
 import { engineer } from './agents/engineer/agent.js';
 import { seniorEngineer } from './agents/senior-engineer/agent.js';
-import type { GitlabClient } from './integrations/gitlab.js';
+import type { GitlabClient, PipelineStatus } from './integrations/gitlab.js';
 import type { JiraClient, JiraIssue } from './integrations/jira.js';
 import { seedEngineerMemory } from './memory.js';
 import { log } from './observability.js';
@@ -15,6 +15,7 @@ export interface WorkflowContext {
     refactorLoopCap: number;
     ciRetryCap: number;
     ciPollIntervalMs: number;
+    ciWaitTimeoutMs: number;
     anthropicModel?: string;
   };
   jira: JiraClient;
@@ -28,6 +29,35 @@ export interface WorkflowContext {
  * WorkflowContext at call time.
  */
 export type WorkflowCtxBase = Omit<WorkflowContext, 'issueKey' | 'state'>;
+
+const PIPELINE_SETTLING: ReadonlySet<PipelineStatus> = new Set(['created', 'pending', 'running']);
+
+function isPipelineSettling(status: string): boolean {
+  return PIPELINE_SETTLING.has(status as PipelineStatus);
+}
+
+type PipelineWaitResult = { status: string; timedOut: false } | { status: string; timedOut: true };
+
+async function waitForPipelineSettled(
+  gitlab: GitlabClient,
+  mrUrl: string,
+  behaviour: WorkflowContext['behaviour'],
+): Promise<PipelineWaitResult> {
+  const deadline = Date.now() + behaviour.ciWaitTimeoutMs;
+
+  let status: string;
+  do {
+    if (behaviour.ciPollIntervalMs > 0) {
+      await new Promise<void>((res) => setTimeout(res, behaviour.ciPollIntervalMs));
+    }
+    status = await gitlab.getPipelineStatus(mrUrl);
+    if (!isPipelineSettling(status)) {
+      return { status, timedOut: false };
+    }
+  } while (Date.now() < deadline);
+
+  return { status, timedOut: true };
+}
 
 /**
  * Aggregate the step history into a cost summary and emit a single
@@ -302,14 +332,21 @@ async function runStoryInner(ctx: WorkflowContext, input: AgentInput): Promise<v
   let ciPassed = false;
 
   for (let attempt = 0; attempt < behaviour.ciRetryCap; attempt++) {
-    // Poll until the pipeline settles (not "running").
-    let status: string;
-    do {
-      if (behaviour.ciPollIntervalMs > 0) {
-        await new Promise<void>((res) => setTimeout(res, behaviour.ciPollIntervalMs));
-      }
-      status = await gitlab.getPipelineStatus(mrUrl);
-    } while (status === 'running');
+    const waitResult = await waitForPipelineSettled(gitlab, mrUrl, behaviour);
+
+    if (waitResult.timedOut) {
+      await escalateToHumanReview(
+        jira,
+        issueKey,
+        'CI pipeline wait timeout exceeded',
+        [],
+        state,
+        mrUrl,
+      );
+      return;
+    }
+
+    const { status } = waitResult;
 
     if (status === 'success') {
       ciPassed = true;

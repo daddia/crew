@@ -149,8 +149,8 @@ and implementation of the scaffold crews' workflows beyond config hygiene.
       Then the task value is one of the enumerated, skill-backed tasks
     ```
 
-- [ ] **[RH01-05] Bound and correct the CI polling loop**
-  - **Status:** Not started | **Priority:** P0 | **Estimate:** 2
+- [x] **[RH01-05] Bound and correct the CI polling loop**
+  - **Status:** Done | **Priority:** P0 | **Estimate:** 2
   - **Epic:** RH01 | **Labels:** phase:now, area:delivery-build, type:fix
   - **Depends on:** -
   - **Deliverable:** The pipeline wait treats `created` and `pending` as "still settling," and the inner wait is capped by a config-driven timeout. Closes review §2.5.

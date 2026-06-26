@@ -65,6 +65,11 @@ describe('loadConfig – behaviour defaults', () => {
     expect(config.behaviour.ciPollIntervalMs).toBe(30_000);
   });
 
+  it('defaults ciWaitTimeoutMs to 1800000 when CI_WAIT_TIMEOUT_MS is absent', () => {
+    const config = loadConfig(REQUIRED_ENV);
+    expect(config.behaviour.ciWaitTimeoutMs).toBe(1_800_000);
+  });
+
   it('defaults clarificationTimeoutHours to 24', () => {
     const config = loadConfig(REQUIRED_ENV);
     expect(config.behaviour.clarificationTimeoutHours).toBe(24);

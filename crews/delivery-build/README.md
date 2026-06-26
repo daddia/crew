@@ -51,6 +51,7 @@ On loop-cap exhaustion or any unrecoverable failure, the ticket transitions to "
 | `REFACTOR_LOOP_CAP` | `2` | Max peer-review iterations before escalation |
 | `CI_RETRY_CAP` | `3` | Max CI fix attempts before escalation |
 | `CI_POLL_INTERVAL_MS` | `30000` | Milliseconds between CI pipeline polls |
+| `CI_WAIT_TIMEOUT_MS` | `1800000` | Maximum milliseconds to wait for a pipeline to settle before escalating |
 | `CLARIFICATION_TIMEOUT_HOURS` | `24` | Hours to wait for PM clarification before escalating |
 | `ATLASSIAN_ACCOUNT_ID` | — | Bot account ID for reliable bot-vs-human comment detection (falls back to `ATLASSIAN_EMAIL` comparison when unset) |
 | `DIFF_FILE_CAP` | `50` | Maximum number of files included in an MR diff sent to the agent |

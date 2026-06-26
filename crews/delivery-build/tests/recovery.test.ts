@@ -61,7 +61,7 @@ function makeCtxBase(): WorkflowCtxBase & {
   gitlab: ReturnType<typeof makeMockGitlab>;
 } {
   return {
-    behaviour: { refactorLoopCap: 2, ciRetryCap: 3, ciPollIntervalMs: 0 },
+    behaviour: { refactorLoopCap: 2, ciRetryCap: 3, ciPollIntervalMs: 0, ciWaitTimeoutMs: 1_800_000 },
     jira: makeMockJira(),
     gitlab: makeMockGitlab(),
     projectDir: '/project',

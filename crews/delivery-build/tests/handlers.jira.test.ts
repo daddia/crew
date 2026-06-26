@@ -37,7 +37,7 @@ const mockGitlab = {
 } satisfies GitlabClient;
 
 const ctxBase: WorkflowCtxBase = {
-  behaviour: { refactorLoopCap: 2, ciRetryCap: 3, ciPollIntervalMs: 0 },
+  behaviour: { refactorLoopCap: 2, ciRetryCap: 3, ciPollIntervalMs: 0, ciWaitTimeoutMs: 1_800_000 },
   jira: mockJira,
   gitlab: mockGitlab,
   projectDir: '/project',

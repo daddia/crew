@@ -65,6 +65,7 @@ function makeCtxBase(
       refactorLoopCap: 2,
       ciRetryCap: 3,
       ciPollIntervalMs: 0,
+      ciWaitTimeoutMs: 1_800_000,
       ...behaviourOverrides,
     },
     jira,
@@ -363,6 +364,47 @@ describe('runStory', () => {
 
     expect(ctxBase.gitlab.getPipelineStatus).toHaveBeenCalledTimes(2);
     expect(ctxBase.jira.transitionIssue).toHaveBeenCalledWith('ENG-1', 'In QA');
+  });
+
+  it('continues waiting when pipeline status is pending or created', async () => {
+    const ctxBase = makeCtxBase();
+    mockEngineer.mockResolvedValue(successResult());
+    mockSeniorEngineer.mockResolvedValue(successResult());
+    vi.mocked(ctxBase.gitlab.getPipelineStatus)
+      .mockResolvedValueOnce('pending')
+      .mockResolvedValueOnce('created')
+      .mockResolvedValueOnce('success');
+
+    const state = makeState();
+    await runStory({ issueKey: 'ENG-1', state, ...ctxBase });
+
+    const ciFixCalls = mockEngineer.mock.calls.filter(
+      (call) => (call[0] as AgentInput).context['task'] === 'fix-ci',
+    );
+    expect(ciFixCalls).toHaveLength(0);
+    expect(ctxBase.gitlab.getPipelineStatus).toHaveBeenCalledTimes(3);
+    expect(ctxBase.jira.transitionIssue).toHaveBeenCalledWith('ENG-1', 'In QA');
+  });
+
+  it('escalates when CI pipeline wait timeout is exceeded', async () => {
+    const ctxBase = makeCtxBase({ ciWaitTimeoutMs: 0, ciPollIntervalMs: 0 });
+    mockEngineer.mockResolvedValue(successResult());
+    mockSeniorEngineer.mockResolvedValue(successResult());
+    vi.mocked(ctxBase.gitlab.getPipelineStatus).mockResolvedValue('running');
+
+    const state = makeState();
+    await runStory({ issueKey: 'ENG-1', state, ...ctxBase });
+
+    const ciFixCalls = mockEngineer.mock.calls.filter(
+      (call) => (call[0] as AgentInput).context['task'] === 'fix-ci',
+    );
+    expect(ciFixCalls).toHaveLength(0);
+    expect(ctxBase.jira.commentOnIssue).toHaveBeenCalledWith(
+      'ENG-1',
+      expect.stringContaining('CI pipeline wait timeout exceeded'),
+    );
+    expect(ctxBase.jira.transitionIssue).toHaveBeenCalledWith('ENG-1', 'Needs human review');
+    expect(ctxBase.jira.transitionIssue).not.toHaveBeenCalledWith('ENG-1', 'In QA');
   });
 
   it('passes context.ticket to engineer for the address-feedback task', async () => {
