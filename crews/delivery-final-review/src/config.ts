@@ -11,7 +11,7 @@ export const ConfigSchema = z.object({
     logLevel: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
   }),
   infrastructure: z.object({
-    port: z.coerce.number().int().positive().default(3001),
+    port: z.coerce.number().int().positive().default(3002),
     dbPath: z.string().min(1).default('./data/delivery-review.db'),
   }),
 });

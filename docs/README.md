@@ -6,7 +6,7 @@ The hierarchy of reference, in order: **Product strategy → Solution architectu
 
 | Layer                                                            | Document                                                                                   |
 | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| Product strategy — what Crew is, why, for whom                   | [`product/strategy.md`](product/strategy.md)                                               |
+| Product strategy — what Crew is, why, for whom                   | [`product/strategy.md`](product/strategy.md) (`product.md` redirects here)                   |
 | Solution architecture — how Crew is built and operated           | [`architecture/solution.md`](architecture/solution.md)                                     |
 | Roadmap — phases (Now / Next / Later / Future) and exit criteria | [`product/roadmap.md`](product/roadmap.md)                                                 |
 | Product backlog — epic breakdown, dependencies, risks            | [`product/backlog.md`](product/backlog.md)                                                 |

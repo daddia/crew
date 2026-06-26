@@ -1,27 +1,31 @@
 # Delivery Review (`delivery-review`)
 
-Forward-looking contract for the final-review slice. Scaffolded in code as [`crews/delivery-final-review/`](../../../crews/delivery-final-review/) — the folder will be renamed to `delivery-review` once the implementation is live.
+Forward-looking contract for the final-review slice. Scaffolded in code as [`crews/delivery-final-review/`](../../../crews/delivery-final-review/) — the folder will be renamed to `delivery-review` in CREW-06-01.
 
 ```ts
 /**
  * Run the delivery-review sequence for one story.
  *
  * Trigger:
- *   A) `ready-for-review` event from delivery-qa (primary)
- *   B) Scheduled polling of Jira for tickets in `in review` (fallback)
+ *   A) Jira webhook — transition to `In Review` (primary)
+ *   B) Poller JQL — tickets in `In Review` assigned to the review bot (fallback)
+ *   (Upstream `delivery-qa` emits `workflow.handoff-to-review` for observability;
+ *    this crew does not subscribe to log events — Jira state is the handoff.)
  *
- * Scope: QA-validated MR → tech-lead final code review → PM stakeholder
- *   review → merge to main → ticket transitioned to "Done".
+ * Scope: QA-validated MR → context-seed → tech-lead final code review →
+ *   PM stakeholder HITL pause → deterministic GitLab approve + merge →
+ *   review summary on Jira → ticket transitioned to "Done".
  *
  * Sequence:
+ *   → context-seed (Jira AC + MR resolution; CI-green guard)
  *   → tech-lead final-code-review (architecture, cross-cutting, technical AC)
- *   → HUMAN-IN-THE-LOOP PAUSE: await product-manager stakeholder review
- *       (functional AC validation; PM approval is blocking — merge cannot proceed without it)
+ *   → stakeholder-review-pending (HITL PAUSE: await human PM sign-off via Jira
+ *       comment `/pm-approve` from an allowlisted account)
  *       → timeout: PM_REVIEW_TIMEOUT_HOURS → escalateToHumanReview, halt
- *   → both approvals confirmed (tech-lead + product-manager)
- *   → tech-lead approves the MR and merges to main
- *   → tech-lead updates the Jira ticket with a review summary
- *   → status update: `in review` → `done`
+ *   → merge-and-close (workflow integration layer: approve + merge MR — not on
+ *       the review-task tool allowlist)
+ *   → tech-lead publish-review-summary (Jira comment)
+ *   → status update: `In Review` → `Done`
  *   → done
  *
  * Caps and timers:
@@ -31,10 +35,10 @@ Forward-looking contract for the final-review slice. Scaffolded in code as [`cre
  *   - By this point the MR branch is CI-green and QA-validated; tech-lead
  *     review is an architecture + AC gate, not a defect-finding exercise.
  *   - PM review is serial and blocking; merge cannot proceed without explicit
- *     PM sign-off.
+ *     human PM sign-off (no `product-manager` agent persona in v1).
  *   - Four-eyes merge policy is NOT enforced at this crew boundary (tech-lead
- *     reviews AND merges); promote to separate approver / merger personas if
- *     policy requires separation of duties.
+ *     reviews; workflow merges deterministically after both gates pass); promote
+ *     to separate approver / merger personas if policy requires separation of duties.
  *   - PM_REVIEW_TIMEOUT_HOURS should reflect the team SLA for stakeholder
  *     availability.
  *

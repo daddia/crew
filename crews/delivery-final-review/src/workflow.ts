@@ -7,30 +7,12 @@ export interface WorkflowContext {
 }
 
 /**
- * Run the delivery review sequence for one story.
+ * Run the delivery-review sequence for one story.
  *
- * Trigger:
- *   `ready-for-review` event from delivery-build crew
- *   (also: scheduled polling of jira board for tickets in `in review` as fallback)
+ * Authoritative contract: docs/design/crew-flows/delivery-review.md
+ * Implementation spec: docs/work/06-delivery-review/design.md
  *
- * Sequence:
- *   → tech-lead final-code-review (architecture + cross-cutting gate + technical AC validation)
- *   → HUMAN-IN-THE-LOOP PAUSE: await product-manager stakeholder-review
- *       (functional AC validation; PM approval is blocking — merge cannot proceed without sign-off)
- *       → timeout: PM_REVIEW_TIMEOUT_HOURS → escalate to delivery-lead → halt
- *   → both approvals confirmed (tech-lead + product-manager)
- *   → tech-lead approves MR and merges to main
- *   → tech-lead updates Jira ticket, adds review summary comment
- *   → status update: `in review` → `done`
- *   → done
- *
- * Operational notes:
- *   - PM review is serial and blocking; merge cannot occur without explicit PM sign-off
- *   - Four-eyes merge policy not enforced at this crew boundary (tech-lead reviews AND merges);
- *     promote to separate approver/merger roles if policy requires separation of duties
- *   - PM_REVIEW_TIMEOUT_HOURS should reflect team SLA for stakeholder availability
- *
- * TODO: implement — this crew is scaffolded; full implementation follows delivery-build proof.
+ * TODO: implement — scaffold only; full implementation is CREW-06-03+.
  */
 export async function runReview(ctx: WorkflowContext): Promise<void> {
   const { issueKey } = ctx;

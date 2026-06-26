@@ -46,7 +46,7 @@ export async function boot(env: NodeJS.ProcessEnv = process.env): Promise<void> 
 
   app.get('/healthz', (c) => c.json({ ok: true }));
 
-  // TODO: add webhook handler for `ready-for-review` event from delivery-build.
+  // TODO (CREW-06-06): POST /webhooks/jira — dispatch on transition to In Review.
 
   const server = serve({ fetch: app.fetch, port }, () => {
     log.info('server.start', { port, db: dbPath });

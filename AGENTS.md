@@ -18,10 +18,11 @@ Two layers:
 | Folder (code)                  | Role                                                              | Planned name (architecture / docs) | Status        |
 | ------------------------------ | ----------------------------------------------------------------- | ---------------------------------- | ------------- |
 | `crews/delivery-build/`        | Pick up story → implement → peer review → open MR → CI → hand off | `delivery-build`                   | Implemented   |
+| `crews/delivery-qa/`           | Deploy to QA → automated + exploratory pass → defect loop → hand off | `delivery-qa`                   | Implemented   |
+| `crews/delivery-final-review/` | Tech-lead final review → PM HITL → merge → Done                   | `delivery-review`                  | Scaffold only |
 | `crews/delivery-code-review/`  | Standalone code-review crew (post-MR, planned CLI-shaped)         | `code-reviewer`                    | Scaffold only |
-| `crews/delivery-final-review/` | Tech-lead final review → PM stakeholder review → merge            | `delivery-review`                  | Scaffold only |
 
-The QA crew (`delivery-qa`) named in [`docs/design/crew-flows/`](docs/design/crew-flows/) is not yet scaffolded in code. When it lands it will own the `In QA → In Review` transition.
+`delivery-final-review/` renames to `delivery-review/` in CREW-06-01. Flow contracts for the full vertical live in [`docs/design/crew-flows/`](docs/design/crew-flows/).
 
 ## Repository layout
 
@@ -50,8 +51,30 @@ crews/
     Dockerfile
     package.json           # @daddia/crew-delivery-build
 
+  delivery-qa/             # Implemented QA crew (In QA → In Review)
+    src/
+      index.ts             # Hono server entry
+      config.ts            # Typed env schema (only file that reads process.env)
+      workflow.ts          # Sequence: context-seed → deploy-qa → automated suite → exploratory → defect loop → hand-off
+      state.ts             # SQLite store via @daddia/crew/state
+      poller.ts            # Jira poll loop (fallback trigger)
+      qa-workspace.ts      # Ephemeral QA workspace for deploy + suite runs
+      observability.ts     # log = createLogger(name); tracer = createTracer(name); initTracing() at boot
+      idempotency.ts       # Lazy singleton wrapping createIdempotencyStore()
+      agents/
+        qa-engineer/       # Deploy, suite, exploratory, document-defects
+      handlers/
+        jira.ts            # POST /webhooks/jira (issue transitions)
+      integrations/
+        jira.ts
+        gitlab.ts
+    evals/                 # Fixture-owned CrewBench evals (*.eval.ts)
+    mcp.json
+    Dockerfile
+    package.json           # @daddia/crew-delivery-qa
+
   delivery-code-review/    # Scaffold — see crew README
-  delivery-final-review/   # Scaffold — see crew README
+  delivery-final-review/   # Scaffold — renames to delivery-review (CREW-06); see crew README
 
 packages/
   crew/                    # @daddia/crew — published shared library

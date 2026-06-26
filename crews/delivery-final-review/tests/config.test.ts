@@ -6,7 +6,7 @@ describe('loadConfig – defaults', () => {
   it('returns scaffold defaults when no env vars are set', () => {
     const config = loadConfig({});
     expect(config.identity.crewId).toBe('delivery-final-review');
-    expect(config.infrastructure.port).toBe(3001);
+    expect(config.infrastructure.port).toBe(3002);
     expect(config.infrastructure.dbPath).toBe('./data/delivery-review.db');
     expect(config.behaviour.logLevel).toBe('info');
   });

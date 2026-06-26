@@ -97,8 +97,10 @@ cheaper than the first and keeps every runtime change eval-gated.
 
 **Capabilities:**
 
-- QA and review crews operational; handoff events (`ready-for-qa`,
-  `ready-for-review`) wired so downstream crews self-trigger.
+- QA and review crews operational; upstream crews emit structured handoff logs on
+  Jira transitions (`workflow.handoff-to-qa`, `workflow.handoff-to-review`); downstream
+  crews pick up work by polling Jira status and accepting webhooks — not by subscribing
+  to log events.
 - Remote audit sink (`@daddia/crew/audit`) — the prerequisite for the first
   CLI-shaped crew.
 - First CLI-shaped crew (code-reviewer) shipping on the audit sink.
@@ -131,7 +133,7 @@ cheaper than the first and keeps every runtime change eval-gated.
 
 1. An overnight run completes without operator intervention; the morning report
    shows autonomy rate and cost per story.
-2. Downstream crews pick up handoffs without manual re-trigger.
+2. Downstream crews pick up Jira handoffs (status transitions) without manual re-trigger.
 3. Eval baseline populated; cost-per-accepted-feature trend is visibly improving
    release over release.
 4. Outcome telemetry pipeline operational (single-emission events → durable
