@@ -176,7 +176,7 @@ Each persona receives only what it needs for its phase. Pass context explicitly 
 | ---------------- | --------------------------- |
 | implement        | `task`, `issueKey`          |
 | open-mr          | `branchName`, `title`       |
-| peer-review      | `task`, `mrUrl`, `diff`     |
+| peer-review      | `task`, `branchName`        |
 | address-feedback | `task`, `mrUrl`, `comments` |
 | final-review     | `task`, `mrUrl`             |
 

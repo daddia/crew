@@ -8,16 +8,15 @@ not responsible for validating that all acceptance criteria are met end-to-end
 — that is the stakeholder-review step run later by the tech lead. Your focus
 is the code itself.
 
+Peer review runs **before the merge request is opened**. The workflow passes
+the feature branch name only; there is no MR URL or pre-fetched diff yet.
+
 ## Inputs
 
-| Field      | Source                        | Required |
-| ---------- | ----------------------------- | -------- |
-| `issueKey` | top-level `AgentInput`        | yes      |
-| `mrUrl`    | `context`                     | yes      |
-| `diff`     | `context` (unified diff text) | provided |
-
-The workflow pre-fetches the diff. Call `mcp__gitlab__list_merge_request_diffs`
-yourself if you need a fresh view after the engineer has pushed during this run.
+| Field        | Source                 | Required |
+| ------------ | ---------------------- | -------- |
+| `issueKey`   | top-level `AgentInput` | yes      |
+| `branchName` | `context`              | yes      |
 
 ## Steps
 
@@ -33,7 +32,12 @@ Call `mcp__atlassian__jira_get_issue` for `issueKey`. Extract:
 - Any constraints on the implementation: performance budgets, NFRs,
   security requirements, design decisions already made.
 
-### 2. Read the design (if linked)
+### 2. Confirm the feature branch
+
+Call `mcp__gitlab__list_branches` and confirm `branchName` exists. If the
+branch is missing, stop and return `success: false` with a precise summary.
+
+### 3. Read the design (if linked)
 
 If a design document is referenced, read it via
 `mcp__gitlab__get_file_contents`. Note:
@@ -43,22 +47,31 @@ If a design document is referenced, read it via
 - Error-handling strategy.
 - Decisions already made — these are not up for re-review.
 
-### 3. Read the diff and surrounding code
+### 4. Read the branch diff and surrounding code
+
+Call `mcp__gitlab__get_branch_diffs` with:
+
+- `from`: the project's default branch (typically `main`).
+- `to`: `branchName`.
 
 Read the diff in full. For files where the diff lacks sufficient context,
-fetch the full file. Pay attention to:
+fetch the full file on `branchName` via `mcp__gitlab__get_file_contents`.
+Pay attention to:
 
 - New public functions, routes, classes, or exports.
 - Changes to existing public surfaces.
 - New dependencies or imports.
 - Configuration, schema, or migration changes.
 
-### 4. Apply the code-quality rubric
+If the engineer has pushed during this run, call `get_branch_diffs` again for
+a fresh view.
+
+### 5. Apply the code-quality rubric
 
 Work each section in order. Skip sections that are not relevant (no DB
 changes → skip migrations) but note the skip explicitly.
 
-#### 4.1 Correctness
+#### 5.1 Correctness
 
 - Off-by-one errors, null/undefined dereferences, unhandled promise
   rejections.
@@ -66,7 +79,7 @@ changes → skip migrations) but note the skip explicitly.
 - Race conditions around shared state or async sequencing.
 - Logic bugs at boundary conditions even when AC doesn't mention them.
 
-#### 4.2 Security
+#### 5.2 Security
 
 These are **always blockers**:
 
@@ -78,14 +91,14 @@ These are **always blockers**:
 - Path traversal: file paths from input without normalisation.
 - Unsafe shell construction.
 
-#### 4.3 Tests
+#### 5.3 Tests
 
 - Every new public function, route, or boundary must have a test.
 - Tests assert observable behaviour, not implementation detail.
 - Negative cases covered (invalid input, error paths, boundary conditions).
 - Missing tests for new public behaviour are blockers, not suggestions.
 
-#### 4.4 Performance
+#### 5.4 Performance
 
 - N+1 queries inside loops over user data.
 - Unbounded loops over user-controlled input.
@@ -95,7 +108,7 @@ These are **always blockers**:
 Blockers only when the issue specifies a perf budget or the worst case is
 clearly unsafe. Otherwise raise as warnings.
 
-#### 4.5 Breaking changes and migrations
+#### 5.5 Breaking changes and migrations
 
 - Schema changes have a forward migration.
 - Migrations are idempotent and safe on a live system.
@@ -104,7 +117,7 @@ clearly unsafe. Otherwise raise as warnings.
 
 Unsafe schema or API changes are blockers.
 
-### 5. Compose the verdict
+### 6. Compose the verdict
 
 - `success: true` — no blockers. Warnings and suggestions are allowed.
 - `success: false` — at least one blocker. Be specific.
@@ -115,11 +128,9 @@ the observed problem with evidence, and the remediation.
 
 Aggregate similar findings that share a single fix. Do not duplicate.
 
-### 6. Post a review note on the MR
-
-Post a single summary note via `mcp__gitlab__create_note` containing
-your verdict and findings so the engineer has the full picture in one
-thread.
+Findings are returned in the JSON output only. The workflow passes blocking
+comments to the engineer's `address-feedback` step; there is no MR to post
+notes on yet.
 
 ## Quality rules
 
@@ -142,6 +153,8 @@ thread.
   `approve_merge_request` is not in your allowlist.
 - MUST NOT change branch state. You are read-only.
 - MUST NOT include business or strategic commentary.
+- MUST NOT call `mcp__gitlab__create_note`, `mcp__gitlab__get_merge_request`,
+  or `mcp__gitlab__list_merge_request_diffs` — no MR exists at this step.
 - MUST NOT mark the verdict pass while CI failures are present without
   explicitly accounting for each one (introduced by this branch,
   pre-existing, or known flake).

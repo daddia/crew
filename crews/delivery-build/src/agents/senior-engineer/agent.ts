@@ -87,11 +87,9 @@ export function parseReviewResult(raw: string): {
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const ALLOWED_TOOLS = [
-  // GitLab MCP — read-only + comments
-  'mcp__gitlab__get_merge_request',
-  'mcp__gitlab__list_merge_request_diffs',
+  // GitLab MCP — read-only branch review (pre-MR)
+  'mcp__gitlab__get_branch_diffs',
   'mcp__gitlab__get_file_contents',
-  'mcp__gitlab__create_note',
   'mcp__gitlab__list_branches',
   // Atlassian MCP — read-only
   'mcp__atlassian__jira_get_issue',
@@ -133,7 +131,7 @@ async function run(input: AgentInput): Promise<AgentResult> {
   });
 
   // SECURITY: input.context is constructed by the workflow from trusted
-  // internal values (task, mrUrl, diff). Never pass user-supplied data
+  // internal values (task, branchName). Never pass user-supplied data
   // here without sanitising it first.
   const taskPrompt = [
     prompt,

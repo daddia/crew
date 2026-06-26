@@ -66,7 +66,7 @@ function makeSession(messages: SDKResultMessage[] = []): AgentSession {
 
 const baseInput: AgentInput = {
   issueKey: 'CREW-50-003',
-  context: { task: 'peer-code-review', mrUrl: 'https://gitlab.example.com/mr/7' },
+  context: { task: 'peer-code-review', branchName: 'feature/CREW-50-003-test' },
 };
 
 describe('seniorEngineer.run()', () => {
