@@ -50,3 +50,9 @@ Desktop.ini
 
 # npm auth (written by CI)
 .npmrc
+
+# .cursor
+.cursor/
+!.cursor/rules/
+!.cursor/skills/
+!.cursor/mcp.json
