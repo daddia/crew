@@ -13,7 +13,7 @@
     "@daddia/crew-delivery-code-review#build": {
       "dependsOn": ["@daddia/crew#build", "^build"]
     },
-    "@daddia/crew-delivery-final-review#build": {
+    "@daddia/crew-delivery-review#build": {
       "dependsOn": ["@daddia/crew#build", "^build"]
     },
     "@daddia/crew-delivery-qa#build": {

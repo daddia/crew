@@ -19,10 +19,10 @@ Two layers:
 | ------------------------------ | ----------------------------------------------------------------- | ---------------------------------- | ------------- |
 | `crews/delivery-build/`        | Pick up story → implement → peer review → open MR → CI → hand off | `delivery-build`                   | Implemented   |
 | `crews/delivery-qa/`           | Deploy to QA → automated + exploratory pass → defect loop → hand off | `delivery-qa`                   | Implemented   |
-| `crews/delivery-final-review/` | Tech-lead final review → PM HITL → merge → Done                   | `delivery-review`                  | Scaffold only |
+| `crews/delivery-review/`       | Tech-lead final review → PM HITL → merge → Done                   | `delivery-review`                  | Scaffold only |
 | `crews/delivery-code-review/`  | Standalone code-review crew (post-MR, planned CLI-shaped)         | `code-reviewer`                    | Scaffold only |
 
-`delivery-final-review/` renames to `delivery-review/` in CREW-06-01. Flow contracts for the full vertical live in [`docs/design/crew-flows/`](docs/design/crew-flows/).
+Flow contracts for the full vertical live in [`docs/design/crew-flows/`](docs/design/crew-flows/).
 
 ## Repository layout
 
@@ -74,7 +74,7 @@ crews/
     package.json           # @daddia/crew-delivery-qa
 
   delivery-code-review/    # Scaffold — see crew README
-  delivery-final-review/   # Scaffold — renames to delivery-review (CREW-06); see crew README
+  delivery-review/         # Scaffold — see crew README
 
 packages/
   crew/                    # @daddia/crew — published shared library

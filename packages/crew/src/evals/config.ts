@@ -73,7 +73,7 @@ export function resolveCrewDir(
     }
   }
 
-  for (const entry of ['delivery-build', 'delivery-code-review', 'delivery-final-review']) {
+  for (const entry of ['delivery-build', 'delivery-code-review', 'delivery-review']) {
     const candidate = join(workspaceRoot, 'crews', entry);
     if (existsSync(join(candidate, 'evals'))) {
       return candidate;

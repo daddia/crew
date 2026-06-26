@@ -1,18 +1,32 @@
-import { initTracing } from '@daddia/crew';
-import { SchemaValidationError } from '@daddia/crew/config';
 import { pathToFileURL } from 'node:url';
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
-import { loadConfig, CONFIG_SCHEMA_VERSION } from './config.js';
+import { initTracing } from '@daddia/crew';
+import { SchemaValidationError, redact } from '@daddia/crew/config';
+import { loadConfig, CONFIG_SCHEMA_VERSION, type Config } from './config.js';
 import { log } from './observability.js';
 import { createStateStore } from './state.js';
+
+/**
+ * HTTP application with routes wired for this crew. Exported for unit tests
+ * that exercise handlers without binding a port.
+ */
+export function createApp(): Hono {
+  const app = new Hono();
+  app.get('/healthz', (c) => c.json({ ok: true }));
+
+  // TODO (CREW-06-06): POST /webhooks/jira — dispatch on transition to In Review.
+
+  return app;
+}
 
 /**
  * Full application boot sequence. Exported so tests can drive it with a fixture
  * env without spawning a real process.
  */
 export async function boot(env: NodeJS.ProcessEnv = process.env): Promise<void> {
-  let config;
+  let config: Config;
+
   try {
     config = loadConfig(env);
   } catch (err) {
@@ -28,28 +42,25 @@ export async function boot(env: NodeJS.ProcessEnv = process.env): Promise<void> 
     throw err;
   }
 
-  initTracing({ serviceName: 'delivery-final-review' });
+  initTracing({
+    serviceName: 'delivery-review',
+    honeycombApiKey: config.secrets.honeycombApiKey,
+  });
 
   log.info('config.loaded', {
     crewId: config.identity.crewId,
     schemaVersion: CONFIG_SCHEMA_VERSION,
+    ...redact(config),
   });
 
-  const { port, dbPath } = config.infrastructure;
+  const state = createStateStore(config.infrastructure.dbPath);
+  const app = createApp();
 
-  // State is initialised eagerly so the DB file is created and WAL mode is set
-  // before the first request. Once webhook handlers are wired they will receive
-  // this store; the reference is also needed for graceful shutdown.
-  const state = createStateStore(dbPath);
-
-  const app = new Hono();
-
-  app.get('/healthz', (c) => c.json({ ok: true }));
-
-  // TODO (CREW-06-06): POST /webhooks/jira — dispatch on transition to In Review.
-
-  const server = serve({ fetch: app.fetch, port }, () => {
-    log.info('server.start', { port, db: dbPath });
+  const server = serve({ fetch: app.fetch, port: config.infrastructure.port }, () => {
+    log.info('server.start', {
+      port: config.infrastructure.port,
+      db: config.infrastructure.dbPath,
+    });
   });
 
   function shutdown(): void {
@@ -64,7 +75,6 @@ export async function boot(env: NodeJS.ProcessEnv = process.env): Promise<void> 
   process.on('SIGINT', shutdown);
 }
 
-// Execute boot only when this file is the direct entry point.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   void boot();
 }

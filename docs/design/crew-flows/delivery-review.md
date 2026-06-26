@@ -1,6 +1,6 @@
 # Delivery Review (`delivery-review`)
 
-Forward-looking contract for the final-review slice. Scaffolded in code as [`crews/delivery-final-review/`](../../../crews/delivery-final-review/) — the folder will be renamed to `delivery-review` in CREW-06-01.
+Forward-looking contract for the final-review slice. Scaffolded in code as [`crews/delivery-review/`](../../../crews/delivery-review/).
 
 ```ts
 /**

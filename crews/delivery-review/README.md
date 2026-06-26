@@ -1,7 +1,6 @@
-# Delivery Review Crew (`delivery-final-review` → `delivery-review`)
+# Delivery Review Crew (`delivery-review`)
 
-> **Scaffold** — implements the planned `delivery-review` flow contract. Folder rename to
-> `delivery-review` is CREW-06-01. Authoritative spec:
+> **Scaffold** — implements the planned `delivery-review` flow contract. Authoritative spec:
 > [`docs/work/06-delivery-review/design.md`](../../docs/work/06-delivery-review/design.md) ·
 > [`docs/design/crew-flows/delivery-review.md`](../../docs/design/crew-flows/delivery-review.md)
 
@@ -40,7 +39,7 @@ PM sign-off is human-only in v1 — no `product-manager` agent persona.
 | Component         | Status                                          |
 | ----------------- | ----------------------------------------------- |
 | `src/workflow.ts` | Stubbed — throws `not yet implemented`          |
-| `src/state.ts`    | Scaffolded with the planned `Step` union        |
+| `src/state.ts`    | Step union per design contract                  |
 | `src/index.ts`    | Scaffolded (`/healthz` only; no handlers wired) |
 | Personas          | Not yet added                                   |
 | Webhook handler   | Not yet added                                   |
@@ -54,7 +53,7 @@ cp .env.example .env
 cd ../../          # workspace root
 pnpm install && pnpm build
 
-cd crews/delivery-final-review
+cd crews/delivery-review
 pnpm start
 ```
 

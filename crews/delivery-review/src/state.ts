@@ -6,7 +6,16 @@ import type {
   StoryRow as BaseStoryRow,
 } from '@daddia/crew/state';
 
-export type Step = 'final-code-review' | 'stakeholder-review' | 'done' | 'needs-human-review';
+export const STEPS = [
+  'context-seed',
+  'final-code-review',
+  'stakeholder-review-pending',
+  'merge-and-close',
+  'done',
+  'needs-human-review',
+] as const;
+
+export type Step = (typeof STEPS)[number];
 
 export type StoryRow = Omit<BaseStoryRow, 'currentStep'> & { currentStep: Step };
 export type StepRow = Omit<BaseStepRow, 'step'> & { step: Step };
