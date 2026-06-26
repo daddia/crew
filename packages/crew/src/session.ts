@@ -85,17 +85,35 @@ class QueryBackedSession implements AgentSession {
   }
 }
 
+async function filterExistingPaths(
+  paths: string[],
+  label: 'skill' | 'subagent',
+): Promise<string[]> {
+  const results = await Promise.all(
+    paths.map(async (p) => {
+      try {
+        await access(p);
+        return p;
+      } catch {
+        console.warn(`resolveSession: ${label} file not found, skipping: ${p}`);
+        return null;
+      }
+    }),
+  );
+  return results.filter((p): p is string => p !== null);
+}
+
 /**
  * Resolve whether to start a new Claude session or resume an existing one.
  * Returns a session handle; call {@link AgentSession.send} then iterate
  * {@link AgentSession.stream}. Errors from the SDK are propagated on send or
  * while streaming.
  *
- * Subagent definitions listed in AgentDefinition.subagentPaths are validated
- * before the session is created. Missing files are skipped with a warning.
- * When valid subagent paths are present, the SDK subprocess is pointed at the
- * agent's project directory (settingSources: ['project']) so it loads the
- * .claude/agents/ definitions automatically.
+ * Skill and subagent paths listed on AgentDefinition are validated before the
+ * session is created. Missing files are skipped with a warning. When at least
+ * one valid skill or subagent path exists, the SDK subprocess is pointed at the
+ * agent's project directory (settingSources: ['project']) so it loads
+ * .claude/skills/ and .claude/agents/ definitions automatically.
  */
 export async function resolveSession(
   options: SessionOptions,
@@ -103,21 +121,14 @@ export async function resolveSession(
 ): Promise<ActiveSession> {
   const { resumeWithinMs, model, definition, auditHook } = options;
 
-  const results = await Promise.all(
-    definition.subagentPaths.map(async (p) => {
-      try {
-        await access(p);
-        return p;
-      } catch {
-        console.warn(`resolveSession: subagent file not found, skipping: ${p}`);
-        return null;
-      }
-    }),
-  );
-  const validSubagentPaths = results.filter((p): p is string => p !== null);
+  const [validSkillPaths, validSubagentPaths] = await Promise.all([
+    filterExistingPaths(definition.skillPaths, 'skill'),
+    filterExistingPaths(definition.subagentPaths, 'subagent'),
+  ]);
 
   const cwd = dirname(definition.promptPath);
-  const settingSources: SettingSource[] = validSubagentPaths.length > 0 ? ['project'] : [];
+  const settingSources: SettingSource[] =
+    validSkillPaths.length > 0 || validSubagentPaths.length > 0 ? ['project'] : [];
 
   const baseOptions: Options = {
     model,

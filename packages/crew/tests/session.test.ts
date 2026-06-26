@@ -1,13 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { readFile } from 'node:fs/promises';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { SDKMessage } from '@anthropic-ai/claude-agent-sdk';
 
 vi.mock('@anthropic-ai/claude-agent-sdk', () => ({
   query: vi.fn(),
 }));
 
-vi.mock('node:fs/promises', () => ({
-  access: vi.fn(),
-}));
+vi.mock('node:fs/promises', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs/promises')>();
+  return {
+    ...actual,
+    access: vi.fn(),
+  };
+});
 
 import { query } from '@anthropic-ai/claude-agent-sdk';
 import { access } from 'node:fs/promises';
@@ -16,6 +23,17 @@ import type { SessionOptions } from '../src/session.js';
 
 const mockQuery = vi.mocked(query);
 const mockAccess = vi.mocked(access);
+
+const fixturesDir = join(dirname(fileURLToPath(import.meta.url)), 'fixtures');
+const seniorEngineerFixture = join(fixturesDir, 'senior-engineer');
+const engineerFixture = join(fixturesDir, 'engineer');
+const peerCodeReviewSkill = join(
+  seniorEngineerFixture,
+  '.claude',
+  'skills',
+  'peer-code-review',
+  'SKILL.md',
+);
 
 function makeQuery(messages: SDKMessage[] = []) {
   return {
@@ -193,7 +211,7 @@ describe('resolveSession', () => {
       );
     });
 
-    it('does not set settingSources when subagentPaths is empty', async () => {
+    it('does not set settingSources when subagentPaths and skillPaths are empty', async () => {
       await startSession(makeOptions());
 
       expect(mockAccess).not.toHaveBeenCalled();
@@ -269,6 +287,113 @@ describe('resolveSession', () => {
 
       const options = mockQuery.mock.calls[0]?.[0].options as Record<string, unknown>;
       expect(options).not.toHaveProperty('settingSources');
+    });
+  });
+
+  describe('skill loading', () => {
+    it('Gherkin: a persona with skills but no subagents loads its skills', async () => {
+      await startSession(
+        makeOptions({
+          definition: {
+            name: 'senior-engineer',
+            promptPath: join(seniorEngineerFixture, 'prompt.md'),
+            skillPaths: [peerCodeReviewSkill],
+            subagentPaths: [],
+            allowedTools: ['Read'],
+            mcpServerNames: ['gitlab'],
+          },
+        }),
+      );
+
+      expect(mockAccess).toHaveBeenCalledWith(peerCodeReviewSkill);
+      expect(mockQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          options: expect.objectContaining({
+            cwd: seniorEngineerFixture,
+            settingSources: ['project'],
+          }),
+        }),
+      );
+
+      const skillContent = await readFile(peerCodeReviewSkill, 'utf8');
+      expect(skillContent).toContain('peer-code-review');
+    });
+
+    it('Gherkin: a persona with subagents still loads its skills', async () => {
+      const implementStorySkill = join(
+        engineerFixture,
+        '.claude',
+        'skills',
+        'implement-story',
+        'SKILL.md',
+      );
+      const testRunnerSubagent = join(engineerFixture, '.claude', 'agents', 'test-runner.md');
+
+      await startSession(
+        makeOptions({
+          definition: {
+            name: 'engineer',
+            promptPath: join(engineerFixture, 'prompt.md'),
+            skillPaths: [implementStorySkill],
+            subagentPaths: [testRunnerSubagent],
+            allowedTools: ['Read', 'Edit'],
+            mcpServerNames: ['gitlab'],
+          },
+        }),
+      );
+
+      expect(mockAccess).toHaveBeenCalledWith(implementStorySkill);
+      expect(mockAccess).toHaveBeenCalledWith(testRunnerSubagent);
+      const options = mockQuery.mock.calls[0]?.[0].options as Record<string, unknown>;
+      expect(options['settingSources']).toEqual(['project']);
+      expect(options['cwd']).toBe(engineerFixture);
+
+      const skillContent = await readFile(implementStorySkill, 'utf8');
+      expect(skillContent).toContain('implement-story');
+    });
+
+    it('warns and skips a skill path that cannot be accessed', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const enoent = Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
+      mockAccess.mockRejectedValueOnce(enoent);
+
+      await startSession(
+        makeOptions({
+          definition: {
+            name: 'senior-engineer',
+            promptPath: join(seniorEngineerFixture, 'prompt.md'),
+            skillPaths: [join(seniorEngineerFixture, '.claude', 'skills', 'missing', 'SKILL.md')],
+            subagentPaths: [],
+            allowedTools: ['Read'],
+            mcpServerNames: ['gitlab'],
+          },
+        }),
+      );
+
+      expect(warnSpy).toHaveBeenCalledOnce();
+      expect(warnSpy.mock.calls[0]?.[0]).toContain('skill file not found');
+      const options = mockQuery.mock.calls[0]?.[0].options as Record<string, unknown>;
+      expect(options).not.toHaveProperty('settingSources');
+      warnSpy.mockRestore();
+    });
+
+    it("passes settingSources: ['project'] when only valid skill paths exist", async () => {
+      await startSession(
+        makeOptions({
+          definition: {
+            name: 'senior-engineer',
+            promptPath: join(seniorEngineerFixture, 'prompt.md'),
+            skillPaths: [peerCodeReviewSkill],
+            subagentPaths: [],
+            allowedTools: ['Read'],
+            mcpServerNames: ['gitlab'],
+          },
+        }),
+      );
+
+      const options = mockQuery.mock.calls[0]?.[0].options as Record<string, unknown>;
+      expect(options['settingSources']).toEqual(['project']);
     });
   });
 
