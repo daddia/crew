@@ -591,7 +591,14 @@ async function runQaWorkflowInner(
     return;
   }
 
-  emitWorkflowComplete(issueKey, state, 'exploratory-pass', true, qaSeed.mrUrl);
+  // ── Success: transition to In Review ─────────────────────────────────────
+  state.upsertStory(issueKey, 'in-review');
+  state.startStep(issueKey, 'in-review');
+  await jira.transitionIssue(issueKey, 'In Review');
+  state.finishStep(issueKey, 'in-review', { verdict: 'ok' });
+
+  log.info('workflow.handoff-to-review', { issueKey, mrUrl: qaSeed.mrUrl });
+  emitWorkflowComplete(issueKey, state, 'in-review', true, qaSeed.mrUrl);
 }
 
 /**

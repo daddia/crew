@@ -193,7 +193,60 @@ describe('runQaWorkflow', () => {
     expect(finishedSteps).toContain('automated-suite');
     expect(finishedSteps).toContain('exploratory-pass');
     expect(finishedSteps).toContain('external-integration');
+    expect(finishedSteps).toContain('in-review');
+    expect(ctxBase.jira.transitionIssue).toHaveBeenCalledWith('CREW-99', 'In Review');
     expect(ctxBase.jira.transitionIssue).not.toHaveBeenCalledWith('CREW-99', 'Needs human review');
+    expect(state.stories.get('CREW-99')?.currentStep).toBe('in-review');
+  });
+
+  it('emits workflow.handoff-to-review log after transitioning to In Review', async () => {
+    const ctxBase = makeCtxBase();
+    const workspace = makeWorkspaceMock();
+    const state = makeState();
+
+    await runQaWorkflow(
+      { issueKey: 'CREW-42', state, ...ctxBase },
+      { workspace, agents: { qaEngineer: { name: 'qa-engineer', run: mockQaEngineer } } },
+    );
+
+    expect(vi.mocked(log.info)).toHaveBeenCalledWith(
+      'workflow.handoff-to-review',
+      expect.objectContaining({
+        issueKey: 'CREW-42',
+        mrUrl: 'https://gitlab.example.com/mr/7',
+      }),
+    );
+  });
+
+  it('persists per-step cost_usd for agent steps on happy path', async () => {
+    const ctxBase = makeCtxBase();
+    const workspace = makeWorkspaceMock();
+    const state = makeState();
+
+    mockQaEngineer.mockImplementation(async (input: AgentInput) => {
+      const task = input.context['task'];
+      const costByTask: Record<string, number> = {
+        'deploy-qa': 0.01,
+        'run-automated-suite': 0.02,
+        'exploratory-pass': 0.03,
+      };
+      return passResult({
+        costUsd: costByTask[String(task)] ?? 0,
+        artefacts: { sessionId: `sess-${String(task)}`, verdict: 'pass' },
+      });
+    });
+
+    await runQaWorkflow(
+      { issueKey: 'CREW-99', state, ...ctxBase },
+      { workspace, agents: { qaEngineer: { name: 'qa-engineer', run: mockQaEngineer } } },
+    );
+
+    const agentSteps = state.stepHistory.filter((r) => r.sessionId !== null);
+    expect(agentSteps.length).toBeGreaterThanOrEqual(3);
+    for (const row of agentSteps) {
+      expect(row.costUsd).not.toBeNull();
+      expect(row.costUsd).toBeGreaterThan(0);
+    }
   });
 
   it('writes stories row before each agent.run call', async () => {
