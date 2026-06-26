@@ -1,10 +1,10 @@
 ---
 type: Product Strategy
 scope: product
-version: '3.0'
+version: '3.1'
 owner: daddia
 status: Current
-last_updated: 2026-05-24
+last_updated: 2026-06-26
 ---
 
 # Product Strategy — Crew
@@ -39,6 +39,8 @@ The agent ecosystem has converged on three layers. Crew's position is deliberate
 
 **Agent SDKs and frameworks.** LangChain, CrewAI, AutoGen, Mastra, and the Claude Agent SDK own session management, tool execution, and prompt orchestration internals. Crew is a runtime layer on top of an SDK, not a replacement for one. The SDK is pluggable; Crew's value lives above it.
 
+**Durable agent runtimes.** A newer class of framework packages durable execution, channels, sandboxing, and human-in-the-loop into a filesystem-first runtime for *single* agents. These validate Crew's core bets (filesystem-first authoring, durability, evals on the production surface) and, more consequentially, commoditise the runtime substrate. Crew treats them as substrate to ride, not rivals to beat: where a maintained durable runtime exists, Crew prefers to adopt its open primitives rather than rebuild them. What these runtimes do not provide is the layer Crew sells — deterministic multi-persona orchestration, a compounding surface, and a workspace contract. A single durable agent is not a crew.
+
 **Single-purpose coding agents.** Cursor, Windsurf, Codex, and Claude Code own the developer-in-the-loop coding experience. Crew is not an IDE extension. It operates unattended on a backlog, not interactively in an editor. The value proposition is throughput and governance, not keystroke assistance.
 
 ### 3.2 Where Crew is differentiated
@@ -48,6 +50,8 @@ The agent ecosystem has converged on three layers. Crew's position is deliberate
 **Crews, not agents.** The unit of deployment is a team, not a function. A crew has multiple specialised personas, a defined workflow, a peer-review loop, and a definition of done. This is what makes autonomous operation trustworthy — no single agent approves its own work.
 
 **Artefact-based convergence.** Personas do not message each other. They read from and write to versioned artefacts — the same documents, branches, and issues that human teams use. This means every step is auditable, every decision is traceable, and there is no hidden agent-to-agent state that a reviewer cannot inspect.
+
+**Deterministic orchestration, agentic execution.** The workflow is deterministic and reviewable; the model does the work *inside* bounded steps but never decides the workflow itself — the team, the sequence, or the tool surface. This is the deliberate opposite of an agentic orchestrator that lets a model assemble all of that at runtime: a powerful pattern, but one fundamentally at odds with auditability and bounded operation. Crew keeps the workflow a reviewable artefact and reserves model-generated orchestration as an opt-in, evidence-gated capability, not the default. Predictability is the product.
 
 **Compounding above the model.** Most agent platforms reset on every run. Crew accumulates value across runs: project memory reduces context cost, cross-run evidence trains evaluation policy, model routing optimises cost-quality trade-offs per task type, and specialist optimisers propose improvements to the platform itself based on observed outcomes. The compounding surface is the commercial moat — it is where Crew's value diverges from the model's value with every run.
 
@@ -157,3 +161,5 @@ Solo-operated today. The RACI expands as crews are operated by or for other team
 ## 10. The bet
 
 Crew is a multi-year platform bet. The compounding thesis, stated once: **own the layer above the model, where orchestration, memory, evidence, and governance accumulate value with every run.** A better foundation model raises the floor for a single call. A better runtime raises the floor for every call, forever. Crew is being built to be that runtime.
+
+The runtime layer itself is commoditising — well-resourced durable-agent frameworks now give away what was once hard to build. That sharpens rather than threatens the bet. It lowers the cost of Crew's substrate and concentrates defensibility where it always belonged: the compounding surface, the multi-persona orchestration, and the catalogue above the runtime. Crew wins by shipping the layer the frameworks do not, on top of the substrate they now provide — and by refusing to spend its scarce effort rebuilding substrate it can borrow.

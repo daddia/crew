@@ -2,7 +2,7 @@
 type: Solution Architecture
 scope: product
 stage: full
-version: '2.2'
+version: '2.3'
 owner: daddia
 status: Current
 last_updated: 2026-06-26
@@ -18,7 +18,7 @@ Three further constraints flow from the product narrative and shape this documen
 
 1. **Compounding surface.** Memory, evidence, evaluation policy, model routing, and orchestration are first-class platform concerns — not afterthoughts. The Pro-tier managed control plane (planned, deferred to the Next / Later phases) is where these compound across runs and crews.
 2. **Legible to agents.** Crew is extended by AI agents, including Crew itself. Building blocks, contracts, and conventions must be reasonable over by an agent, not only by a human — names are explicit, side effects are local, and module boundaries match the words an agent would search for.
-3. **Agent SDK-agnostic.** Crew is a runtime and deployment layer on top of *an* agent SDK, not a specific one. The SDK in use today resolves sessions, executes tools, and exposes a post-tool-use hook surface; any SDK that exposes that contract can be wired in without changing the runtime API. Crew's value lives above the SDK, not inside it.
+3. **Agent SDK-agnostic.** Crew is a runtime and deployment layer on top of *an* agent SDK, not a specific one. The SDK in use today resolves sessions, executes tools, and exposes a post-tool-use hook surface; any SDK that exposes that contract can be wired in without changing the runtime API. Crew's value lives above the SDK, not inside it. Contemporary durable-agent runtimes demonstrate the same contract on different stacks — evidence the boundary is real, and candidate substrates Crew can ride rather than reimplement.
 
 Current-state conventions for code are authoritative in [`../../AGENTS.md`](../../AGENTS.md). Sprint-level designs are tracked outside this repo (Jira and Confluence).
 
@@ -186,6 +186,8 @@ This is an authoring constraint (`AGENTS.md`), not a runtime measurement.
 | 8   | **Legible to agents.** Module boundaries, file names, and contracts are chosen so an AI agent can locate the right code on the first search and modify it without an oral handoff. Names are explicit (no clever abbreviations); side effects are local to the file that names them; cross-module coupling goes through named exports, never via global mutation.                                                      | Slightly more verbose code and more files than a human-only codebase would warrant; rewarded by Crew being extended by Crew safely.                  | Authoring constraint (see §2.1) |
 | 9   | **Agent SDK-agnostic, model-agnostic.** The `Agent` contract names sessions, tool execution, and a post-tool-use hook surface — never a specific SDK. The foundation model is selected per task by the Pro-tier router (or pinned in config); no crew imports a vendor SDK directly. Today the codebase is wired to one SDK because shipping demanded it; a second SDK is an adapter, not a refactor. | A small abstraction tax at the runtime boundary; rewarded by insulation from any single vendor's roadmap, deprecation, or pricing shift.             | Compounding value above the model |
 | 10  | **Filesystem-first authoring.** Personas, skills, subagents, and crew policy are files at predictable paths; the path is the identifier. No parallel registry. Conventions are documented in `AGENTS.md` and enforced mechanically in CI (`guard:invariants`). Runtime docs ship inside the published package so agents extending Crew read contracts locally. | Slightly more directory structure than a single config object; rewarded by inspectability, diffability, and agent legibility — the catalogue scales by adding files, not by editing a central registry. | Reproducible deployability, Authoring constraint |
+| 11  | **Deterministic orchestration, deferred agentic planning.** The workflow is a deterministic, reviewable plan; the model executes work inside bounded steps but never decides the sequence, the team, or the tool surface at runtime. Model-generated workflow plans are an opt-in capability — default-off and gated behind evals (see §5.6). | Defers the most flexible (and most marketable) "agentic orchestrator" pattern; rewarded by every run staying auditable and bounded. | Auditability, Bounded operation |
+| 12  | **Borrow substrate, don't rebuild it.** Durable execution, sandboxing, channels, and durable human-in-the-loop are substrate, not differentiation. Crew adopts them from maintained dependencies (the durable-execution and agent-SDK primitives that maintained agent runtimes provide) when a shipped workflow needs them, and keeps its own code on the layer above. | A dependency to track and an adapter to maintain; rewarded by not re-paying for runtime plumbing an earlier iteration already proved costly to own. | Reproducible deployability, Compounding value above the model |
 
 ## 4. Building block view
 
@@ -351,7 +353,7 @@ Two durability scopes coexist by design:
 |-------|-------|-----------------|---------------------|
 | **Workflow** | Story / step across personas | Per-crew SQLite (`stories`, `steps`); startup recovery scan | Unchanged — domain-specific |
 | **Session** | Single persona run | SDK session resume (`resumeWithinMs`); `maxTurns` / cost cap | Context compaction (Next) |
-| **Turn** | In-run tool checkpoints | Not yet — mid-implementation crash may replay tool work | Step checkpointing research (Future) |
+| **Turn** | In-run tool checkpoints | Not yet — mid-implementation crash may replay tool work | Adopt a maintained durable-execution engine (e.g. Inngest) rather than build bespoke — see §11 and ADR-016 (Future) |
 | **Pipeline** | Cross-crew handoffs | Jira state + `ready-for-*` events; poll fallback | Orchestrator suspend/resume (Future) |
 
 Story-level recovery is necessary for unattended crews. Turn-level checkpointing
@@ -452,6 +454,43 @@ process boot
 The invariant: no new story begins processing until interrupted runs have been
 either resumed or escalated. The `stories` row written _before_ `agent.run()`
 is the canonical in-flight signal.
+
+### 5.6 Orchestration determinism spectrum
+
+How much of the workflow the model decides is an explicit, staged choice — not a
+fixed property. Crew moves left-to-right deliberately, and never past the point
+its quality goals allow by default.
+
+```text
+1. Hardcoded sequence    workflow.ts                                ← delivery-build today
+2. Declarative plan      WorkflowPlan + Orchestrator/AgentRegistry
+                         (contract already exported by @daddia/crew) ← next
+3. Model-generated plan  LLM assembles team + tools + sequence
+                         at runtime; default-off, eval-gated         ← deferred
+```
+
+- **Level 1 — hardcoded.** `workflow.ts` names the sequence in code. Maximally
+  auditable, minimally flexible. Where the delivery crew runs today.
+- **Level 2 — declarative `WorkflowPlan`.** The sequence becomes data
+  (`WorkflowPlan`, `WorkflowStep`, `FailurePolicy`) interpreted by
+  `createWorkflowEngine`, assembled by an `Orchestrator` against an
+  `AgentRegistry`. Still deterministic; adaptive only at declared decision points
+  (loops, gates). The contract is already exported, so graduating from Level 1 to
+  Level 2 is wiring, not new architecture.
+- **Level 3 — model-generated plan.** An orchestrator model decides the agents,
+  tools, skills, and sequence per request and emits a plan for the engine to run.
+  This is the most flexible pattern and was the headline ambition of an earlier
+  Crew iteration (an agentic orchestrator on a durable engine). It is **deferred
+  by design**: it is in direct tension with quality goals #1 (auditability) and #2
+  (bounded operation), so it ships default-off and only for a specific workflow
+  once CrewBench evals demonstrate it stays within bounds. It is a capability, not
+  the default (principle 11, ADR-015).
+
+The earlier iteration validated Levels 2–3 end to end (declarative plans on a
+durable engine, model-driven dispatch); it was set aside not because the design
+was wrong but because shipping demanded the deterministic floor first. The
+substrate it hand-built (durable engine, channels, sandbox) is now a
+borrow-not-build decision (principle 12, ADR-016, §11).
 
 ## 6. Data model and ubiquitous language
 
@@ -579,6 +618,8 @@ is itself a graduation candidate (see §11).
 | ADR-012 | Agent SDK is pluggable behind the `Agent` contract; foundation model is selected by Pro-tier routing; no crew imports a vendor SDK directly                   | _(Not yet written)_ |
 | ADR-013 | Filesystem-first authoring: path-derived identity, no parallel registry; conventions enforced mechanically in CI                                                | _(Not yet written)_ |
 | ADR-014 | CrewBench evals exercise the production session surface; prompt/harness changes require eval gate before unattended deploy                                      | _(Not yet written)_ |
+| ADR-015 | Deterministic orchestration; model-generated workflow plans (Level 3, §5.6) are default-off and gated behind evals                                              | _(Not yet written)_ |
+| ADR-016 | Borrow durable-execution substrate (e.g. Inngest), sandbox, and channels from maintained dependencies rather than build bespoke; adopt only when a shipped workflow needs them | _(Not yet written)_ |
 
 ## 10. Risks, technical debt, and open questions
 
@@ -598,6 +639,8 @@ is itself a graduation candidate (see §11).
 | R10 | "Legible to agents" erodes over time as patches and shortcuts accumulate          | Medium     | Medium | `AGENTS.md` is authoritative; pre-merge checklist requires that an AI agent can describe the change without an oral handoff. Refactor budget per quarter to repay clarity debt.                                |
 | R11 | Catalogue growth outpaces shared-runtime test coverage                            | Low        | Medium | Each new crew adopts the runtime contract test suite at scaffolding time; runtime fixes ship with backport tests that exercise every catalogued crew.                                                         |
 | R12 | Single-SDK wiring becomes de-facto vendor lock as crews multiply                  | Medium     | Medium | The `Agent` contract is SDK-agnostic and tested independently of any one SDK; adding a second SDK is gated on a real driver (second model provider, capability gap, or pricing event) — not done speculatively, but the contract stays adapter-shaped so the second SDK is one file, not a refactor. |
+| R13 | A well-resourced durable-agent runtime commoditises the substrate layer | High       | Medium | Defensibility sits above the substrate: deterministic multi-persona orchestration, the compounding surface (memory, evidence, evaluation, routing), and the workspace contract — none of which single-agent runtimes provide. Where such a runtime exposes reusable primitives (a durable-execution engine, an agent SDK), Crew adopts them rather than competes (§11, principle 12, ADR-016). The exposure is re-platforming churn, not loss of moat. |
+| R14 | "Slowly add v1 features" silently becomes "rebuild v1" — re-platforming instead of shipping | Medium     | High   | Features return only when a shipped workflow needs them (graduation discipline, §11). Substrate is borrowed, not rebuilt (principle 12). Agentic orchestration stays deferred (principle 11). The deterministic delivery workflow shipping end-to-end is the gating milestone before any v1 capability is reintroduced. |
 
 ### 10.2 Technical debt
 
@@ -679,3 +722,17 @@ Nothing graduates speculatively. Each row lifts only when the trigger fires.
 | Channel adapter            | Per-handler Hono routes in `handlers/`                                        | `@daddia/crew/channels` (defineChannel)              | Second ingress surface (Slack or generic HTTP) duplicates handler boilerplate.                                                                     |
 | Schedule authoring         | `poller.ts` only                                                             | `schedules/` convention + host cron compile          | First scheduled-batch crew (Later).                                                                                                                |
 | Execution isolation        | Host workspace + workspace-lock                                                | `@daddia/crew/sandbox` adapter                       | Catalogue crew needs untrusted code execution (Later).                                                                                             |
+| Durable execution engine (turn-level) | Per-crew SQLite story/step recovery                              | A maintained durable-execution engine (e.g. Inngest) behind `createWorkflowEngine` | A shipped workflow needs turn-level durability or durable HITL (CREW-20). Borrow, don't build (ADR-016).                   |
+| Durable human-in-the-loop  | Escalation-only (`escalateToHumanReview`)                                      | `@daddia/crew/hitl` over the durable engine          | A workflow needs a mid-run human approval gate that resumes the same run, not a terminal escalation.                                               |
+| Model-generated workflow plan (Level 3) | Deterministic `WorkflowPlan` (Levels 1–2, §5.6)                   | `Orchestrator` resolving a model-authored plan       | A specific workflow's CrewBench evals show a model-generated plan stays auditable and bounded. Default-off until then (ADR-015).                    |
+
+**Borrow substrate, don't rebuild it.** Durable execution, sandboxing, channels,
+and durable HITL are substrate, not differentiation. An earlier Crew iteration
+built them by hand (an agentic orchestrator on Inngest), and that weight is part
+of why it was deferred in favour of a deterministic floor that ships. When one of
+the triggers above fires, the default is to adopt a maintained dependency — the
+durable-execution and agent-SDK primitives that maintained agent runtimes
+provide — and keep Crew's own code on the layer above: orchestration,
+evidence, evaluation, and the catalogue. The runtime contract (`Agent`,
+`AgentCrew`) stays adapter-shaped so the substrate underneath can change without
+touching crews (principle 12).

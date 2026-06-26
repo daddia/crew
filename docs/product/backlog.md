@@ -1,7 +1,8 @@
 ---
 type: Backlog
+level: epic
 scope: product
-version: '0.2'
+version: '0.3'
 owner: daddia
 status: Current
 last_updated: 2026-06-26
@@ -11,186 +12,180 @@ related:
   - docs/architecture/solution.md
 ---
 
-# Backlog — Crew
+# Backlog -- Crew
 
-- **Product strategy:** [`strategy.md`](strategy.md)
-- **Solution architecture:** [`../architecture/solution.md`](../architecture/solution.md)
-- **Phases and gates:** [`roadmap.md`](roadmap.md)
+- **Product:** [`strategy.md`](strategy.md)
+- **Solution:** [`../architecture/solution.md`](../architecture/solution.md)
+- **Roadmap:** [`roadmap.md`](roadmap.md)
 
 ## 1. Summary
 
-**Objective.** Deliver the Crew platform from proof-of-concept to a hardened, commercially available runtime and catalogue — starting with software delivery as the first vertical proof, then broadening to additional crews, and eventually exposing the compounding surface (memory, evaluation, routing) that differentiates the platform from raw model calls. The bet is stated in [`strategy.md`](strategy.md) §3: a shared runtime hosts a growing catalogue of independently deployable crews; each crew reuses the substrate without reimplementing it.
+**Objective.** Deliver the Crew platform from proof-of-concept to a hardened,
+commercially available runtime and catalogue — starting with software delivery as
+the first vertical proof, then broadening to additional crews, and eventually
+exposing the compounding surface (memory, evaluation, routing) that differentiates
+the platform from raw model calls. This backlog decomposes the phases in
+[`roadmap.md`](roadmap.md) into epics; phase sequencing and exit criteria are
+owned by the roadmap, not duplicated here.
 
-**Strategic direction (2026).** Competitive review of contemporary agent runtimes confirms Crew's differentiation — multi-persona crews, artefact-based handoffs, governed tool policy, and compounding above the model — while surfacing platform gaps in authoring ergonomics, eval-driven quality, and turn-level durability. The Next phase closes the delivery loop *and* invests in: filesystem-first scaffolding (`crew init`), mechanical convention enforcement (`guard:invariants`), CrewBench (`crew eval`), progressive context control (skill loading, compaction), and operator visibility. Later phases generalise ingress (channels, schedules) and optional execution isolation for the broader catalogue. Future phase researches step checkpointing for cross-crew orchestration. Crew does not become a general-purpose single-agent framework; it absorbs harness patterns that serve unattended crews.
-
-**Delivery approach.** Prove the hardest thing first (`delivery-build` is the most demanding crew). Every later crew inherits a runtime that has already earned crash recovery, audit, bounded loops, and escalation. Once the first vertical is unattended-production-safe, open the catalogue.
+**Delivery approach.** Prove the hardest thing first (`delivery-build` is the most
+demanding crew). Every later crew inherits a runtime that has already earned crash
+recovery, audit, bounded loops, and escalation. Ship the deterministic floor
+before any agentic flexibility, and borrow substrate rather than rebuild it
+(see [`solution.md`](../architecture/solution.md) §5.6, §11). Once the first
+vertical is unattended-production-safe, open the catalogue.
 
 **Prerequisites (complete).**
 
-- `@daddia/crew` v0.4.x published to npm — `main`, `webhooks`, `config`, `state`, `workflow` subpaths all ship.
-- `delivery-build` core workflow implemented (engineer + senior-engineer; Jira poll + GitLab webhooks).
-- Runtime hardening epic RH01 complete — skills, tool enforcement, structured results, plugins, model routing, workspace (see `docs/work/TASKS.md`).
+- `@daddia/crew` v0.4.x published to npm — `main`, `webhooks`, `config`, `state`,
+  `workflow` subpaths all ship.
+- `delivery-build` core workflow implemented (engineer + senior-engineer; Jira
+  poll + GitLab webhooks).
+- Platform authoring & quality loop (RH02) complete — `crew init`,
+  `guard:invariants`, bundled docs, CrewBench (`crew eval`), progressive skills,
+  compaction, run-stream, security model (see [`../work/TASKS.md`](../work/TASKS.md)).
 - Crew flow contracts authored for the full delivery vertical (build, QA, review).
-- Railway deployment topology validated for server-shaped crews.
-- Contributing guides and AGENTS.md in place for new crew/persona authoring.
+- Container deployment topology validated for server-shaped crews.
+- Contributing guides and `AGENTS.md` in place for new crew/persona authoring.
 
-**Prerequisites (required before core work can ship).**
+**Prerequisites (required before Next can ship).**
 
-- CREW-2 must be fully production-safe (CREW-3 gates everything in Next).
-- Remote audit sink (`@daddia/crew/audit`) must ship before the first CLI-shaped crew (`code-reviewer`) can land — it is the only open blocker identified in [`solution.md`](../architecture/solution.md) §10.3.
+- CREW-03 must be fully production-safe — it gates everything in the Next phase.
+- The remote audit sink (CREW-04, `@daddia/crew/audit`) must ship before the first
+  CLI-shaped crew (CREW-07, `code-reviewer`) can land.
 
-**Out of scope.** The canonical no-gos live in [`strategy.md`](strategy.md) §5. Phase-gated deferrals live in [`roadmap.md`](roadmap.md) §Later and §Future.
+**Out of scope.** Canonical no-gos live in [`strategy.md`](strategy.md) §8.
+Phase-gated deferrals live in [`roadmap.md`](roadmap.md) §6 (Deferred beyond this cycle).
 
 ## 2. Conventions
 
 | Convention | Value |
-|------------|-------|
-| Epic ID | `CREW-{nn}` (e.g. `CREW-1`) |
-| Story ID | `CREW-{nn}-{nn}` (defined inside the work-package backlog) |
+| ---------- | ----- |
+| Epic ID | `CREW-{nn}` (e.g. `CREW-01`) — zero-padded two digits |
+| Epic work path | `docs/work/{nn}-{slug}/` — epic number prefix + kebab-case slug (max two words in slug) |
+| Task ID | `CREW-{nn}-{nn}` in `docs/work/{nn}-{slug}/tasks.md` |
 | Status | Not started · In progress · In review · Done · Blocked |
-| Priority | P0 (must have) · P1 (should have) · P2 (stretch) · P3 (defer) |
+| Priority | P0 (must) · P1 (should) · P2 (stretch) · P3 (defer) |
 | Estimation | Fibonacci story points (1, 2, 3, 5, 8, 13) |
-| Acceptance format | EARS + Gherkin at work-package scope |
 
 ## 3. Epic breakdown
 
 ### Now phase
 
-| Epic | Title | Phase | Priority | Deps | Points | Work package | Status |
-|------|-------|-------|----------|------|--------|--------------|--------|
-| CREW-1 | Shared runtime — `@daddia/crew` | Now | P0 | — | 40 | `work/01-shared-runtime/` | Done |
-| CREW-2 | `delivery-build` crew | Now | P0 | CREW-1 | 21 | `work/02-delivery-build/` | In progress |
-| CREW-3 | Production readiness — build crew | Now | P0 | CREW-2 | 13 | `work/03-build-production/` | In progress |
+| Epic ID | Title | Phase | Priority | Deps | Points | Work path | Status |
+| ------- | ----- | ----- | -------- | ---- | ------ | --------- | ------ |
+| CREW-01 | Shared runtime (`@daddia/crew`) | Now | P0 | — | 40 | `docs/work/01-shared-runtime/` | Done |
+| CREW-02 | `delivery-build` crew | Now | P0 | CREW-01 | 21 | `docs/work/02-delivery-build/` | In progress |
+| CREW-03 | Production readiness — build crew | Now | P0 | CREW-02 | 13 | `docs/work/03-build-production/` | In progress |
 
 ### Next phase
 
-| Epic | Title | Phase | Priority | Deps | Points | Work package | Status |
-|------|-------|-------|----------|------|--------|--------------|--------|
-| CREW-4 | Remote audit sink (`@daddia/crew/audit`) | Next | P0 | CREW-3 | TBD | `work/04-audit-sink/` (planned) | Not started |
-| CREW-5 | `delivery-qa` crew | Next | P0 | CREW-3 | TBD | `work/05-delivery-qa/` (planned) | Not started |
-| CREW-6 | `delivery-review` crew | Next | P0 | CREW-5 | TBD | `work/06-delivery-review/` (planned) | Not started |
-| CREW-7 | `code-reviewer` CLI crew | Next | P1 | CREW-4 | TBD | `work/07-code-reviewer/` (planned) | Not started |
-| CREW-8 | Observability — OTel tracing across crews | Next | P1 | CREW-3 | TBD | `work/08-otel/` (planned) | In progress |
-| CREW-9 | Commercial foundations — licence gating | Next | P1 | CREW-6 | TBD | `work/09-commercial/` (planned) | Not started |
-| CREW-14 | Authoring ergonomics — `crew init`, bundled docs, invariants | Next | P0 | CREW-3 | 13 | `work/14-authoring/` (planned) | Not started |
-| CREW-15 | CrewBench — `crew eval` framework and delivery fixtures | Next | P0 | CREW-3, CREW-14 | 21 | `work/15-crewbench/` (planned) | Not started |
-| CREW-16 | Harness hardening — progressive skills, compaction, run stream | Next | P1 | CREW-14 | 13 | `work/16-harness/` (planned) | Not started |
-| CREW-17 | Security model and pre-production checklist | Next | P1 | CREW-3 | 5 | `work/17-security/` (planned) | Done (RH02-11) |
+| Epic ID | Title | Phase | Priority | Deps | Points | Work path | Status |
+| ------- | ----- | ----- | -------- | ---- | ------ | --------- | ------ |
+| CREW-04 | Remote audit sink (`@daddia/crew/audit`) | Next | P0 | CREW-03 | TBD | `docs/work/04-audit-sink/` | Not started |
+| CREW-05 | `delivery-qa` crew | Next | P0 | CREW-03 | TBD | `docs/work/05-delivery-qa/` | Not started |
+| CREW-06 | `delivery-review` crew | Next | P0 | CREW-05 | TBD | `docs/work/06-delivery-review/` | Not started |
+| CREW-07 | `code-reviewer` CLI crew | Next | P1 | CREW-04 | TBD | `docs/work/07-code-reviewer/` | Not started |
+| CREW-08 | Observability — OTel tracing | Next | P1 | CREW-03 | TBD | `docs/work/08-observability/` | In progress |
+| CREW-09 | Commercial foundations — licence gating | Next | P1 | CREW-06 | TBD | `docs/work/09-commercial/` | Not started |
+| CREW-14 | Authoring ergonomics — `crew init`, invariants | Next | P0 | CREW-03 | 13 | `docs/work/14-authoring/` | Done (RH02) |
+| CREW-15 | CrewBench — `crew eval` and delivery fixtures | Next | P0 | CREW-03, CREW-14 | 21 | `docs/work/15-crewbench/` | Done (RH02) |
+| CREW-16 | Harness hardening — skills, compaction, run-stream | Next | P1 | CREW-14 | 13 | `docs/work/16-harness/` | Done (RH02) |
+| CREW-17 | Security model and pre-production checklist | Next | P1 | CREW-03 | 5 | `docs/work/17-security-model/` | Done (RH02) |
 
 ### Later phase
 
-| Epic | Title | Phase | Priority | Deps | Points | Work package | Status |
-|------|-------|-------|----------|------|--------|--------------|--------|
-| CREW-10 | Discovery crews (PM, Architect) | Later | P1 | CREW-6 | TBD | (planned) | Not started |
-| CREW-11 | Documentation / release-notes crew | Later | P1 | CREW-6 | TBD | (planned) | Not started |
-| CREW-12 | Pro-tier compounding surface | Later | P1 | CREW-9 | TBD | (planned) | Not started |
-| CREW-18 | Ingress conventions — channels and schedules | Later | P2 | CREW-6 | TBD | (planned) | Not started |
-| CREW-19 | Optional execution isolation (sandbox) | Later | P2 | CREW-12 | TBD | (planned) | Not started |
+| Epic ID | Title | Phase | Priority | Deps | Points | Work path | Status |
+| ------- | ----- | ----- | -------- | ---- | ------ | --------- | ------ |
+| CREW-10 | Discovery crews (PM, Architect) | Later | P1 | CREW-06 | TBD | `docs/work/10-discovery-crews/` | Not started |
+| CREW-11 | Documentation / release-notes crew | Later | P1 | CREW-06 | TBD | `docs/work/11-docs-crew/` | Not started |
+| CREW-12 | Pro-tier compounding surface | Later | P1 | CREW-09 | TBD | `docs/work/12-compounding-surface/` | Not started |
+| CREW-18 | Ingress conventions — channels and schedules | Later | P2 | CREW-06 | TBD | `docs/work/18-ingress/` | Not started |
+| CREW-19 | Optional execution isolation (sandbox) | Later | P2 | CREW-12 | TBD | `docs/work/19-sandbox/` | Not started |
 
 ### Future phase
 
-| Epic | Title | Phase | Priority | Deps | Points | Work package | Status |
-|------|-------|-------|----------|------|--------|--------------|--------|
-| CREW-13 | Cross-crew orchestrator | Future | P1 | CREW-12, CREW-20 | TBD | (planned) | Not started |
-| CREW-20 | Turn-level durability research | Future | P1 | CREW-16 | TBD | (planned) | Not started |
+| Epic ID | Title | Phase | Priority | Deps | Points | Work path | Status |
+| ------- | ----- | ----- | -------- | ---- | ------ | --------- | ------ |
+| CREW-13 | Cross-crew orchestrator | Future | P1 | CREW-12, CREW-20 | TBD | `docs/work/13-orchestrator/` | Not started |
+| CREW-20 | Turn-level durability | Future | P1 | CREW-16 | TBD | `docs/work/20-turn-durability/` | Not started |
 
-## 4. Epic detail — Now phase
+## 4. Epic detail (Now phase)
 
-### CREW-1 — Shared runtime (`@daddia/crew`)
+### CREW-01 -- Shared runtime (`@daddia/crew`)
 
-**Scope.** Publish the TypeScript monorepo package that every crew depends on. Ships the `Agent`, `AgentCrew`, `AgentInput`, `AgentResult`, and `AgentDefinition` contracts; the `resolveSession`, `buildAuditHook`, and `boundedIterGuard` helpers; plus four subpath exports: `state` (SQLite `StateStore`), `workflow` (`WorkflowEngine` + `WorkflowPlan`), `webhooks` (signature verification, replay guard, idempotency store), and `config` (typed env loader + `Secret` brand).
+**Scope.** Publish the TypeScript monorepo package that every crew depends on.
+Ships the `Agent`, `AgentCrew`, `AgentInput`, `AgentResult`, and `AgentDefinition`
+contracts; the `resolveSession`, `buildAuditHook`, and `boundedIterGuard` helpers;
+plus subpath exports `state` (SQLite `StateStore`), `workflow` (`WorkflowEngine` +
+`WorkflowPlan`), `webhooks` (signature verification, replay guard, idempotency),
+`config` (typed env loader + `Secret` brand), and `evals` (CrewBench).
 
-**Key deliverables.** Published `@daddia/crew` on npm at v0.4.0; all five subpaths resolve and export correctly; Changesets release pipeline wired to GitHub Actions; integration tests cover happy paths and local fallback for every subpath.
+**Key deliverables.** Published `@daddia/crew` on npm; all subpaths resolve and
+export correctly; Changesets release pipeline wired to CI; integration tests cover
+happy paths and local fallback for every subpath.
 
 **Dependencies.** None — this epic is the foundation.
 
-**Status.** Done. **Work package:** `work/01-shared-runtime/` (retrospective; no further authoring required unless the runtime contract changes).
+**Status.** Done. **Work path:** `docs/work/01-shared-runtime/` (retrospective; no
+further authoring unless the runtime contract changes).
 
----
+### CREW-02 -- `delivery-build` crew
 
-### CREW-2 — `delivery-build` crew
+**Scope.** The first crew running real Jira stories end-to-end. Implements the
+build sequence in [`../design/crew-flows/delivery-build.md`](../design/crew-flows/delivery-build.md):
+context seed → clarification assessment → implement → peer review (bounded loop,
+`REFACTOR_LOOP_CAP`) → open MR → CI monitor (bounded loop, `CI_RETRY_CAP`) →
+transition to "In QA". Two personas — `engineer` (implement, assess-clarification,
+address-feedback) and `senior-engineer` (peer-code-review) — each with a minimal
+`allowedTools` list and `buildAuditHook` enforced at runtime. Triggered by Jira
+poll (primary) and `POST /webhooks/jira` (secondary); human feedback via MR
+comments handled by `POST /webhooks/gitlab`.
 
-**Scope.** The first crew running real Jira stories end-to-nd. Implements the full build sequence defined in [`docs/design/crew-flows/delivery-build.md`](../design/crew-flows/delivery-build.md): context seed → clarification assessment → implement → peer review (bounded loop, `REFACTOR_LOOP_CAP`) → open MR → CI monitor (bounded loop, `CI_RETRY_CAP`) → transition to "In QA". Two personas — `engineer` (implement, assess-clarification, address-feedback) and `senior-ngineer` (peer-code-review) — each with a minimal `allowedTools` list and `buildAuditHook` enforced at runtime. Triggered by Jira poll (primary) and `POST /webhooks/jira` (secondary). Human feedback via MR comments handled by `POST /webhooks/gitlab`.
+**Key deliverables.** Working `delivery-build` server deployable to a container
+host; Hono server with `/healthz`; both personas with prompts, skills, and tool
+scoping; idempotent Jira + GitLab integrations; SQLite state store using
+`@daddia/crew/state`; crash-recovery startup scan; complete escalation paths (loop
+cap, clarification timeout, agent failure) all reaching "Needs human review"
+without crashing the server.
 
-**Key deliverables.** Working `delivery-build` server deployable to Railway; Hono server with `/healthz`; `engineer` and `senior-ngineer` personas with prompts, skills, and tool scoping; idempotent Jira + GitLab integrations; SQLite state store using `@daddia/crew/state`; crash-recovery startup scan; complete escalation paths (loop cap, clarification timeout, agent failure) all leading to "Needs human review" without crashing the server.
+**Dependencies.** CREW-01 (published `@daddia/crew` with `state`, `workflow`,
+`webhooks`, `config` subpaths).
 
-**Dependencies.** CREW-1 (published `@daddia/crew` with `state`, `workflow`, `webhooks`, `config` subpaths).
+**Status.** In progress — core workflow and runtime hardening complete;
+production-readiness items (CREW-03) remain. **Work path:** `docs/work/02-delivery-build/`.
 
-**Status.** In progress — core workflow and RH01 runtime hardening complete; production-readiness items (CREW-3) remain. **Work package:** `work/02-delivery-build/`.
+### CREW-03 -- Production readiness — build crew
 
----
+**Scope.** Everything required to run `delivery-build` unattended on real stories
+with confidence and evidence: a `pnpm diagnose` script verifying all integration
+touch points; structured cost-per-run logging emitted on every `workflow.complete`;
+`/healthz` reporting poller-tick status and SQLite health; an end-to-end smoke
+against a live Jira board and GitLab project; an operations runbook; and three or
+more real stories completing the autonomous path to "In QA". This epic is the
+direct gate for the Now exit criteria in [`roadmap.md`](roadmap.md).
 
-### CREW-3 — Production readiness — build crew
+**Key deliverables.** `pnpm diagnose` passing all checks; `workflow.complete` log
+with `totalCostUsd`, `durationMs`, and per-step breakdown; `/healthz` with a
+structured JSON body; runbook covering deploy, smoke, monitoring, recovery, and
+cost controls; three stories with provenance in the audit trail; all three
+escalation paths verified manually.
 
-**Scope.** Everything required to run `delivery-build` unattended on real stories with confidence and evidence. Specifically: a `pnpm diagnose` script that verifies all six integration touch points; structured cost-per-run logging emitted on every `workflow.complete` event; `/healthz` endpoint reporting poller tick status and SQLite health; end-to-nd smoke against a live Jira board and GitLab project; operations runbook; and three or more real stories completing the autonomous path to "In QA". This epic is the direct gate for the Now exit criteria in [`roadmap.md`](roadmap.md).
+**Dependencies.** CREW-02 (fully functional `delivery-build` workflow).
 
-**Key deliverables.** `pnpm diagnose` passing all checks; `workflow.complete` log with `totalCostUsd`, `durationMs`, and per-step breakdown; `/healthz` with structured JSON body; runbook covering deploy, smoke, monitoring, recovery, and cost controls; three stories with provenance in the audit trail; all three escalation paths (loop cap, clarification timeout, agent failure) verified manually.
-
-**Dependencies.** CREW-2 (fully functional `delivery-build` workflow).
-
-**Status.** In progress. **Work package:** `work/03-build-production/`.
-
----
-
-### CREW-14 — Authoring ergonomics
-
-**Scope.** Reduce time-to-first-crew and agent legibility: `crew init` CLI scaffolds server- or CLI-shaped crews; canonical persona layout documented and enforced (`plugin/` for skills/subagents; legacy `.claude/` trees removed); key contributor docs bundled inside the published `@daddia/crew` package; `guard:invariants` script enforces AGENTS.md rules (env isolation, crash-recovery ordering, dependency boundaries) in CI.
-
-**Key deliverables.** `npx @daddia/crew init <name>` (or equivalent); invariant guard in root `pnpm lint`; docs readable from `node_modules/@daddia/crew/docs`; contributing guide updated to reference init instead of manual copy.
-
-**Dependencies.** CREW-3 (stable reference crew to template from).
-
-**Status.** Not started. **Work package:** `work/14-authoring/` (planned).
-
----
-
-### CREW-15 — CrewBench (`crew eval`)
-
-**Scope.** First-class eval framework: `defineEval` / `crew eval` CLI; fixture-owned evals per crew driving real sessions; gate vs soft assertions; optional LLM-as-judge for fuzzy grading; CI integration with `--strict`. Delivery-build smoke evals cover escalation, tool allowlist, and handoff artefacts.
-
-**Key deliverables.** `@daddia/crew/evals` subpath (or standalone `@daddia/crew-cli` eval command); `evals/` convention per crew; baseline scores recorded in warehouse; roadmap exit criterion #5 met.
-
-**Dependencies.** CREW-3; CREW-14 (scaffold includes eval stub).
-
-**Status.** Not started. **Work package:** `work/15-crewbench/` (planned).
-
----
-
-### CREW-16 — Harness hardening
-
-**Scope.** Progressive skill loading; context compaction hook in `resolveSession`; operator run-stream or equivalent progress API; per-tool approval metadata for destructive integrations; dev fixture driver to run one story locally without live Jira.
-
-**Key deliverables.** Token spend measurably lower on skill-heavy runs; long implementation sessions survive context pressure; overnight operator can inspect live progress; `@daddia/crew/tools` subpath for typed crew-local tools (optional).
-
-**Dependencies.** CREW-14.
-
-**Status.** Not started. **Work package:** `work/16-harness/` (planned).
-
----
-
-### CREW-17 — Security model
-
-**Scope.** Publish `docs/architecture/security-model.md` (runtime vs workspace vs MCP trust boundaries); pre-production checklist in runbook; align with existing webhook verification and untrusted-input delimiters.
-
-**Key deliverables.** Security model doc; checklist referenced from delivery runbooks; no new code required beyond doc unless gaps found.
-
-**Dependencies.** CREW-3.
-
-**Status.** Done via RH02-11 (`docs/architecture/security-model.md`, delivery-build runbook §7). **Work package:** `work/17-security/` (planned).
-
----
+**Status.** In progress. **Work path:** `docs/work/03-build-production/`.
 
 ## 5. Dependency graph
 
 ```text
-CREW-1  ─────────────────────────────────────────────────────────────────
-  └── CREW-2 (delivery-build crew)
-        └── CREW-3 (production readiness)
-              ├── CREW-4 (audit sink)
-              │     └── CREW-7 (code-reviewer CLI)
-              ├── CREW-5 (delivery-qa)
-              │     └── CREW-6 (delivery-review)
-              │           ├── CREW-9 (commercial)
+CREW-01  ─────────────────────────────────────────────────────────────────
+  └── CREW-02 (delivery-build crew)
+        └── CREW-03 (production readiness)
+              ├── CREW-04 (audit sink)
+              │     └── CREW-07 (code-reviewer CLI)
+              ├── CREW-05 (delivery-qa)
+              │     └── CREW-06 (delivery-review)
+              │           ├── CREW-09 (commercial)
               │           │     └── CREW-12 (Pro-tier compounding)
               │           │           ├── CREW-13 (cross-crew orchestrator)
               │           │           │     └── CREW-20 (turn-level durability)
@@ -198,7 +193,7 @@ CREW-1  ────────────────────────
               │           ├── CREW-10 (discovery crews)
               │           ├── CREW-11 (docs crew)
               │           └── CREW-18 (channels / schedules)
-              ├── CREW-8 (OTel tracing)
+              ├── CREW-08 (OTel tracing)
               ├── CREW-14 (authoring ergonomics)
               │     ├── CREW-15 (CrewBench)
               │     └── CREW-16 (harness hardening)
@@ -206,29 +201,32 @@ CREW-1  ────────────────────────
               └── CREW-17 (security model)
 ```
 
-**Critical path:** CREW-1 → CREW-2 → CREW-3 → CREW-5 → CREW-6 → CREW-9 → CREW-12 → CREW-13.
+**Critical path:** CREW-01 → CREW-02 → CREW-03 → CREW-05 → CREW-06 → CREW-09 →
+CREW-12 → CREW-13.
 
-**Quality path (parallel, Next phase):** CREW-3 → CREW-14 → CREW-15 → (ongoing) CrewBench gates on every runtime change.
+**Quality path (parallel, Next phase):** CREW-03 → CREW-14 → CREW-15 → (ongoing)
+CrewBench gates on every runtime change.
 
 **Parallelisation opportunities (Next phase):**
 
-- CREW-4 (audit sink) and CREW-5 (delivery-qa) can begin in parallel once CREW-3 exits.
-- CREW-8 (OTel) can begin alongside any Next-phase epic — no story data dependencies.
-- CREW-7 (code-reviewer CLI) unblocks as soon as CREW-4 ships, independent of CREW-5 / CREW-6.
-- CREW-14, CREW-15, CREW-16, and CREW-17 can run in parallel after CREW-3; CREW-15 depends on CREW-14 for scaffold conventions.
+- CREW-04 (audit sink) and CREW-05 (delivery-qa) can begin in parallel once CREW-03 exits.
+- CREW-08 (OTel) can begin alongside any Next-phase epic — no story-data dependencies.
+- CREW-07 (code-reviewer CLI) unblocks as soon as CREW-04 ships, independent of CREW-05 / CREW-06.
 
-**Minimum viable slice (Now):** CREW-3 complete → Now exit criteria met → Next phase opens.
+**Minimum viable slice (Now):** CREW-03 complete → Now exit criteria met → Next phase opens.
 
 ## 6. Risks
 
 | ID | Risk | Likelihood | Impact | Mitigation |
-|----|------|------------|--------|------------|
-| R1 | e2e smoke against a real board surfaces integration-level bugs that delay CREW-3 | Medium | High | Keep the smoke Jira board simple (one project, four transitions); run diagnose before each smoke attempt |
-| R2 | CREW-4 (audit sink API) design takes longer than expected, blocking the CLI crew | Medium | Medium | Unblock CREW-7 design in parallel; ship CREW-6 first so CREW-4 is not on the critical path to the delivery vertical |
-| R3 | `delivery-qa` crew requires a managed QA environment that is not available at start of Next | Medium | High | Scope CREW-5 to a mocked/sandbox environment first; real-nv integration in a follow-on story |
-| R4 | Commercial foundations (CREW-9) take longer than runtime work, compressing the market window | Low | High | Scope licence gating as a thin wrapper; defer pricing UI; ship the mechanism not the full product |
-| R5 | The second crew (CREW-5) surfaces shared-runtime gaps that require a `@daddia/crew` version bump and re-pin across all crews | Medium | Medium | Accept this as expected graduation work; CREW-2 is already the reference; the bump cost is mechanical |
-| R6 | CrewBench arrives late and prompt regressions ship to production unnoticed | Medium | High | CREW-15 is P0 in Next; start with deterministic smoke evals before LLM-as-judge; gate CI on `crew eval --strict` |
-| R7 | Authoring ergonomics stay manual and catalogue growth reintroduces copy-paste drift | Medium | Medium | CREW-14 ships before third crew; invariants guard prevents env and boundary regressions |
+| -- | ---- | ---------- | ------ | ---------- |
+| R1 | e2e smoke against a real board surfaces integration bugs that delay CREW-03 | Medium | High | Keep the smoke board simple (one project, four transitions); run diagnose before each smoke attempt |
+| R2 | CREW-04 (audit sink) design takes longer than expected, blocking the CLI crew | Medium | Medium | Unblock CREW-07 design in parallel; ship CREW-06 first so CREW-04 is not on the critical path to the delivery vertical |
+| R3 | `delivery-qa` crew needs a managed QA environment unavailable at Next start | Medium | High | Scope CREW-05 to a mocked/sandbox environment first; real integration in a follow-on story |
+| R4 | Commercial foundations (CREW-09) take longer than runtime work, compressing the market window | Low | High | Scope licence gating as a thin wrapper; defer pricing UI; ship the mechanism not the full product |
+| R5 | The second crew (CREW-05) surfaces shared-runtime gaps requiring a `@daddia/crew` bump and re-pin across crews | Medium | Medium | Accept as expected graduation work; CREW-02 is the reference; the bump cost is mechanical |
+| R6 | "Slowly add v1 features" silently becomes "rebuild v1" — re-platforming instead of shipping | Medium | High | Features return only when a shipped workflow needs them; substrate is borrowed not rebuilt; agentic orchestration stays deferred (solution.md §10.1 R14) |
+| R7 | Authoring ergonomics drift as the catalogue grows, reintroducing copy-paste | Medium | Medium | CREW-14 shipped before the third crew; `guard:invariants` prevents env and boundary regressions |
 
-Technical and architecture risks are authoritative in [`../architecture/solution.md`](../architecture/solution.md) §10.1 and are not duplicated here.
+Technical and architecture risks are authoritative in
+[`../architecture/solution.md`](../architecture/solution.md) §10.1 and are not
+duplicated here.

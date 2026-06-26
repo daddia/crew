@@ -388,7 +388,7 @@ Each item maps to an **existing control** (✓) or a **tracked gap** (○).
 | 14 | CI invariant guard is green | `pnpm guard:invariants` exits 0 on `main` | ✓ `tooling/invariants-guard` |
 | 15 | Tool allowlist denial is eval-covered | `crew eval` / CI eval suite includes `tool-allowlist-denial.eval.ts` | ✓ RH02-06 eval suite |
 | 16 | Kernel-level workspace sandbox | Not required for org-owned target repos | ○ `CREW-19` (Later) |
-| 17 | OTel trace export to collector | Optional for initial deploy | ○ `CREW-8` (Next) |
+| 17 | OTel trace export to collector | Optional for initial deploy | ○ `CREW-08` (Next) |
 | 18 | Live run-stream for overnight batches | Use structured logs + `/healthz` until shipped | ○ `RH02-09` (Next) |
 
 Do not deploy while any ✓ item fails verification. ○ items are documented

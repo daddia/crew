@@ -1,7 +1,7 @@
 ---
 type: Product Roadmap
 scope: product
-version: '1.3'
+version: '2.0'
 owner: daddia
 status: Current
 last_updated: 2026-06-26
@@ -12,98 +12,248 @@ related:
 
 # Roadmap -- Crew
 
-Phases follow [`strategy.md`](strategy.md) §2. Calendar dates are not committed; a phase opens when the previous phase exits cleanly. The architectural anchor for every phase is [`solution.md`](../architecture/solution.md); the active story-level backlog is in Jira.
+## 1. Roadmap intent
 
-## Now — prove delivery on the platform
+This roadmap sequences the build of the Crew platform from a single proof-point
+crew to a hardened runtime carrying a growing catalogue, then to the compounding
+surface that differentiates the platform from raw model calls. It derives from
+the bets in [`strategy.md`](strategy.md) §2 and the architecture in
+[`solution.md`](../architecture/solution.md); it expresses phases as **outcomes
+and capabilities**, not epics. Epic and story decomposition lives downstream in
+the backlog and in Jira; this document is what that decomposition is sequenced
+*against*.
 
-**Outcome.** The `delivery-build` crew runs end-to-end on real Jira stories: context seed → clarification → implement → peer review → open MR → CI check → hand off for review. The build slice is the proof point that the substrate can carry the most demanding crew.
+Phasing matters because the substrate is earned, not assumed. The first crew is
+expensive precisely so every later crew is cheap. Calendar dates are not
+committed: a phase opens only when the previous phase exits cleanly against its
+named criteria. Phases are sequential; parallelism lives *within* a phase.
 
-**Capabilities (shipped or in flight).**
+## 2. Sequencing logic
 
-| Capability | Where it lives |
-|------------|----------------|
-| Shared runtime (`@daddia/crew`) | `packages/crew` — `main`, `webhooks`, `config`, `state`, `workflow` subpaths |
-| `delivery-build` crew | `crews/delivery-build` — engineer + senior-engineer; Jira poll + GitLab webhooks |
-| `delivery-review` crew | Scaffolded as `crews/delivery-final-review` — full implementation deferred until build slice validates |
-| `code-reviewer` crew (CLI-shaped) | Scaffolded as `crews/delivery-code-review` — full implementation deferred |
-| Solution architecture | [`solution.md`](../architecture/solution.md) |
-| Build flow contract | [`docs/design/crew-flows/delivery-build.md`](../design/crew-flows/delivery-build.md) |
+1. **Prove the hardest crew first.** The build crew is the most demanding
+   workload — multi-persona, multi-phase, external integrations, bounded loops,
+   human gates. Earning crash recovery, audit, bounded loops, and escalation on
+   the hardest crew means every later crew inherits a runtime that has already
+   paid for the hard parts.
+2. **Deterministic floor before agentic flexibility.** Ship the reviewable,
+   deterministic workflow end-to-end before any model-generated orchestration.
+   Model-decided team/sequence/tool-surface (Level 3, [`solution.md`](../architecture/solution.md) §5.6)
+   stays default-off and eval-gated — it returns only when a shipped workflow's
+   evals prove it stays auditable and bounded.
+3. **Borrow substrate, don't rebuild it.** Durable execution, sandboxing,
+   channels, and durable human-in-the-loop are substrate, not differentiation
+   ([`solution.md`](../architecture/solution.md) §11, principle 12). They are
+   adopted from maintained dependencies *only when a shipped workflow needs them*
+   — never speculatively, never rebuilt by hand.
+4. **Quality and authoring infrastructure gate catalogue growth.** Eval-on-the-
+   production-surface and one-command scaffolding land alongside the second crew,
+   before copy-paste drift can set in. No prompt or harness change ships
+   unattended without an eval gate.
+5. **Compounding lands after the vertical closes.** Memory, evidence, evaluation
+   policy, and routing — the commercial moat — invest only once the delivery
+   vertical runs unattended-safe. A wedge with no proof point is a liability.
 
-**Exit criteria.**
+## 3. Phases
 
-1. Diagnostics, cost-per-run logging, `/healthz`, runbook, and an e2e smoke against a real Jira board + GitLab project all in place.
-2. Three or more stories reach the hand-off step via the autonomous path (poll or webhook), with provenance recorded per run.
-3. Escalation paths verified: loop cap, clarification timeout, and agent failure all surface to humans without crashing the server.
+### Phase 1 -- Now -- prove delivery on the platform
 
-## Next — harden the runtime; close the delivery loop
+**Objective:** The build crew runs end-to-end on real stories, unattended, on a
+runtime that has earned the right to carry the catalogue.
 
-**Outcome.** Safe to run unattended overnight: predictable recovery, observable cost and quality, operational runbooks for every deployed crew. The delivery vertical is complete (build → QA → review) and the compounding wedge — cost per accepted artefact trending down, recall trending up — is measurable.
+**Capabilities:**
 
-**Capabilities.**
+- Shared runtime (`@daddia/crew`) — `main`, `webhooks`, `config`, `state`,
+  `workflow` subpaths published and consumed by crews as a pinned dependency.
+- Build crew — engineer + senior-engineer; context seed → clarification →
+  implement → peer review → open MR → CI check → hand off; bounded loops and
+  escalation on every failure path.
+- Production readiness — diagnostics, cost-per-run logging, `/healthz`, an
+  operations runbook, and an e2e smoke against a live board.
 
-- Crash recovery and in-flight story detection documented, tested, and consistent across all delivery crews.
-- Structured cost-per-run logging with alerting on failure rate and cost drift.
-- `delivery-qa` and `delivery-review` crews operational; handoff events (`ready-for-qa`, `ready-for-review`) wired.
-- OTel tracing across crews.
-- First CLI-shaped crew (`code-reviewer`) ships — requires the remote audit sink (`@daddia/crew/audit`).
-- **Authoring ergonomics.** `crew init` scaffolds a server- or CLI-shaped crew from a template; canonical persona layout (`plugin/` for skills and subagents); runtime docs bundled inside `@daddia/crew` for agent-local consumption; `guard:invariants` enforces AGENTS.md rules in CI.
-- **CrewBench and `crew eval`.** Fixture-owned evals per crew assert session success, tool usage, and escalation paths against the same HTTP/CLI surface production uses; gate vs soft assertions; baseline populated before prompt or harness changes ship unattended.
-- **Harness hardening.** Progressive skill loading (descriptions always on, bodies on demand); context compaction before window overflow on long implementation runs; structured `outputSchema` on task-mode steps where verdicts must be machine-parseable.
-- **Security model (shipped).** [`security-model.md`](../architecture/security-model.md) — runtime vs workspace vs MCP trust boundaries; pre-production checklist in [`delivery-build` runbook](../runbook/delivery-build.md) §7 for webhook verification, allowlists, and untrusted-input fencing.
-- **Operator visibility.** Run stream or equivalent live progress surface for overnight batches; subagent runs correlated to parent story in audit.
-- **Outcome telemetry wired.** GitLab merge/revert webhooks and Jira story-reopen events captured and attributed to originating runs. `model_id`, `task_type`, and `escalation_cause` taxonomy added to the audit hook. Every run from this point is a data point the optimisation layer will learn from. See [CrewTelemetry](https://carinyaparc.atlassian.net/wiki/spaces/CREW/pages/1671200) (Confluence research).
-- **Event stream infrastructure.** Single-emission OTel-compliant events, durable stream (RabbitMQ or equivalent), fan-out to Honeycomb (filtered, runtime health) and a data warehouse (full payload — Postgres + JSONB to start). The warehouse is the shared read surface for CrewBench, the future optimisation layer, and any downstream consumer.
-- Commercial foundations: licence gating and the first surface of the managed control plane sketched.
+**Quality gates:**
 
-**Exit criteria.**
+- Diagnostics pass all integration touch points against live credentials.
+- Every workflow completion emits total cost, duration, and a per-step breakdown.
+- All escalation paths (loop cap, clarification timeout, agent failure) reach
+  "Needs human review" without crashing the server.
 
-1. Overnight run completes without operator intervention; morning report shows autonomy rate and cost per story.
+**Exit criteria:**
+
+1. Diagnostics, cost-per-run logging, `/healthz`, runbook, and an e2e smoke
+   against a real board are all in place.
+2. Three or more stories reach the hand-off step via the autonomous path (poll or
+   webhook), with provenance recorded per run.
+3. Escalation paths verified end-to-end: loop cap, clarification timeout, and
+   agent failure all surface to humans without crashing the server.
+
+**Out of scope for this phase:** QA and review crews; the eval framework;
+authoring scaffolding; any compounding-surface work; channels and schedules.
+
+### Phase 2 -- Next -- harden the runtime; close the delivery loop
+
+**Objective:** The full delivery vertical (build → QA → review) runs unattended
+overnight, with quality and authoring infrastructure that makes the second crew
+cheaper than the first and keeps every runtime change eval-gated.
+
+**Capabilities:**
+
+- QA and review crews operational; handoff events (`ready-for-qa`,
+  `ready-for-review`) wired so downstream crews self-trigger.
+- Remote audit sink (`@daddia/crew/audit`) — the prerequisite for the first
+  CLI-shaped crew.
+- First CLI-shaped crew (code-reviewer) shipping on the audit sink.
+- OTel tracing across crews; outcome telemetry and a durable event stream
+  fanning out to runtime-health and warehouse sinks.
+- Authoring ergonomics — one-command crew scaffolding, runtime docs bundled in
+  the published package, and mechanical invariant enforcement in CI.
+- Eval framework on the production surface — fixture-owned evals per crew, gate
+  vs soft assertions, a baseline populated before prompt/harness changes ship.
+- Harness hardening — progressive skill loading, context compaction on long
+  runs, and an operator run-stream for overnight batches.
+- Security model — runtime/workspace/MCP trust boundaries and a pre-production
+  checklist *(shipped)*.
+- Commercial foundations — licence gating and the first surface of the managed
+  control plane sketched.
+
+**Quality gates:**
+
+- At least one fixture-owned eval per deployed crew runs in CI; a prompt or
+  harness regression fails the build before merge.
+- A completed story's run joins to its MR outcome and its cost breakdown in a
+  single warehouse query.
+- A new crew scaffolds from the template and reaches a passing smoke eval without
+  copying an existing crew by hand.
+- Invariant enforcement blocks env-isolation, crash-recovery-ordering, and
+  dependency-boundary regressions in CI.
+
+**Exit criteria:**
+
+1. An overnight run completes without operator intervention; the morning report
+   shows autonomy rate and cost per story.
 2. Downstream crews pick up handoffs without manual re-trigger.
-3. CrewBench baseline populated; cost-per-accepted-feature trend is visibly improving release over release.
-4. Outcome telemetry pipeline operational: a completed story's run can be joined to its MR outcome and its cost breakdown in a single warehouse query.
-5. At least one fixture-owned eval per deployed crew runs in CI; a prompt or harness regression fails the build before merge.
-6. A new crew can be scaffolded with `crew init` and reach a passing smoke eval without copying an existing crew by hand.
+3. Eval baseline populated; cost-per-accepted-feature trend is visibly improving
+   release over release.
+4. Outcome telemetry pipeline operational (single-emission events → durable
+   stream → runtime-health + warehouse).
+5. The first CLI-shaped crew ships on the remote audit sink.
 
-## Later — open the catalogue
+**Out of scope for this phase:** model-generated workflow plans (Level 3);
+execution isolation / sandbox; channel and schedule generalisation; the full
+Pro-tier compounding surface.
 
-**Outcome.** Additional verticals on the same runtime. Each new crew is workflow + personas + prompts; the substrate is reused without modification.
+### Phase 3 -- Later -- open the catalogue
 
-**Candidates.**
+**Objective:** Additional verticals run on the same runtime — each new crew is
+workflow + personas + prompts — and the Pro-tier compounding surface begins to
+make every run cheaper and more accurate than the last.
 
-- Documentation crew (release notes, changelog narration).
-- Discovery crews (PM, Architect) feeding ready stories into delivery.
-- Customer-issue triage crew.
-- Full Pro-tier compounding surface: project memory, evaluation policy, model routing.
-- **First optimiser ships** — model selector, as the highest-leverage specialist. Pro-tier value proposition with a measurable outcome. See [CrewOptimiser](https://carinyaparc.atlassian.net/wiki/spaces/CREW/pages/1703940) (Confluence research).
-- **Ingress conventions.** Generalise webhook handlers into a channel adapter pattern (HTTP, Slack, scheduled triggers) without coupling crews to a single work source.
-- **Scheduled-batch topology.** Cron-authored schedules as first-class crew files, compiled to the host's scheduler — same audit and escalation guarantees as server-shaped crews.
-- **Optional execution isolation.** Sandbox or container-backed workspace for catalogue crews that operate on untrusted or forked code; credential brokering keeps secrets out of the model-visible environment.
-- **Dynamic policy (local tier).** Per-project or per-tenant skill and prompt resolution in config — seed of the Pro control plane without requiring managed infrastructure.
+**Capabilities:**
 
-## Future — durable cross-crew orchestration
+- Discovery crews (PM, Architect) feeding ready stories into delivery; a
+  documentation / release-notes crew; a customer-issue triage crew.
+- Pro-tier compounding surface — project memory, evaluation policy, and model
+  routing; the first optimiser (model selector) ships as the highest-leverage
+  specialist.
+- Ingress conventions — webhook handlers generalised into a channel adapter
+  pattern, plus scheduled-batch topology as first-class crew files.
+- Optional execution isolation (sandbox) for catalogue crews operating on
+  untrusted or forked code — adopted as borrowed substrate, not built.
+- Dynamic policy (local tier) — per-project / per-tenant skill and prompt
+  resolution; the seed of the Pro control plane without managed infrastructure.
 
-**Outcome.** Pipelines that survive process restarts: suspend / resume, fan-out from a single trigger, human gates mid-pipeline. Coordination lives above the crew, never inside it. The `Orchestrator` contract in `@daddia/crew` is the entry point; individual crews remain independently deployable.
+**Quality gates:**
 
-**Capabilities (research before build).**
+- A new vertical reaches its first unattended run reusing the substrate with no
+  runtime change beyond a version bump.
+- The first optimiser demonstrates a measurable cost-quality improvement against
+  an eval baseline before it influences any crew's routing.
+- Every control-plane call degrades to local on unreachability — proven, not assumed.
 
-- **Turn-level durability inside long agent steps.** Story-level SQLite recovery is necessary but not sufficient for multi-hour implementation runs; evaluate step checkpointing inside a single persona session so mid-turn crashes resume without replaying completed tool work.
-- **Park / resume for human gates.** Clarification and approval waits suspend durably (not only timeout-and-escalate) when the work source supports async human reply.
-- **Composition layer** subscribing to `ready-for-*` events with explicit suspend/resume semantics.
+**Exit criteria:**
 
-See [`strategy.md`](strategy.md) §2 Future and [`solution.md`](../architecture/solution.md) §1.1.
+1. At least one non-delivery crew runs a real workload unattended on the shared runtime.
+2. Cost per accepted artefact trends down and recall trends up after the
+   compounding surface lands — the platform-improves-with-use proof.
+3. The Pro tier is purchasable: pricing model, free/Pro boundary, licence
+   enforcement, and an eval proof pack (documented wins and at least one loss)
+   are all resolved.
 
-## Commercial release gate (Next → market)
+**Out of scope for this phase:** durable cross-crew orchestration with
+suspend/resume; turn-level durability inside long agent steps.
 
-The following must be resolved before the Pro tier is purchasable:
+### Phase 4 -- Future -- durable cross-crew orchestration
 
-- **Pricing model.** Per-crew, per-run, per-accepted-artefact, or seat-based. Pricing must align with the value metric customers understand (cost per accepted artefact) and the platform metric Crew controls (routing, memory, evaluation).
-- **Free vs. Pro boundary.** Every crew runs end-to-end on local-only config (free tier). The Pro tier adds compounding capabilities — memory, evidence, evaluation policy, model routing — that reduce cost and improve quality with use. The boundary must be clear to both customers and agents.
-- **Licence enforcement.** Licence key provisioning, validation at session start, degradation behaviour on expiry or unreachability.
-- **CrewBench proof pack.** Documented wins and at least one documented loss. Cost-per-accepted-feature trend improving after runtime optimisations.
-- **Control-plane availability.** SLO defined and tested. Every control-plane call degrades to local on unreachability — this must be proven, not assumed.
+**Objective:** Pipelines survive process restarts — suspend/resume, fan-out from
+a single trigger, human gates mid-pipeline — with coordination above the crew,
+never inside it. Agentic orchestration (Level 3) becomes evaluable on a durable
+substrate that is borrowed, not built.
 
-## Review cadence
+**Capabilities:**
 
-- **Per sprint:** Jira backlog against Now exit criteria.
-- **Per phase gate:** update this document with evidence links.
-- **Quarterly:** re-sequence Later / Future if the platform thesis shifts.
+- Cross-crew orchestrator subscribing to `ready-for-*` events with explicit
+  suspend/resume semantics; individual crews remain independently deployable.
+- Turn-level durability inside long agent steps — step checkpointing so a
+  mid-turn crash resumes without replaying completed tool work; adopt a
+  maintained durable-execution engine rather than build bespoke (ADR-016).
+- Park / resume for human gates — clarification and approval waits suspend
+  durably when the work source supports async human reply.
+
+**Quality gates:**
+
+- A multi-hour implementation run resumes after a mid-turn crash without replaying
+  completed tool work.
+- A human approval gate suspends durably and resumes the same run, not a terminal escalation.
+- Any Level 3 (model-generated plan) capability ships default-off and only for a
+  specific workflow whose evals show it stays within bounds (ADR-015).
+
+**Exit criteria:**
+
+1. A cross-crew pipeline survives a process restart and resumes at the suspended step.
+2. Turn-level durability research concludes with a borrow-or-build decision
+   recorded as an ADR.
+
+**Out of scope for this phase:** rebuilding any borrowed substrate by hand;
+making model-generated orchestration the default for any crew.
+
+## 4. Milestones
+
+| Milestone | Phase | Customer-visible? | Notes |
+| --------- | ----- | ----------------- | ----- |
+| Build crew runs unattended on real stories | Now | No (internal proof) | Now exit criteria met; gates Next opening |
+| Full delivery vertical (build → QA → review) operational | Next | Yes | Handoffs auto-trigger; overnight run completes |
+| Eval framework gating every runtime change | Next | No | Eval gate in CI before unattended deploy |
+| First CLI-shaped crew (code-reviewer) ships | Next | Yes | Requires the remote audit sink |
+| Pro tier purchasable | Later | Yes | Pricing, licence enforcement, proof pack resolved |
+| First optimiser (model selector) live | Later | Yes (Pro) | Measurable cost-quality win on the eval baseline |
+| Durable cross-crew pipeline resumes after restart | Future | Yes | Coordination above the crew |
+
+## 5. External dependencies
+
+| Dependency | Owner squad | Gates | Status |
+| ---------- | ----------- | ----- | ------ |
+| npm registry (publish `@daddia/crew`) | daddia | Every crew's pinned dependency | Available |
+| Container deployment topology | daddia | Server-shaped crew deploys | Validated |
+| Work source + VCS (live board for smoke) | daddia | Now e2e exit criterion | Available |
+| Foundation model provider(s) | daddia (vendor: model labs) | Every persona run; routing in Later | Available |
+| Durable-execution engine (when borrowed) | daddia (vendor: maintained dependency) | Future turn-level durability + orchestration | Deferred until a shipped workflow needs it |
+| Telemetry warehouse + durable stream | daddia | Next exit criterion #4; eval read surface | In progress |
+
+## 6. Deferred beyond this cycle
+
+- **Model-generated workflow plans (Level 3).** Default-off and eval-gated;
+  returns only when a specific workflow proves it stays bounded
+  ([`solution.md`](../architecture/solution.md) §5.6, ADR-015).
+- **Single run across multiple repos / orgs / security boundaries.** One tenant
+  per run is a permanent boundary ([`strategy.md`](strategy.md) §8).
+- **Conversational multi-agent graphs.** Personas converge on artefacts, not messages.
+- **Browser-based governance UI.** Steering happens in the systems of record.
+- **Mandatory multi-reviewer change-advisory chains.** Crew respects configured
+  bounds; it does not replace institutional approval processes.
+
+## 7. Review cadence
+
+- **Weekly:** the active backlog is checked against the current phase's exit criteria.
+- **Pre-phase-gate:** update this document with evidence links before opening the
+  next phase; confirm every exit criterion is met, not asserted.
+- **Quarterly:** re-sequence Later / Future if the platform thesis or the
+  substrate-borrow landscape shifts.

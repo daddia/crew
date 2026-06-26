@@ -10,7 +10,7 @@ The hierarchy of reference, in order: **Product strategy → Solution architectu
 | Solution architecture — how Crew is built and operated | [`architecture/solution.md`](architecture/solution.md) |
 | Roadmap — phases (Now / Next / Later / Future) and exit criteria | [`product/roadmap.md`](product/roadmap.md) |
 | Product backlog — epic breakdown, dependencies, risks | [`product/backlog.md`](product/backlog.md) |
-| Active story-level backlog | Jira (`CREW` project) |
+| Active story-level backlog | Jira (`CREW` project — issue keys like `CREW-123`, distinct from doc epic IDs `CREW-{nn}`) |
 
 ## Supporting docs
 
@@ -24,4 +24,5 @@ The hierarchy of reference, in order: **Product strategy → Solution architectu
 | Runbooks | [`runbook/`](runbook/) | Operating deployed crews |
 | Contributor guides | [`../contributing/`](../contributing/) | Authoring crews and personas in code |
 | Code conventions | [`../AGENTS.md`](../AGENTS.md) | Current-state conventions for AI agents and humans |
+| Epic work artefacts | [`work/`](work/) | Per-epic `design.md` and `tasks.md` under `docs/work/{nn}-{slug}/` |
 | Research and ideas | [Confluence → 03 Research](https://carinyaparc.atlassian.net/wiki/spaces/CREW/pages/753668/03+Research) | Ideas, CrewBench (not in git) |
