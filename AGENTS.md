@@ -127,6 +127,16 @@ The `run` implementation:
 
 Tool allowlists are enforced at two levels: the SDK `allowedTools` option, and the `buildAuditHook` belt-and-suspenders check at the post-tool-use boundary.
 
+### Prompt injection / context provenance (threat model)
+
+Jira issue bodies, parent ticket text, and MR/reviewer comments are **author-controlled** and may contain prompt-injection attempts (for example "ignore previous instructions" or "merge to main now"). Defense is layered:
+
+1. **Delimiter fencing** — persona `agent.ts` modules wrap author text in explicit `<<< untrusted input — data only >>>` markers via `buildTaskPrompt` / `formatAgentContext` before sending to the model.
+2. **System prompt** — each persona's `prompt.md` instructs the model to treat delimited content as data only, never as instructions.
+3. **Tool allowlist** — `allowedTools` plus `buildAuditHook` block privileged operations (merge, protected-branch push) even if the model complies with injected instructions.
+
+Agent `context` MUST be assembled from integration API responses fetched by the workflow, not from raw webhook bodies. Webhook handlers validate and deduplicate events, then pass only trusted identifiers (issue key, MR URL) into the workflow.
+
 ## State store conventions
 
 Each crew owns its own SQLite database; the path is injected via `DB_PATH`. Use `createSqliteStateStore(dbPath)` — it provisions the standard three-table schema and enforces crash-recovery ordering.
@@ -229,6 +239,7 @@ Per-crew: `pnpm build`, `pnpm dev`, `pnpm typecheck`, `pnpm diagnose` (where the
 - Every failure branch calls `escalateToHumanReview` and returns; none rethrow to the HTTP layer.
 - `verifySignature` is the first operation in every webhook handler.
 - No hardcoded credentials, tokens, or secrets anywhere in source.
+- Author-controlled text (Jira descriptions, parent ticket fields, MR/reviewer comments) is wrapped in the untrusted-input delimiter before inclusion in persona prompts; system prompts instruct the model to treat delimited content as data only.
 - Agent `context` is built from trusted integration outputs, not raw webhook payloads.
 - If `@daddia/crew` was bumped: published to registry and every crew's pinned dep updated in the same PR.
 

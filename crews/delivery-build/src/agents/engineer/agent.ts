@@ -12,6 +12,7 @@ import {
   type AgentInput,
   type AgentResult,
 } from '@daddia/crew';
+import { buildTaskPrompt } from '../prompt-context.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -122,14 +123,12 @@ async function run(input: AgentInput): Promise<AgentResult> {
     previousSessionId,
   );
 
-  // SECURITY: input.context is constructed by the workflow from trusted
-  // internal values (task, mrUrl, comments). Never pass user-supplied data
-  // here without sanitising it first.
-  const taskPrompt = isResumed
-    ? `Continue with the current task.\nIssue: ${input.issueKey}\nContext: ${JSON.stringify(input.context)}`
-    : [prompt, '---', `Issue: ${input.issueKey}`, `Context: ${JSON.stringify(input.context)}`].join(
-        '\n\n',
-      );
+  const taskPrompt = buildTaskPrompt({
+    personaPrompt: prompt,
+    issueKey: input.issueKey,
+    context: input.context,
+    isResumed,
+  });
 
   try {
     await session.send(taskPrompt);

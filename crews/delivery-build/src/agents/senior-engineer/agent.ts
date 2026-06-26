@@ -12,6 +12,7 @@ import {
   type AgentInput,
   type AgentResult,
 } from '@daddia/crew';
+import { buildTaskPrompt } from '../prompt-context.js';
 
 /**
  * Flatten a single comment entry from the peer-code-review JSON output.
@@ -130,15 +131,11 @@ async function run(input: AgentInput): Promise<AgentResult> {
     auditHook,
   });
 
-  // SECURITY: input.context is constructed by the workflow from trusted
-  // internal values (task, branchName). Never pass user-supplied data
-  // here without sanitising it first.
-  const taskPrompt = [
-    prompt,
-    '---',
-    `Issue: ${input.issueKey}`,
-    `Context: ${JSON.stringify(input.context)}`,
-  ].join('\n\n');
+  const taskPrompt = buildTaskPrompt({
+    personaPrompt: prompt,
+    issueKey: input.issueKey,
+    context: input.context,
+  });
 
   try {
     await session.send(taskPrompt);

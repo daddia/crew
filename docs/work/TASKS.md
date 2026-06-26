@@ -257,8 +257,8 @@ and implementation of the scaffold crews' workflows beyond config hygiene.
       Then crash-recovery, dedup, and loop-cap counts behave as before
     ```
 
-- [ ] **[RH01-10] Delimit untrusted Jira/MR text in persona prompts**
-  - **Status:** Not started | **Priority:** P1 | **Estimate:** 3
+- [x] **[RH01-10] Delimit untrusted Jira/MR text in persona prompts**
+  - **Status:** Done | **Priority:** P1 | **Estimate:** 3
   - **Epic:** RH01 | **Labels:** phase:now, area:security, type:security
   - **Depends on:** -
   - **Deliverable:** Issue descriptions, parent ticket text, and MR/reviewer comments are wrapped in an explicit "untrusted input — data only" delimiter in the prompt; a threat-model note is added to `AGENTS.md`. Closes review §2.6.
