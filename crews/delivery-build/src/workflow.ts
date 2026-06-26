@@ -1,5 +1,11 @@
 import { getSessionInfo } from '@anthropic-ai/claude-agent-sdk';
-import { boundedIterGuard, IterationCapReached, type AgentInput, type AgentResult } from '@daddia/crew';
+import {
+  boundedIterGuard,
+  IterationCapReached,
+  type Agent,
+  type AgentInput,
+  type AgentResult,
+} from '@daddia/crew';
 import { engineer } from './agents/engineer/agent.js';
 import { seniorEngineer } from './agents/senior-engineer/agent.js';
 import type { GitlabClient, PipelineStatus } from './integrations/gitlab.js';
@@ -32,6 +38,16 @@ export interface WorkflowContext {
  * WorkflowContext at call time.
  */
 export type WorkflowCtxBase = Omit<WorkflowContext, 'issueKey' | 'state'>;
+
+/** Injectable personas for CrewBench workflow fixtures. */
+export interface WorkflowAgents {
+  engineer: Agent;
+  seniorEngineer: Agent;
+}
+
+export interface RunStoryOptions {
+  agents?: WorkflowAgents;
+}
 
 const PIPELINE_SETTLING: ReadonlySet<PipelineStatus> = new Set(['created', 'pending', 'running']);
 
@@ -132,14 +148,15 @@ function emitWorkflowComplete(
  *   → CI monitoring loop (cap: CI_RETRY_CAP)
  *   → status update: `in progress` → `in qa`
  */
-export async function runStory(ctx: WorkflowContext): Promise<void> {
+export async function runStory(ctx: WorkflowContext, options?: RunStoryOptions): Promise<void> {
   const { issueKey } = ctx;
   const input: AgentInput = { issueKey, context: {} };
+  const agents: WorkflowAgents = options?.agents ?? { engineer, seniorEngineer };
 
   log.info('workflow.start', { issueKey });
 
   try {
-    await runStoryInner(ctx, input);
+    await runStoryInner(ctx, input, agents);
   } catch (err) {
     log.error('workflow.unhandled-error', { issueKey, err: String(err) });
     await escalateToHumanReview(ctx.jira, issueKey, 'Unexpected workflow error', [], ctx.state);
@@ -176,8 +193,13 @@ function isBoundedOperationFailure(result: AgentResult): boolean {
   return typeof result.artefacts['boundedReason'] === 'string';
 }
 
-async function runStoryInner(ctx: WorkflowContext, input: AgentInput): Promise<void> {
+async function runStoryInner(
+  ctx: WorkflowContext,
+  input: AgentInput,
+  agents: WorkflowAgents,
+): Promise<void> {
   const { issueKey, state, jira, gitlab, behaviour, projectDir } = ctx;
+  const { engineer: eng, seniorEngineer: sr } = agents;
 
   await seedEngineerMemory(projectDir);
 
@@ -215,7 +237,7 @@ async function runStoryInner(ctx: WorkflowContext, input: AgentInput): Promise<v
   // touches the board until the engineer is ready to commit to it.
   state.upsertStory(issueKey, 'assess-clarification');
 
-  const assessResult = await engineer.run({
+  const assessResult = await eng.run({
     ...input,
     context: engineerContext(ctx, {
       task: 'assess-clarification',
@@ -266,7 +288,7 @@ async function runStoryInner(ctx: WorkflowContext, input: AgentInput): Promise<v
   // ── Step 4: Implement ─────────────────────────────────────────────────────
   state.upsertStory(issueKey, 'implement');
 
-  const implResult = await engineer.run({
+  const implResult = await eng.run({
     ...input,
     context: engineerContext(ctx, {
       task: 'implement-story',
@@ -316,7 +338,7 @@ async function runStoryInner(ctx: WorkflowContext, input: AgentInput): Promise<v
     state.upsertStory(issueKey, 'peer-code-review');
     state.startStep(issueKey, 'peer-code-review');
 
-    const reviewResult = await seniorEngineer.run({
+    const reviewResult = await sr.run({
       ...input,
       context: personaContext(ctx, { task: 'peer-code-review', branchName }),
     });
@@ -349,7 +371,7 @@ async function runStoryInner(ctx: WorkflowContext, input: AgentInput): Promise<v
 
     state.upsertStory(issueKey, 'address-feedback');
 
-    const feedbackResult = await engineer.run({
+    const feedbackResult = await eng.run({
       ...input,
       context: engineerContext(ctx, {
         task: 'address-feedback',
@@ -429,7 +451,7 @@ async function runStoryInner(ctx: WorkflowContext, input: AgentInput): Promise<v
 
     // Pipeline failed — ask the engineer to fix CI.
     state.upsertStory(issueKey, 'ci-check');
-    const ciFixResult = await engineer.run({
+    const ciFixResult = await eng.run({
       ...input,
       context: engineerContext(ctx, {
         task: 'fix-ci',

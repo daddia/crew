@@ -12,6 +12,7 @@
     "start": "node dist/index.js",
     "dev": "node --watch dist/index.js",
     "diagnose": "node dist/diagnose.js",
+    "eval:ci": "node dist/eval/run-ci.js",
     "test": "vitest run",
     "clean": "rm -rf dist"
   },

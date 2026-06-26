@@ -151,8 +151,8 @@ context compaction; run-stream for operators; security model doc.
       Then crew eval exits non-zero
     ```
 
-- [ ] **[RH02-06] Delivery-build fixture eval suite**
-  - **Status:** Not started | **Priority:** P0 | **Estimate:** 8
+- [x] **[RH02-06] Delivery-build fixture eval suite**
+  - **Status:** Done | **Priority:** P0 | **Estimate:** 8
   - **Epic:** RH02 | **Labels:** phase:next, area:delivery-build, type:test
   - **Depends on:** RH02-05
   - **Deliverable:** Evals cover escalation (loop cap), tool allowlist denial, and handoff artefact shape; run in CI on PR.

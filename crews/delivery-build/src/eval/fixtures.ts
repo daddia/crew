@@ -1,4 +1,9 @@
 import type { EvalFixtureRunner, EvalSessionResult } from '@daddia/crew/evals';
+import {
+  runHandoffArtefactFixture,
+  runLoopCapEscalationFixture,
+  runToolAllowlistDenialFixture,
+} from './workflow-fixtures.js';
 
 export type EvalFixtureMode = 'mock' | 'live';
 
@@ -46,5 +51,8 @@ export function createEvalFixtures(mode: EvalFixtureMode): Record<string, EvalFi
   return {
     smoke: async () => (mode === 'live' ? runSmokeFixtureLive() : runSmokeFixtureMock()),
     failure: runFailureFixture,
+    'loop-cap-escalation': runLoopCapEscalationFixture,
+    'tool-allowlist-denial': runToolAllowlistDenialFixture,
+    'handoff-artefact': runHandoffArtefactFixture,
   };
 }
