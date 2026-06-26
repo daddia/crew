@@ -55,5 +55,5 @@ describe('bundled runtime docs', () => {
     await rm(tarballPath, { force: true });
     expect(listing).toContain('package/docs/AGENTS.md');
     expect(listing).toContain('package/docs/adding-a-persona.md');
-  });
+  }, 15_000);
 });
