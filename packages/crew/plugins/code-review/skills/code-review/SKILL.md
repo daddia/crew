@@ -1,6 +1,11 @@
-# Skill: peer-code-review
+# Skill: code-review
 
-You are running this skill when `context.task === "peer-code-review"`.
+Shared code-quality review skill used by `senior-engineer` (pre-MR peer review)
+and the `code-reviewer` CLI crew (post-MR review). The workflow task name
+determines which inputs are available — see Inputs below.
+
+You are running this skill when `context.task === "peer-code-review"` (pre-MR)
+or `context.task === "code-review"` (post-MR).
 
 This is a **code quality review**. You are checking that the implementation
 is correct, secure, well-tested, and consistent with the design. You are

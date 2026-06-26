@@ -7,7 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readSkillsDir, readSubagentsDir } from '@daddia/crew';
+import { readSkillsDir, readSubagentsDir, personaSkillsDir, personaAgentsDir } from '@daddia/crew';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const agentsDir = join(__dirname, '../src/agents');
@@ -26,8 +26,8 @@ describe('agent tool scoping', () => {
     const { engineer } = await import('../src/agents/engineer/agent.js');
     const base = join(agentsDir, 'engineer');
     const [skillPaths, subagentPaths] = await Promise.all([
-      readSkillsDir(join(base, '.claude', 'skills')),
-      readSubagentsDir(join(base, '.claude', 'agents')),
+      readSkillsDir(personaSkillsDir(base)),
+      readSubagentsDir(personaAgentsDir(base)),
     ]);
 
     expect(engineer.name).toBe('engineer');

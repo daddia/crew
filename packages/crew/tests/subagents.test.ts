@@ -5,7 +5,7 @@ import { dirname } from 'node:path';
 import { parseSubagentFile, buildSdkAgentsMap } from '../src/subagents.js';
 
 const fixturesDir = join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'engineer');
-const testRunnerPath = join(fixturesDir, '.claude', 'agents', 'test-runner.md');
+const testRunnerPath = join(fixturesDir, 'plugin', 'agents', 'test-runner.md');
 
 describe('subagent helpers', () => {
   it('parseSubagentFile reads frontmatter name and description', async () => {

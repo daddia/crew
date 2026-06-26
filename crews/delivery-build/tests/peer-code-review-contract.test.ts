@@ -7,17 +7,12 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, it, expect } from 'vitest';
 
+import { CODE_REVIEW_PLUGIN_PATH } from '@daddia/crew';
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const agentsDir = join(__dirname, '../src/agents');
 
-const SKILL_PATH = join(
-  agentsDir,
-  'senior-engineer',
-  '.claude',
-  'skills',
-  'peer-code-review',
-  'SKILL.md',
-);
+const SKILL_PATH = join(CODE_REVIEW_PLUGIN_PATH, 'skills', 'code-review', 'SKILL.md');
 
 /** Context keys the workflow passes to senior-engineer for peer-code-review. */
 const WORKFLOW_PEER_REVIEW_CONTEXT = new Set(['task', 'branchName', 'model']);

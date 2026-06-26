@@ -6,7 +6,6 @@ import {
   type Options,
   type Query,
   type SDKMessage,
-  type SettingSource,
 } from '@anthropic-ai/claude-agent-sdk';
 import type { AgentDefinition, AgentInput } from './agent.js';
 import type { SubmitResultCapture } from './result.js';
@@ -19,7 +18,7 @@ import {
   type ToolDenialHandler,
 } from './hooks.js';
 import type { SdkSubagentDefinition } from './subagents.js';
-import { skillNamesFromPaths } from './workspace.js';
+import { resolvePluginBundles } from './plugins.js';
 
 export interface SessionOptions {
   definition: AgentDefinition;
@@ -62,7 +61,7 @@ export interface SessionOptions {
   maxBudgetUsd?: number;
   /** Inline subagent definitions for the Task tool. */
   sdkAgents?: Record<string, SdkSubagentDefinition>;
-  /** Skill names to enable when using a workspace cwd (defaults from skillPaths). */
+  /** Namespaced skill names to enable (defaults from plugin bundles). */
   skills?: string[];
   /** Audit callback for SubagentStart/SubagentStop events. */
   onSubagentAudit?: SubagentAuditHandler;
@@ -145,10 +144,9 @@ async function filterExistingPaths(
  * while streaming.
  *
  * Skill and subagent paths listed on AgentDefinition are validated before the
- * session is created. Missing files are skipped with a warning. When at least
- * one valid skill or subagent path exists, the SDK subprocess is pointed at the
- * agent's project directory (settingSources: ['project']) so it loads
- * .claude/skills/ and .claude/agents/ definitions automatically.
+ * session is created. Missing files are skipped with a warning. Skills,
+ * subagents, hooks, and MCP servers load via explicit SDK `plugins` bundles —
+ * not filesystem setting-source heuristics.
  */
 export async function resolveSession(
   options: SessionOptions,
@@ -176,11 +174,14 @@ export async function resolveSession(
 
   const personaDir = dirname(definition.promptPath);
   const sessionCwd = workspaceCwd ?? personaDir;
-  const settingSources: SettingSource[] =
-    validSkillPaths.length > 0 || validSubagentPaths.length > 0 ? ['project'] : [];
 
-  const skillList =
-    skills ?? (validSkillPaths.length > 0 ? skillNamesFromPaths(validSkillPaths) : undefined);
+  const { plugins, skillNames: pluginSkillNames } = await resolvePluginBundles({
+    personaDir,
+    skillPaths: validSkillPaths,
+    sharedPlugins: definition.sharedPlugins,
+  });
+
+  const skillList = skills ?? (pluginSkillNames.length > 0 ? pluginSkillNames : undefined);
 
   const allowedTools = resultCapture
     ? [...definition.allowedTools, resultCapture.toolName]
@@ -201,7 +202,7 @@ export async function resolveSession(
     allowedTools,
     canUseTool: buildToolAllowlistGuard(allowedTools, onToolDeny),
     cwd: sessionCwd,
-    ...(settingSources.length > 0 ? { settingSources } : {}),
+    ...(plugins.length > 0 ? { plugins } : {}),
     ...(skillList && skillList.length > 0 ? { skills: skillList } : {}),
     ...(sdkAgents && Object.keys(sdkAgents).length > 0 ? { agents: sdkAgents } : {}),
     ...(maxTurns !== undefined ? { maxTurns } : {}),

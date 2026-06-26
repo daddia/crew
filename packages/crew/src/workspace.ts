@@ -1,7 +1,8 @@
 import { cp, mkdir, access } from 'node:fs/promises';
-import { join, dirname, basename } from 'node:path';
+import { join } from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { PERSONA_PLUGIN_DIR } from './plugins.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -23,28 +24,20 @@ async function runGit(cwd: string, args: string[]): Promise<string> {
 }
 
 /**
- * Copy persona skills and subagent definitions into the target project's
- * `.claude/` tree so the SDK can discover them when `cwd` is the workspace.
+ * Stage a persona plugin bundle inside the workspace `.claude/` tree for
+ * offline discovery. Prefer passing absolute `plugins` paths in session
+ * options when the SDK host can read the persona bundle directly.
  */
 export async function syncPersonaClaudeAssets(personaDir: string, projectDir: string): Promise<void> {
-  const srcSkills = join(personaDir, '.claude', 'skills');
-  const dstSkills = join(projectDir, '.claude', 'skills');
-  const srcAgents = join(personaDir, '.claude', 'agents');
-  const dstAgents = join(projectDir, '.claude', 'agents');
+  const srcPlugin = join(personaDir, PERSONA_PLUGIN_DIR);
+  const dstPlugin = join(projectDir, '.claude', PERSONA_PLUGIN_DIR);
 
-  await mkdir(dstSkills, { recursive: true });
-  await mkdir(dstAgents, { recursive: true });
+  await mkdir(dstPlugin, { recursive: true });
 
   try {
-    await cp(srcSkills, dstSkills, { recursive: true, force: true });
+    await cp(srcPlugin, dstPlugin, { recursive: true, force: true });
   } catch {
-    // persona has no skills directory
-  }
-
-  try {
-    await cp(srcAgents, dstAgents, { recursive: true, force: true });
-  } catch {
-    // persona has no agents directory
+    // persona has no plugin directory
   }
 }
 
@@ -116,7 +109,14 @@ export async function prepareEngineerWorkspace(
   await runGit(projectDir, ['checkout', '-b', branch]);
 }
 
-/** Derive SDK skill names from absolute `.../skill-name/SKILL.md` paths. */
+/** @deprecated Use namespaced skill names from {@link resolvePluginBundles}. */
 export function skillNamesFromPaths(skillPaths: string[]): string[] {
-  return skillPaths.map((p) => basename(dirname(p)));
+  return skillPaths.map((p) => {
+    const parts = p.split('/');
+    const skillIdx = parts.lastIndexOf('skills');
+    if (skillIdx >= 0 && parts[skillIdx + 1]) {
+      return parts[skillIdx + 1]!;
+    }
+    return parts[parts.length - 2] ?? p;
+  });
 }

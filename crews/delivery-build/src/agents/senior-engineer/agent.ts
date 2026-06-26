@@ -3,13 +3,12 @@ import { fileURLToPath } from 'node:url';
 import {
   resolveSession,
   readPromptFile,
-  readSkillsDir,
-  readSubagentsDir,
   buildAuditHook,
   createPeerReviewSubmitResultCapture,
   collectSessionOutcome,
   finalizeAgentRun,
   buildPeerReviewAgentResult,
+  CODE_REVIEW_PLUGIN_PATH,
   type Agent,
   type AgentDefinition,
   type AgentInput,
@@ -33,16 +32,19 @@ const DEFAULT_MODEL = 'claude-opus-4-5';
 
 async function buildDefinition(): Promise<AgentDefinition> {
   const base = __dirname;
-  const [skillPaths, subagentPaths] = await Promise.all([
-    readSkillsDir(join(base, '.claude', 'skills')),
-    readSubagentsDir(join(base, '.claude', 'agents')),
-  ]);
+  const codeReviewSkill = join(
+    CODE_REVIEW_PLUGIN_PATH,
+    'skills',
+    'code-review',
+    'SKILL.md',
+  );
 
   return {
     name: 'senior-engineer',
     promptPath: join(base, 'prompt.md'),
-    skillPaths,
-    subagentPaths,
+    skillPaths: [codeReviewSkill],
+    subagentPaths: [],
+    sharedPlugins: ['code-review'],
     allowedTools: ALLOWED_TOOLS,
     mcpServerNames: ['atlassian', 'gitlab'],
     memory: 'project',

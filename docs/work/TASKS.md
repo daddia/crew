@@ -329,8 +329,8 @@ and implementation of the scaffold crews' workflows beyond config hygiene.
       Then the session terminates and the story escalates with context
     ```
 
-- [ ] **[RH01-13] Adopt the SDK `plugins` option and consolidate skill sprawl**
-  - **Status:** Not started | **Priority:** P1 | **Estimate:** 8
+- [x] **[RH01-13] Adopt the SDK `plugins` option and consolidate skill sprawl**
+  - **Status:** Done | **Priority:** P1 | **Estimate:** 8
   - **Epic:** RH01 | **Labels:** phase:next, area:runtime, type:refactor
   - **Depends on:** RH01-01, RH01-06
   - **Deliverable:** Skills, subagents, hooks, and MCP servers are packaged via the SDK `plugins` option; a shared `code-review` skill is reused by `senior-engineer` and the future `code-reviewer` CLI crew instead of being copied. Closes review §3.2.

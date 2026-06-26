@@ -7,13 +7,13 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, it, expect } from 'vitest';
 import { z } from 'zod';
-import { readSkillsDir, buildSubmitResultHandler } from '@daddia/crew';
+import { readSkillsDir, personaSkillsDir, buildSubmitResultHandler } from '@daddia/crew';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const agentsDir = join(__dirname, '../src/agents');
 const engineerDir = join(agentsDir, 'engineer');
 const PROMPT_PATH = join(engineerDir, 'prompt.md');
-const FIX_CI_SKILL_PATH = join(engineerDir, '.claude', 'skills', 'fix-ci', 'SKILL.md');
+const FIX_CI_SKILL_PATH = join(engineerDir, 'plugin', 'skills', 'fix-ci', 'SKILL.md');
 const WORKFLOW_PATH = join(__dirname, '../src/workflow.ts');
 
 /** Engineer tasks dispatched from workflow.ts (literal `task:` values). */
@@ -62,7 +62,7 @@ describe('fix-ci contract (RH01-04)', () => {
     const [promptMarkdown, skillMarkdown, skillPaths] = await Promise.all([
       readFile(PROMPT_PATH, 'utf8'),
       readFile(FIX_CI_SKILL_PATH, 'utf8'),
-      readSkillsDir(join(engineerDir, '.claude', 'skills')),
+      readSkillsDir(personaSkillsDir(engineerDir)),
     ]);
 
     const promptTasks = parsePromptTaskTable(promptMarkdown);
@@ -102,7 +102,7 @@ describe('fix-ci contract (RH01-04)', () => {
     const [promptMarkdown, workflowSource, skillDirEntries] = await Promise.all([
       readFile(PROMPT_PATH, 'utf8'),
       readFile(WORKFLOW_PATH, 'utf8'),
-      readdir(join(engineerDir, '.claude', 'skills')),
+      readdir(join(engineerDir, 'plugin', 'skills')),
     ]);
 
     const promptTasks = parsePromptTaskTable(promptMarkdown);

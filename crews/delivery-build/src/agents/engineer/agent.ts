@@ -5,14 +5,14 @@ import {
   readPromptFile,
   readSkillsDir,
   readSubagentsDir,
+  personaSkillsDir,
+  personaAgentsDir,
   buildAuditHook,
-  buildSdkAgentsMap,
-  syncPersonaClaudeAssets,
-  prepareEngineerWorkspace,
   createEngineerSubmitResultCapture,
   collectSessionOutcome,
   finalizeAgentRun,
   buildEngineerAgentResult,
+  prepareEngineerWorkspace,
   type Agent,
   type AgentDefinition,
   type AgentInput,
@@ -60,8 +60,8 @@ function allowedToolsForTask(task: unknown): string[] {
 async function buildDefinition(allowedTools: string[]): Promise<AgentDefinition> {
   const base = __dirname;
   const [skillPaths, subagentPaths] = await Promise.all([
-    readSkillsDir(join(base, '.claude', 'skills')),
-    readSubagentsDir(join(base, '.claude', 'agents')),
+    readSkillsDir(personaSkillsDir(base)),
+    readSubagentsDir(personaAgentsDir(base)),
   ]);
 
   return {
@@ -102,7 +102,6 @@ async function run(input: AgentInput): Promise<AgentResult> {
   const execute = async (): Promise<AgentResult> => {
     if (workspaceMode && projectDir) {
       try {
-        await syncPersonaClaudeAssets(__dirname, projectDir);
         await prepareEngineerWorkspace(projectDir, { branchName });
       } catch (err) {
         return {
@@ -138,11 +137,6 @@ async function run(input: AgentInput): Promise<AgentResult> {
       });
     };
 
-    const sdkAgents =
-      workspaceMode && definition.subagentPaths.length > 0
-        ? await buildSdkAgentsMap(definition.subagentPaths)
-        : undefined;
-
     const previousSessionId =
       typeof input.context['previousSessionId'] === 'string'
         ? input.context['previousSessionId']
@@ -160,7 +154,6 @@ async function run(input: AgentInput): Promise<AgentResult> {
         workspaceCwd: workspaceMode ? projectDir : undefined,
         maxTurns,
         maxBudgetUsd,
-        sdkAgents,
       },
       previousSessionId,
     );

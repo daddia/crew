@@ -32,15 +32,7 @@ vi.mock('@daddia/crew', async (importOriginal) => {
     readSubagentsDir: vi.fn().mockResolvedValue(['/fake/agents/test-runner.md']),
     buildAuditHook: vi.fn().mockReturnValue(() => {}),
     createEngineerSubmitResultCapture: vi.fn(() => makeCapture()),
-    syncPersonaClaudeAssets: vi.fn().mockResolvedValue(undefined),
     prepareEngineerWorkspace: vi.fn().mockResolvedValue(undefined),
-    buildSdkAgentsMap: vi.fn().mockResolvedValue({
-      'test-runner': {
-        description: 'Runs tests',
-        prompt: 'Run pnpm test',
-        tools: ['Bash'],
-      },
-    }),
   };
 });
 
@@ -49,7 +41,6 @@ import {
   readPromptFile,
   buildAuditHook,
   SUBMIT_RESULT_TOOL_NAME,
-  syncPersonaClaudeAssets,
   prepareEngineerWorkspace,
 } from '@daddia/crew';
 import { engineer } from '../src/agents/engineer/agent.js';
@@ -57,7 +48,6 @@ import { engineer } from '../src/agents/engineer/agent.js';
 const mockResolveSession = vi.mocked(resolveSession);
 const mockReadPromptFile = vi.mocked(readPromptFile);
 const mockBuildAuditHook = vi.mocked(buildAuditHook);
-const mockSyncPersona = vi.mocked(syncPersonaClaudeAssets);
 const mockPrepareWorkspace = vi.mocked(prepareEngineerWorkspace);
 
 function makeResultMessage(overrides: Partial<SDKResultMessage> = {}): SDKResultMessage {
@@ -496,16 +486,13 @@ describe('engineer.run()', () => {
       },
     });
 
-    expect(mockSyncPersona).toHaveBeenCalledOnce();
     expect(mockPrepareWorkspace).toHaveBeenCalledWith('/workspace/acme', { branchName: undefined });
 
     const callOptions = mockResolveSession.mock.calls[0]?.[0];
     expect(callOptions?.workspaceCwd).toBe('/workspace/acme');
     expect(callOptions?.maxTurns).toBe(40);
     expect(callOptions?.maxBudgetUsd).toBe(4);
-    expect(callOptions?.sdkAgents).toMatchObject({
-      'test-runner': expect.objectContaining({ description: 'Runs tests' }),
-    });
+    expect(callOptions?.sdkAgents).toBeUndefined();
 
     const allowedTools = mockBuildAuditHook.mock.calls[0]?.[0] as string[];
     expect(allowedTools).toContain('Read');

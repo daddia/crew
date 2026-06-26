@@ -43,23 +43,23 @@ describe('workspace helpers', () => {
     ).toEqual(['implement-story', 'fix-ci']);
   });
 
-  it('syncPersonaClaudeAssets copies skills and agents into project .claude', async () => {
+  it('syncPersonaClaudeAssets copies persona plugin into workspace .claude', async () => {
     const personaDir = join(tempDir, 'persona');
     const projectDir = join(tempDir, 'project');
-    await mkdir(join(personaDir, '.claude', 'skills', 'implement-story'), { recursive: true });
-    await mkdir(join(personaDir, '.claude', 'agents'), { recursive: true });
-    await writeFile(join(personaDir, '.claude', 'skills', 'implement-story', 'SKILL.md'), '# skill');
-    await writeFile(join(personaDir, '.claude', 'agents', 'test-runner.md'), '# agent');
+    await mkdir(join(personaDir, 'plugin', 'skills', 'implement-story'), { recursive: true });
+    await mkdir(join(personaDir, 'plugin', 'agents'), { recursive: true });
+    await writeFile(join(personaDir, 'plugin', 'skills', 'implement-story', 'SKILL.md'), '# skill');
+    await writeFile(join(personaDir, 'plugin', 'agents', 'test-runner.md'), '# agent');
     await mkdir(projectDir, { recursive: true });
 
     await syncPersonaClaudeAssets(personaDir, projectDir);
 
     const skill = await import('node:fs/promises').then((fs) =>
-      fs.readFile(join(projectDir, '.claude', 'skills', 'implement-story', 'SKILL.md'), 'utf8'),
+      fs.readFile(join(projectDir, '.claude', 'plugin', 'skills', 'implement-story', 'SKILL.md'), 'utf8'),
     );
     expect(skill).toBe('# skill');
     const agent = await import('node:fs/promises').then((fs) =>
-      fs.readFile(join(projectDir, '.claude', 'agents', 'test-runner.md'), 'utf8'),
+      fs.readFile(join(projectDir, '.claude', 'plugin', 'agents', 'test-runner.md'), 'utf8'),
     );
     expect(agent).toBe('# agent');
   });

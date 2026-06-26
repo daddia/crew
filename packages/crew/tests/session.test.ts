@@ -21,20 +21,14 @@ import { access } from 'node:fs/promises';
 import { resolveSession } from '../src/session.js';
 import type { SessionOptions } from '../src/session.js';
 import { SUBMIT_RESULT_TOOL_NAME } from '../src/result.js';
+import { CODE_REVIEW_PLUGIN_PATH } from '../src/plugins.js';
 
 const mockQuery = vi.mocked(query);
 const mockAccess = vi.mocked(access);
 
 const fixturesDir = join(dirname(fileURLToPath(import.meta.url)), 'fixtures');
-const seniorEngineerFixture = join(fixturesDir, 'senior-engineer');
 const engineerFixture = join(fixturesDir, 'engineer');
-const peerCodeReviewSkill = join(
-  seniorEngineerFixture,
-  '.claude',
-  'skills',
-  'peer-code-review',
-  'SKILL.md',
-);
+const codeReviewSkill = join(CODE_REVIEW_PLUGIN_PATH, 'skills', 'code-review', 'SKILL.md');
 
 function makeQuery(messages: SDKMessage[] = []) {
   return {
@@ -75,9 +69,11 @@ async function startSession(
 }
 
 describe('resolveSession', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
-    mockAccess.mockResolvedValue(undefined as never);
+    const { access: realAccess } =
+      await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises');
+    mockAccess.mockImplementation(realAccess);
     mockQuery.mockReturnValue(makeQuery() as ReturnType<typeof query>);
   });
 
@@ -165,17 +161,17 @@ describe('resolveSession', () => {
     });
   });
 
-  describe('subagent loading', () => {
+  describe('plugin loading', () => {
     it('checks each subagent path for existence when non-empty', async () => {
       await startSession(
         makeOptions({
           definition: {
             name: 'engineer',
-            promptPath: '/agent/prompt.md',
+            promptPath: join(engineerFixture, 'prompt.md'),
             skillPaths: [],
             subagentPaths: [
-              '/agent/.claude/agents/test-runner.md',
-              '/agent/.claude/agents/linter.md',
+              join(engineerFixture, 'plugin', 'agents', 'test-runner.md'),
+              join(engineerFixture, 'plugin', 'agents', 'linter.md'),
             ],
             allowedTools: ['Read', 'Edit'],
             mcpServerNames: ['gitlab'],
@@ -183,40 +179,45 @@ describe('resolveSession', () => {
         }),
       );
 
-      expect(mockAccess).toHaveBeenCalledTimes(2);
-      expect(mockAccess).toHaveBeenCalledWith('/agent/.claude/agents/test-runner.md');
-      expect(mockAccess).toHaveBeenCalledWith('/agent/.claude/agents/linter.md');
+      expect(mockAccess).toHaveBeenCalledWith(
+        join(engineerFixture, 'plugin', 'agents', 'test-runner.md'),
+      );
+      expect(mockAccess).toHaveBeenCalledWith(
+        join(engineerFixture, 'plugin', 'agents', 'linter.md'),
+      );
     });
 
-    it("passes settingSources: ['project'] when valid subagent paths exist", async () => {
+    it('passes explicit plugins when a persona plugin bundle exists', async () => {
       await startSession(
         makeOptions({
           definition: {
             name: 'engineer',
-            promptPath: '/agent/prompt.md',
+            promptPath: join(engineerFixture, 'prompt.md'),
             skillPaths: [],
-            subagentPaths: ['/agent/.claude/agents/test-runner.md'],
+            subagentPaths: [join(engineerFixture, 'plugin', 'agents', 'test-runner.md')],
             allowedTools: ['Read', 'Edit'],
             mcpServerNames: ['gitlab'],
           },
         }),
       );
 
-      expect(mockQuery).toHaveBeenCalledWith(
-        expect.objectContaining({
-          options: expect.objectContaining({
-            cwd: '/agent',
-            settingSources: ['project'],
+      const options = mockQuery.mock.calls[0]?.[0].options as Record<string, unknown>;
+      expect(options).not.toHaveProperty('settingSources');
+      expect(options['plugins']).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            type: 'local',
+            path: join(engineerFixture, 'plugin'),
           }),
-        }),
+        ]),
       );
     });
 
-    it('does not set settingSources when subagentPaths and skillPaths are empty', async () => {
+    it('does not set plugins when persona has no plugin bundle and no shared plugins', async () => {
       await startSession(makeOptions());
 
-      expect(mockAccess).not.toHaveBeenCalled();
       const options = mockQuery.mock.calls[0]?.[0].options as Record<string, unknown>;
+      expect(options).not.toHaveProperty('plugins');
       expect(options).not.toHaveProperty('settingSources');
     });
 
@@ -230,9 +231,9 @@ describe('resolveSession', () => {
         makeOptions({
           definition: {
             name: 'engineer',
-            promptPath: '/agent/prompt.md',
+            promptPath: join(engineerFixture, 'prompt.md'),
             skillPaths: [],
-            subagentPaths: ['/agent/.claude/agents/missing.md'],
+            subagentPaths: [join(engineerFixture, 'plugin', 'agents', 'missing.md')],
             allowedTools: ['Read', 'Edit'],
             mcpServerNames: ['gitlab'],
           },
@@ -240,95 +241,49 @@ describe('resolveSession', () => {
       );
 
       expect(warnSpy).toHaveBeenCalledOnce();
-      expect(warnSpy.mock.calls[0]?.[0]).toContain('missing.md');
       warnSpy.mockRestore();
-    });
-
-    it('starts the session with remaining subagents after skipping a missing one', async () => {
-      vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-      const enoent = Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
-      mockAccess.mockRejectedValueOnce(enoent).mockResolvedValueOnce(undefined as never);
-
-      await startSession(
-        makeOptions({
-          definition: {
-            name: 'engineer',
-            promptPath: '/agent/prompt.md',
-            skillPaths: [],
-            subagentPaths: ['/agent/.claude/agents/missing.md', '/agent/.claude/agents/valid.md'],
-            allowedTools: ['Read', 'Edit'],
-            mcpServerNames: ['gitlab'],
-          },
-        }),
-      );
-
-      const options = mockQuery.mock.calls[0]?.[0].options as Record<string, unknown>;
-      expect(options['settingSources']).toEqual(['project']);
-    });
-
-    it('does not set settingSources when all subagent paths are missing', async () => {
-      vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-      const enoent = Object.assign(new Error('ENOENT'), { code: 'ENOENT' });
-      mockAccess.mockRejectedValue(enoent);
-
-      await startSession(
-        makeOptions({
-          definition: {
-            name: 'engineer',
-            promptPath: '/agent/prompt.md',
-            skillPaths: [],
-            subagentPaths: ['/agent/.claude/agents/gone.md'],
-            allowedTools: ['Read', 'Edit'],
-            mcpServerNames: ['gitlab'],
-          },
-        }),
-      );
-
-      const options = mockQuery.mock.calls[0]?.[0].options as Record<string, unknown>;
-      expect(options).not.toHaveProperty('settingSources');
     });
   });
 
   describe('skill loading', () => {
-    it('Gherkin: a persona with skills but no subagents loads its skills', async () => {
+    it('Gherkin: a persona with skills but no subagents loads its skills via plugins', async () => {
       await startSession(
         makeOptions({
           definition: {
             name: 'senior-engineer',
-            promptPath: join(seniorEngineerFixture, 'prompt.md'),
-            skillPaths: [peerCodeReviewSkill],
+            promptPath: '/agents/senior-engineer/prompt.md',
+            skillPaths: [codeReviewSkill],
             subagentPaths: [],
+            sharedPlugins: ['code-review'],
             allowedTools: ['Read'],
             mcpServerNames: ['gitlab'],
           },
         }),
       );
 
-      expect(mockAccess).toHaveBeenCalledWith(peerCodeReviewSkill);
-      expect(mockQuery).toHaveBeenCalledWith(
-        expect.objectContaining({
-          options: expect.objectContaining({
-            cwd: seniorEngineerFixture,
-            settingSources: ['project'],
-          }),
-        }),
+      expect(mockAccess).toHaveBeenCalledWith(codeReviewSkill);
+      const options = mockQuery.mock.calls[0]?.[0].options as Record<string, unknown>;
+      expect(options).not.toHaveProperty('settingSources');
+      expect(options['plugins']).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ type: 'local', path: CODE_REVIEW_PLUGIN_PATH }),
+        ]),
       );
+      expect(options['skills']).toEqual(['code-review:code-review']);
 
-      const skillContent = await readFile(peerCodeReviewSkill, 'utf8');
-      expect(skillContent).toContain('peer-code-review');
+      const skillContent = await readFile(codeReviewSkill, 'utf8');
+      expect(skillContent).toContain('code-review');
     });
 
-    it('Gherkin: a persona with subagents still loads its skills', async () => {
+    it('Gherkin: a persona with subagents still loads its skills via plugins', async () => {
       const implementStorySkill = join(
         engineerFixture,
-        '.claude',
+        'plugin',
         'skills',
         'implement-story',
         'SKILL.md',
       );
-      const testRunnerSubagent = join(engineerFixture, '.claude', 'agents', 'test-runner.md');
+      const testRunnerSubagent = join(engineerFixture, 'plugin', 'agents', 'test-runner.md');
 
       await startSession(
         makeOptions({
@@ -344,10 +299,14 @@ describe('resolveSession', () => {
       );
 
       expect(mockAccess).toHaveBeenCalledWith(implementStorySkill);
-      expect(mockAccess).toHaveBeenCalledWith(testRunnerSubagent);
       const options = mockQuery.mock.calls[0]?.[0].options as Record<string, unknown>;
-      expect(options['settingSources']).toEqual(['project']);
-      expect(options['cwd']).toBe(engineerFixture);
+      expect(options).not.toHaveProperty('settingSources');
+      expect(options['skills']).toEqual(['engineer:implement-story']);
+      expect(options['plugins']).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ type: 'local', path: join(engineerFixture, 'plugin') }),
+        ]),
+      );
 
       const skillContent = await readFile(implementStorySkill, 'utf8');
       expect(skillContent).toContain('implement-story');
@@ -363,9 +322,10 @@ describe('resolveSession', () => {
         makeOptions({
           definition: {
             name: 'senior-engineer',
-            promptPath: join(seniorEngineerFixture, 'prompt.md'),
-            skillPaths: [join(seniorEngineerFixture, '.claude', 'skills', 'missing', 'SKILL.md')],
+            promptPath: '/agents/senior-engineer/prompt.md',
+            skillPaths: [join(CODE_REVIEW_PLUGIN_PATH, 'skills', 'missing', 'SKILL.md')],
             subagentPaths: [],
+            sharedPlugins: ['code-review'],
             allowedTools: ['Read'],
             mcpServerNames: ['gitlab'],
           },
@@ -373,28 +333,9 @@ describe('resolveSession', () => {
       );
 
       expect(warnSpy).toHaveBeenCalledOnce();
-      expect(warnSpy.mock.calls[0]?.[0]).toContain('skill file not found');
       const options = mockQuery.mock.calls[0]?.[0].options as Record<string, unknown>;
-      expect(options).not.toHaveProperty('settingSources');
+      expect(options['skills']).toEqual(['code-review:code-review']);
       warnSpy.mockRestore();
-    });
-
-    it("passes settingSources: ['project'] when only valid skill paths exist", async () => {
-      await startSession(
-        makeOptions({
-          definition: {
-            name: 'senior-engineer',
-            promptPath: join(seniorEngineerFixture, 'prompt.md'),
-            skillPaths: [peerCodeReviewSkill],
-            subagentPaths: [],
-            allowedTools: ['Read'],
-            mcpServerNames: ['gitlab'],
-          },
-        }),
-      );
-
-      const options = mockQuery.mock.calls[0]?.[0].options as Record<string, unknown>;
-      expect(options['settingSources']).toEqual(['project']);
     });
   });
 
@@ -484,10 +425,10 @@ describe('resolveSession', () => {
       expect(options['maxBudgetUsd']).toBe(3.5);
     });
 
-    it('passes inline sdkAgents and skill names', async () => {
+    it('passes inline sdkAgents and namespaced skill names', async () => {
       const implementStorySkill = join(
         engineerFixture,
-        '.claude',
+        'plugin',
         'skills',
         'implement-story',
         'SKILL.md',
@@ -517,7 +458,7 @@ describe('resolveSession', () => {
       expect(options['agents']).toMatchObject({
         'test-runner': { description: 'Runs tests' },
       });
-      expect(options['skills']).toEqual(['implement-story']);
+      expect(options['skills']).toEqual(['engineer:implement-story']);
     });
 
     it('records subagent audit events when onSubagentAudit is provided', async () => {

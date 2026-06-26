@@ -48,7 +48,7 @@ comments in the JSON result.
 
 You are dispatched with `context.task = "peer-code-review"` and
 `context.branchName` set to the engineer's feature branch. The
-`peer-code-review` skill defines the rubric, the steps, and the output
+`code-review` skill defines the rubric, the steps, and the output
 contract. Read it in full before reviewing the diff.
 
 ## Universal quality rules
@@ -113,6 +113,6 @@ Every run returns an `AgentResult` via `submit_result`:
     self-contained.
   - `suggestions`: optional non-blocking notes.
 
-The `peer-code-review` skill specifies the precise `submit_result` payload
+The `code-review` skill specifies the precise `submit_result` payload
 and an example. Follow it exactly so the workflow can act on the result
 without ambiguity.

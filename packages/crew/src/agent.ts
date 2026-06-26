@@ -21,6 +21,8 @@ export interface AgentResult {
   costUsd: number;
 }
 
+import type { SharedPluginName } from './plugins.js';
+
 /** The interface every persona module must export. */
 export interface Agent {
   readonly name: PersonaName;
@@ -32,10 +34,12 @@ export interface AgentDefinition {
   name: PersonaName;
   /** Absolute path to the persona prompt file. */
   promptPath: string;
-  /** Absolute paths to skill entry files under `.claude/skills/`. */
+  /** Absolute paths to skill entry files under `plugin/skills/`. */
   skillPaths: string[];
-  /** Absolute paths to subagent definitions (empty for MVP's tech-lead and senior-engineer). */
+  /** Absolute paths to subagent definitions under `plugin/agents/`. */
   subagentPaths: string[];
+  /** Shared `@daddia/crew` plugin bundles to load alongside the persona plugin. */
+  sharedPlugins?: SharedPluginName[];
   /** Tool names this agent is permitted to call. Enforced as a hard filter. */
   allowedTools: string[];
   /** Keys into the crew's mcp.json servers map. */

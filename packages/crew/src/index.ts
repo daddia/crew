@@ -6,7 +6,18 @@ export { resolveSession } from './session.js';
 export type { SessionOptions, ActiveSession, AgentSession } from './session.js';
 export type { SDKMessage, SDKResultMessage } from '@anthropic-ai/claude-agent-sdk';
 
-export { readPromptFile, readSkillsDir, readSubagentsDir } from './loaders.js';
+export { readPromptFile, readSkillsDir, readSubagentsDir, personaPluginDir, personaSkillsDir, personaAgentsDir } from './loaders.js';
+
+export {
+  CODE_REVIEW_PLUGIN_PATH,
+  PERSONA_PLUGIN_DIR,
+  sharedPluginRef,
+  personaPluginRef,
+  namespacedSkillName,
+  namespacedSkillNamesFromPaths,
+  resolvePluginBundles,
+} from './plugins.js';
+export type { SharedPluginName, ResolvedPlugin } from './plugins.js';
 
 export {
   syncPersonaClaudeAssets,
