@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - main
+    paths:
+      - '.changeset/**'
+      - 'packages/**/package.json'
+      - 'packages/**/CHANGELOG.md'
+      - '.github/workflows/release.yml'
 
 permissions:
   contents: read
