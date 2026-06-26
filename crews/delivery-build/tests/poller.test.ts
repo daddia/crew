@@ -75,7 +75,7 @@ function makeState(
     startStep: vi.fn(),
     finishStep: vi.fn(),
     getStepHistory: vi.fn().mockReturnValue([]),
-    countRefactorIterations: vi.fn().mockReturnValue(0),
+    countStepOccurrences: vi.fn().mockReturnValue(0),
     getInterruptedSteps: vi.fn().mockReturnValue([]),
     ping: vi.fn(),
     close: vi.fn(),

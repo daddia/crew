@@ -236,8 +236,8 @@ and implementation of the scaffold crews' workflows beyond config hygiene.
       And the method ultimately succeeds without escalating the story
     ```
 
-- [ ] **[RH01-09] Graduate the SQLite store into `@daddia/crew/state` and delete per-crew copies**
-  - **Status:** Not started | **Priority:** P1 | **Estimate:** 5
+- [x] **[RH01-09] Graduate the SQLite store into `@daddia/crew/state` and delete per-crew copies**
+  - **Status:** Done | **Priority:** P1 | **Estimate:** 5
   - **Epic:** RH01 | **Labels:** phase:next, area:runtime, type:refactor
   - **Depends on:** RH01-06
   - **Deliverable:** `delivery-build` and `delivery-final-review` consume `createSqliteStateStore` from the package (with a crew-supplied `Step` union) instead of copy-pasted `state.ts`; the divergent implementations are removed. Closes review §2.8; realises the `solution.md §11` graduation row.

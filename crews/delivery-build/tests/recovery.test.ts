@@ -103,7 +103,7 @@ function makeState(interrupted: StepRow[] = []): StateStore {
     startStep: vi.fn(),
     finishStep: vi.fn(),
     getStepHistory: vi.fn().mockReturnValue([]),
-    countRefactorIterations: vi.fn().mockReturnValue(0),
+    countStepOccurrences: vi.fn().mockReturnValue(0),
     checkAndRecord: vi.fn().mockReturnValue(false),
     getInterruptedSteps: vi.fn().mockReturnValue(interrupted),
     ping: vi.fn(),
