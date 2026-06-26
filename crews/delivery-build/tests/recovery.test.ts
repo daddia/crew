@@ -58,6 +58,8 @@ function makeMockGitlab() {
     getMrDiff: vi.fn().mockResolvedValue(''),
     postReviewComment: vi.fn().mockResolvedValue(undefined),
     getPipelineStatus: vi.fn().mockResolvedValue('success'),
+    getMrSourceBranch: vi.fn().mockResolvedValue('feature/CREW-1-test'),
+    findOpenMrForIssue: vi.fn().mockResolvedValue('https://gitlab.example.com/mr/1'),
   } satisfies GitlabClient;
 }
 

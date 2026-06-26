@@ -536,8 +536,34 @@ async function runQaWorkflowInner(
 ): Promise<void> {
   const { issueKey, state, jira, behaviour, qaWorkspaceDir } = ctx;
 
+  const resumeAfterRemediation = state.getStory(issueKey)?.currentStep === 'remediation-pending';
+
   const qaSeed = await seedQaContext(ctx);
   if (!qaSeed) {
+    return;
+  }
+
+  if (resumeAfterRemediation) {
+    log.info('workflow.qa.remediation-resume', { issueKey });
+    const validation = await runValidationSteps(ctx, qaSeed, input, agents, workspace);
+
+    if (validation.infraReason) {
+      await escalateToHumanReview(jira, issueKey, validation.infraReason, state, qaSeed.mrUrl);
+      return;
+    }
+
+    if (!validation.ok && validation.defects.length > 0) {
+      await handleProductDefects(ctx, qaSeed, validation.defects, input, agents);
+      return;
+    }
+
+    state.upsertStory(issueKey, 'in-review');
+    state.startStep(issueKey, 'in-review');
+    await jira.transitionIssue(issueKey, 'In Review');
+    state.finishStep(issueKey, 'in-review', { verdict: 'ok' });
+
+    log.info('workflow.handoff-to-review', { issueKey, mrUrl: qaSeed.mrUrl });
+    emitWorkflowComplete(issueKey, state, 'in-review', true, qaSeed.mrUrl);
     return;
   }
 

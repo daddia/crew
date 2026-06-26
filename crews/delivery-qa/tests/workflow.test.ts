@@ -408,4 +408,34 @@ describe('runQaWorkflow', () => {
     expect(ctxBase.jira.transitionIssue).toHaveBeenCalledWith('CREW-55', 'Needs human review');
     expect(state.stories.get('CREW-55')?.currentStep).toBe('needs-human-review');
   });
+
+  it('resumes from automated-suite after remediation handoff without redeploying', async () => {
+    const ctxBase = makeCtxBase();
+    const workspace = makeWorkspaceMock();
+    const state = makeState();
+    state.stories.set('CREW-55', {
+      currentStep: 'remediation-pending',
+      startedAt: Date.now() - 60_000,
+    });
+
+    mockQaEngineer.mockImplementation(async (input: AgentInput) => {
+      const task = input.context['task'];
+      if (task === 'run-automated-suite' || task === 'exploratory-pass') {
+        return passResult();
+      }
+      return passResult({ success: false, summary: 'unexpected task' });
+    });
+
+    await runQaWorkflow(
+      { issueKey: 'CREW-55', state, ...ctxBase },
+      { workspace },
+    );
+
+    expect(workspace.checkoutMrRef).not.toHaveBeenCalled();
+    expect(workspace.runDeployScript).not.toHaveBeenCalled();
+    const finishedSteps = state.stepHistory.map((r) => r.step);
+    expect(finishedSteps).toContain('automated-suite');
+    expect(finishedSteps).not.toContain('deploy-qa');
+    expect(ctxBase.jira.transitionIssue).toHaveBeenCalledWith('CREW-55', 'In Review');
+  });
 });

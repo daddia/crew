@@ -37,6 +37,8 @@ function makeMockGitlab(): GitlabClient {
     getPipelineStatus: vi.fn(),
     getMrDiff: vi.fn(),
     postReviewComment: vi.fn(),
+    getMrSourceBranch: vi.fn(),
+    findOpenMrForIssue: vi.fn(),
   };
 }
 
@@ -100,6 +102,19 @@ function makeStoryRow(issueKey: string, currentStep: Step) {
   return { issueKey, currentStep, startedAt: Date.now() };
 }
 
+function mockPollerSearches(
+  jira: JiraClient,
+  todoResults: Array<{ issueKey: string }>,
+  remediationResults: Array<{ issueKey: string }> = [],
+): void {
+  vi.mocked(jira.searchIssues).mockImplementation(async (jql: string) => {
+    if (jql.includes('In Remediation')) {
+      return remediationResults;
+    }
+    return todoResults;
+  });
+}
+
 describe('pollTick', () => {
   beforeEach(() => {
     inFlight.clear();
@@ -136,21 +151,21 @@ describe('pollTick', () => {
 
   it('executes a JQL search for the configured project and assignee', async () => {
     const deps = makePollerDeps();
-    vi.mocked(deps.jira.searchIssues).mockResolvedValue([]);
+    mockPollerSearches(deps.jira, []);
 
     await pollTick(deps, makeState());
 
     expect(deps.jira.searchIssues).toHaveBeenCalledWith(
       'project = "CREW" AND status = "To Do" AND assignee = "user-123"',
     );
+    expect(deps.jira.searchIssues).toHaveBeenCalledWith(
+      'project = "CREW" AND status = "In Remediation" AND labels = "qa-remediation" AND assignee = "user-123"',
+    );
   });
 
   it('calls runStory asynchronously for each result returned by the search', async () => {
     const deps = makePollerDeps();
-    vi.mocked(deps.jira.searchIssues).mockResolvedValue([
-      { issueKey: 'CREW-1' },
-      { issueKey: 'CREW-2' },
-    ]);
+    mockPollerSearches(deps.jira, [{ issueKey: 'CREW-1' }, { issueKey: 'CREW-2' }]);
     const state = makeState();
 
     await pollTick(deps, state);
@@ -180,7 +195,7 @@ describe('pollTick', () => {
 
   it('skips an in-progress story and emits a debug log', async () => {
     const deps = makePollerDeps();
-    vi.mocked(deps.jira.searchIssues).mockResolvedValue([{ issueKey: 'CREW-60-001' }]);
+    mockPollerSearches(deps.jira, [{ issueKey: 'CREW-60-001' }]);
     const state = makeState(() => makeStoryRow('CREW-60-001', 'implement'));
 
     await pollTick(deps, state);
@@ -194,7 +209,7 @@ describe('pollTick', () => {
 
   it('skips a terminal story silently without calling runStory', async () => {
     const deps = makePollerDeps();
-    vi.mocked(deps.jira.searchIssues).mockResolvedValue([{ issueKey: 'CREW-60-003' }]);
+    mockPollerSearches(deps.jira, [{ issueKey: 'CREW-60-003' }]);
     const state = makeState(() => makeStoryRow('CREW-60-003', 'in-qa'));
 
     await pollTick(deps, state);
@@ -205,7 +220,7 @@ describe('pollTick', () => {
 
   it('also skips silently when the terminal step is needs-human-review', async () => {
     const deps = makePollerDeps();
-    vi.mocked(deps.jira.searchIssues).mockResolvedValue([{ issueKey: 'CREW-60-003' }]);
+    mockPollerSearches(deps.jira, [{ issueKey: 'CREW-60-003' }]);
     const state = makeState(() => makeStoryRow('CREW-60-003', 'needs-human-review'));
 
     await pollTick(deps, state);
@@ -217,7 +232,7 @@ describe('pollTick', () => {
   it('skips an in-flight issueKey and emits a debug log', async () => {
     inFlight.add('CREW-60-004');
     const deps = makePollerDeps();
-    vi.mocked(deps.jira.searchIssues).mockResolvedValue([{ issueKey: 'CREW-60-004' }]);
+    mockPollerSearches(deps.jira, [{ issueKey: 'CREW-60-004' }]);
 
     await pollTick(deps, makeState());
 
@@ -230,7 +245,7 @@ describe('pollTick', () => {
 
   it('calls runStory for a new story with no state record and no in-flight lock', async () => {
     const deps = makePollerDeps();
-    vi.mocked(deps.jira.searchIssues).mockResolvedValue([{ issueKey: 'CREW-60-002' }]);
+    mockPollerSearches(deps.jira, [{ issueKey: 'CREW-60-002' }]);
     const state = makeState(() => undefined);
 
     await pollTick(deps, state);
@@ -243,7 +258,7 @@ describe('pollTick', () => {
 
   it('removes the issueKey from inFlight after runStory settles', async () => {
     const deps = makePollerDeps();
-    vi.mocked(deps.jira.searchIssues).mockResolvedValue([{ issueKey: 'CREW-NEW' }]);
+    mockPollerSearches(deps.jira, [{ issueKey: 'CREW-NEW' }]);
 
     await pollTick(deps, makeState());
     await new Promise((r) => setTimeout(r, 0));
@@ -545,6 +560,39 @@ describe('pollTick', () => {
       expect.objectContaining({ issueKey: 'CREW-FAIL' }),
     );
   });
+
+  // ── QA remediation poll ──────────────────────────────────────────────────
+
+  it('calls runStory with remediation for In Remediation qa-remediation tickets', async () => {
+    const deps = makePollerDeps();
+    mockPollerSearches(deps.jira, [], [{ issueKey: 'CREW-55' }]);
+    const state = makeState();
+
+    await pollTick(deps, state);
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(deps.jira.searchIssues).toHaveBeenCalledWith(
+      'project = "CREW" AND status = "In Remediation" AND labels = "qa-remediation" AND assignee = "user-123"',
+    );
+    expect(mockRunStory).toHaveBeenCalledWith(
+      expect.objectContaining({ issueKey: 'CREW-55', state }),
+      { remediation: true },
+    );
+  });
+
+  it('skips remediation tickets already in fix-qa-defects step', async () => {
+    const deps = makePollerDeps();
+    mockPollerSearches(deps.jira, [], [{ issueKey: 'CREW-55' }]);
+    const state = makeState(() => makeStoryRow('CREW-55', 'fix-qa-defects'));
+
+    await pollTick(deps, state);
+
+    expect(mockRunStory).not.toHaveBeenCalled();
+    expect(mockLogDebug).toHaveBeenCalledWith(
+      'poller.skip-in-progress',
+      expect.objectContaining({ issueKey: 'CREW-55', step: 'fix-qa-defects' }),
+    );
+  });
 });
 
 describe('startPoller', () => {
@@ -575,7 +623,7 @@ describe('startPoller', () => {
     expect(deps.jira.searchIssues).not.toHaveBeenCalled();
 
     await vi.advanceTimersByTimeAsync(1);
-    expect(deps.jira.searchIssues).toHaveBeenCalledTimes(1);
+    expect(deps.jira.searchIssues).toHaveBeenCalledTimes(2);
 
     clearInterval(interval);
   });
@@ -590,14 +638,14 @@ describe('startPoller', () => {
         ciPollIntervalMs: 30_000,
       },
     });
-    vi.mocked(deps.jira.searchIssues).mockResolvedValue([]);
+    mockPollerSearches(deps.jira, []);
     const interval = startPoller(deps, makeState());
 
     await vi.advanceTimersByTimeAsync(4999);
     expect(deps.jira.searchIssues).not.toHaveBeenCalled();
 
     await vi.advanceTimersByTimeAsync(1);
-    expect(deps.jira.searchIssues).toHaveBeenCalledTimes(1);
+    expect(deps.jira.searchIssues).toHaveBeenCalledTimes(2);
 
     clearInterval(interval);
   });

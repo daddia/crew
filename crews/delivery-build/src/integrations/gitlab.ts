@@ -10,6 +10,7 @@ export interface GitlabClient {
   getMrDiff(mrWebUrl: string): Promise<string>;
   getMrSourceBranch(mrWebUrl: string): Promise<string>;
   postReviewComment(mrWebUrl: string, body: string): Promise<void>;
+  findOpenMrForIssue(issueKey: string): Promise<string | null>;
 }
 
 export interface CreateMrOptions {
@@ -172,6 +173,15 @@ export function createGitlabClient(
         method: 'POST',
         body: JSON.stringify({ body }),
       });
+    },
+
+    async findOpenMrForIssue(issueKey) {
+      const res = await gitlabFetch(
+        `/projects/${encodeURIComponent(projectId)}/merge_requests?state=opened&search=${encodeURIComponent(issueKey)}&per_page=100`,
+      );
+      const mrs = (await res.json()) as Array<{ web_url: string; source_branch: string }>;
+      const match = mrs.find((mr) => mr.source_branch.includes(issueKey));
+      return match?.web_url ?? null;
     },
   };
 }

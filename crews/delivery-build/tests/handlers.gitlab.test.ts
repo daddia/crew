@@ -37,6 +37,8 @@ const mockGitlab = {
   getPipelineStatus: vi.fn(),
   getMrDiff: vi.fn(),
   postReviewComment: vi.fn(),
+  getMrSourceBranch: vi.fn(),
+  findOpenMrForIssue: vi.fn(),
 } satisfies GitlabClient;
 
 const ctxBase: WorkflowCtxBase = {
