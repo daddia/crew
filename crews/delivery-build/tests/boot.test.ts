@@ -179,6 +179,23 @@ describe('boot – happy path', () => {
       expect.any(Function),
     );
   });
+
+  it('mounts CrewBench eval handler so GET /eval/ does not 404', async () => {
+    await boot(VALID_ENV);
+    const serveOptions = vi.mocked(serve).mock.calls[0]![0] as {
+      fetch: (req: Request) => Response | Promise<Response>;
+      port: number;
+    };
+
+    const res = await serveOptions.fetch(new Request('http://localhost/eval/'));
+    expect(res.status).toBe(200);
+
+    const body = (await res.json()) as { ok: boolean; fixtures: string[] };
+    expect(body.ok).toBe(true);
+    expect(body.fixtures).toEqual(
+      expect.arrayContaining(['smoke', 'loop-cap-escalation', 'handoff-artefact']),
+    );
+  });
 });
 
 describe('boot – misconfig path', () => {
