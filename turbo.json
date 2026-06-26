@@ -7,6 +7,18 @@
       "dependsOn": ["^build"],
       "outputs": ["dist/**", "docs/**"]
     },
+    "@daddia/crew-delivery-build#build": {
+      "dependsOn": ["@daddia/crew#build", "^build"]
+    },
+    "@daddia/crew-delivery-code-review#build": {
+      "dependsOn": ["@daddia/crew#build", "^build"]
+    },
+    "@daddia/crew-delivery-final-review#build": {
+      "dependsOn": ["@daddia/crew#build", "^build"]
+    },
+    "@daddia/crew-delivery-qa#build": {
+      "dependsOn": ["@daddia/crew#build", "^build"]
+    },
     "typecheck": {
       "dependsOn": ["^typecheck"],
       "outputs": []
