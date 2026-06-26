@@ -5,9 +5,10 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "crew": "./dist/cli/index.js"
+    "crew": "bin/crew.js"
   },
   "files": [
+    "bin",
     "dist",
     "docs",
     "plugins",
@@ -43,7 +44,7 @@
     }
   },
   "scripts": {
-    "build": "node scripts/bundle-docs.mjs && tsc -p tsconfig.json",
+    "build": "node scripts/bundle-docs.mjs && tsc -p tsconfig.json && chmod +x bin/crew.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "clean": "rm -rf dist docs"
