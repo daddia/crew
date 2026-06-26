@@ -153,8 +153,9 @@ without crashing the server.
 `webhooks`, `config` subpaths).
 
 **Status.** In progress — validated 2026-06-26: 10/11 tasks done; CREW-02-01
-Docker CI build scenario not evidenced in GitHub Actions (Dockerfile + registry pin
-in place). Production-readiness items (CREW-03) remain. **Work path:**
+Dockerfile and registry pin in place (image build verified locally per
+`docs/runbook/container.md`; not gated in CI). Production-readiness items
+(CREW-03) remain. **Work path:**
 `docs/work/02-delivery-build/`.
 
 ### CREW-03 -- Production readiness — build crew
@@ -207,7 +208,7 @@ CREW-01  ───────────────────────�
 CREW-12 → CREW-13.
 
 **Quality path (parallel, Next phase):** CREW-03 → CREW-14 → CREW-15 → (ongoing)
-CrewBench gates on every runtime change.
+CrewBench gates on runtime changes via eval pipeline (deferred from CI).
 
 **Parallelisation opportunities (Next phase):**
 

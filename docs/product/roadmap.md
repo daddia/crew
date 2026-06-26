@@ -117,8 +117,9 @@ cheaper than the first and keeps every runtime change eval-gated.
 
 **Quality gates:**
 
-- At least one fixture-owned eval per deployed crew runs in CI; a prompt or
-  harness regression fails the build before merge.
+- At least one fixture-owned eval per deployed crew runs in the eval/release
+  pipeline (not the CI workflow); a prompt or harness regression fails before
+  unattended deploy.
 - A completed story's run joins to its MR outcome and its cost breakdown in a
   single warehouse query.
 - A new crew scaffolds from the template and reaches a passing smoke eval without
@@ -221,7 +222,7 @@ making model-generated orchestration the default for any crew.
 | -------------------------------------------------------- | ------ | ------------------- | ------------------------------------------------- |
 | Build crew runs unattended on real stories               | Now    | No (internal proof) | Now exit criteria met; gates Next opening         |
 | Full delivery vertical (build → QA → review) operational | Next   | Yes                 | Handoffs auto-trigger; overnight run completes    |
-| Eval framework gating every runtime change               | Next   | No                  | Eval gate in CI before unattended deploy          |
+| Eval framework gating every runtime change               | Next   | No                  | Eval gate in eval/release pipeline before unattended deploy |
 | First CLI-shaped crew (code-reviewer) ships              | Next   | Yes                 | Requires the remote audit sink                    |
 | Pro tier purchasable                                     | Later  | Yes                 | Pricing, licence enforcement, proof pack resolved |
 | First optimiser (model selector) live                    | Later  | Yes (Pro)           | Measurable cost-quality win on the eval baseline  |

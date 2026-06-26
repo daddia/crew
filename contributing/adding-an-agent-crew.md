@@ -32,7 +32,7 @@ cp -r crews/delivery-build crews/<name>
 
 Update `package.json` to set `"name": "@daddia/crew-<name>"` and reset the version.
 
-`pnpm-workspace.yaml` already globs `crews/*`, so no workspace change is needed. Copy and adapt the `delivery-build` `Dockerfile` — the build context must be the workspace root so `packages/*` are available. Add a build and test job for the new crew in CI.
+`pnpm-workspace.yaml` already globs `crews/*`, so no workspace change is needed. Copy and adapt the `delivery-build` `Dockerfile` — the build context must be the workspace root so `packages/*` are available. Verify the image locally (`docs/runbook/container.md`) and wire CrewBench via `pnpm eval:ci` when an eval/release pipeline exists; neither belongs in `.github/workflows/ci.yml`.
 
 ## 3. Directory layout
 

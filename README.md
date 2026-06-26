@@ -39,7 +39,9 @@ pnpm typecheck  # TypeScript across all packages and crews
 pnpm test       # Vitest suite
 ```
 
-CI runs the same gates on every PR.
+CI (`.github/workflows/ci.yml`) runs format, lint, invariants, typecheck, test, and
+build on every PR. Docker image builds and CrewBench evals are out of scope for CI —
+verify locally or in a separate pipeline when that lands.
 
 ## Where to next
 
