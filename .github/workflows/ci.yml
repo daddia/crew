@@ -118,6 +118,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build @daddia/crew
+        run: pnpm --filter @daddia/crew build
+
       - name: Test
         run: pnpm test
 
@@ -161,6 +164,9 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Build @daddia/crew
+        run: pnpm --filter @daddia/crew build
 
       - name: Build
         run: pnpm build
@@ -265,6 +271,10 @@ jobs:
         if: steps.changes.outputs.run == 'true'
         run: pnpm install --frozen-lockfile
 
+      - name: Build @daddia/crew
+        if: steps.changes.outputs.run == 'true'
+        run: pnpm --filter @daddia/crew build
+
       - name: Build
         if: steps.changes.outputs.run == 'true'
         run: pnpm build
@@ -336,6 +346,10 @@ jobs:
       - name: Install dependencies
         if: steps.changes.outputs.run == 'true'
         run: pnpm install --frozen-lockfile
+
+      - name: Build @daddia/crew
+        if: steps.changes.outputs.run == 'true'
+        run: pnpm --filter @daddia/crew build
 
       - name: Build
         if: steps.changes.outputs.run == 'true'
