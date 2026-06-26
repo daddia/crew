@@ -70,7 +70,7 @@ function makeCtxBase(
   gitlab: ReturnType<typeof makeGitlab>;
 } {
   return {
-    behaviour: { refactorLoopCap: 2, ciRetryCap: 3, ciPollIntervalMs: 0, ciWaitTimeoutMs: 1_800_000, ...behaviourOverrides },
+    behaviour: { refactorLoopCap: 2, ciRetryCap: 3, ciPollIntervalMs: 0, ciWaitTimeoutMs: 1_800_000, engineerMaxTurns: 50, engineerCostCapUsd: 5, ...behaviourOverrides },
     jira: makeJira(),
     gitlab: makeGitlab(),
     projectDir: '/project',

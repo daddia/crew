@@ -302,8 +302,8 @@ and implementation of the scaffold crews' workflows beyond config hygiene.
       And the persona is prompted to correct rather than silently failing
     ```
 
-- [ ] **[RH01-12] Give the engineer a real workspace (checkout + Bash + test-runner subagent)**
-  - **Status:** Not started | **Priority:** P1 | **Estimate:** 13
+- [x] **[RH01-12] Give the engineer a real workspace (checkout + Bash + test-runner subagent)**
+  - **Status:** Done | **Priority:** P1 | **Estimate:** 13
   - **Epic:** RH01 | **Labels:** phase:next, area:delivery-build, type:feature
   - **Depends on:** RH01-02
   - **Deliverable:** The engineer operates on a cloned working tree with `Read`/`Edit`/`Write`/`Bash`, can run `pnpm test`/`typecheck`/`lint` before opening the MR, and delegates execution to a real `test-runner` subagent; bounded by `maxTurns` and the per-run cost cap. Replaces one-file-at-a-time MCP pushes. Closes review §3.5 and §3.3.

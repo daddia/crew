@@ -29,9 +29,18 @@ vi.mock('@daddia/crew', async (importOriginal) => {
     resolveSession: vi.fn(),
     readPromptFile: vi.fn().mockResolvedValue('You are an engineer persona.'),
     readSkillsDir: vi.fn().mockResolvedValue([]),
-    readSubagentsDir: vi.fn().mockResolvedValue([]),
+    readSubagentsDir: vi.fn().mockResolvedValue(['/fake/agents/test-runner.md']),
     buildAuditHook: vi.fn().mockReturnValue(() => {}),
     createEngineerSubmitResultCapture: vi.fn(() => makeCapture()),
+    syncPersonaClaudeAssets: vi.fn().mockResolvedValue(undefined),
+    prepareEngineerWorkspace: vi.fn().mockResolvedValue(undefined),
+    buildSdkAgentsMap: vi.fn().mockResolvedValue({
+      'test-runner': {
+        description: 'Runs tests',
+        prompt: 'Run pnpm test',
+        tools: ['Bash'],
+      },
+    }),
   };
 });
 
@@ -40,12 +49,16 @@ import {
   readPromptFile,
   buildAuditHook,
   SUBMIT_RESULT_TOOL_NAME,
+  syncPersonaClaudeAssets,
+  prepareEngineerWorkspace,
 } from '@daddia/crew';
 import { engineer } from '../src/agents/engineer/agent.js';
 
 const mockResolveSession = vi.mocked(resolveSession);
 const mockReadPromptFile = vi.mocked(readPromptFile);
 const mockBuildAuditHook = vi.mocked(buildAuditHook);
+const mockSyncPersona = vi.mocked(syncPersonaClaudeAssets);
+const mockPrepareWorkspace = vi.mocked(prepareEngineerWorkspace);
 
 function makeResultMessage(overrides: Partial<SDKResultMessage> = {}): SDKResultMessage {
   return {
@@ -112,7 +125,7 @@ function makeSession(messages: SDKResultMessage[] = []): AgentSession {
 
 const baseInput: AgentInput = {
   issueKey: 'CREW-50-001',
-  context: { task: 'implement-story' },
+  context: { task: 'assess-clarification' },
 };
 
 describe('engineer.run()', () => {
@@ -129,7 +142,10 @@ describe('engineer.run()', () => {
       isResumed: false,
     });
 
-    const result = await engineer.run(baseInput);
+    const result = await engineer.run({
+      ...baseInput,
+      context: { task: 'implement-story', projectDir: '/workspace/acme' },
+    });
 
     expect(result.success).toBe(true);
     expect(result.summary).toBe(DEFAULT_SUBMITTED.summary);
@@ -145,7 +161,10 @@ describe('engineer.run()', () => {
       isResumed: false,
     });
 
-    const result = await engineer.run(baseInput);
+    const result = await engineer.run({
+      ...baseInput,
+      context: { task: 'implement-story', projectDir: '/workspace/acme' },
+    });
 
     expect(result.success).toBe(false);
     expect(result.summary).toContain('Rate limit exceeded');
@@ -161,7 +180,10 @@ describe('engineer.run()', () => {
       isResumed: false,
     });
 
-    const result = await engineer.run(baseInput);
+    const result = await engineer.run({
+      ...baseInput,
+      context: { task: 'implement-story', projectDir: '/workspace/acme' },
+    });
 
     expect(result.success).toBe(false);
     expect(result.summary).toContain('Network error');
@@ -312,7 +334,10 @@ describe('engineer.run()', () => {
       isResumed: false,
     });
 
-    const result = await engineer.run(baseInput);
+    const result = await engineer.run({
+      ...baseInput,
+      context: { task: 'implement-story', projectDir: '/workspace/acme' },
+    });
 
     expect(result.success).toBe(true);
     expect(result.artefacts).toMatchObject({
@@ -362,7 +387,10 @@ describe('engineer.run()', () => {
       isResumed: false,
     });
 
-    const result = await engineer.run(baseInput);
+    const result = await engineer.run({
+      ...baseInput,
+      context: { task: 'implement-story', projectDir: '/workspace/acme' },
+    });
 
     expect(result.success).toBe(false);
     expect(result.artefacts).toMatchObject({
@@ -380,7 +408,10 @@ describe('engineer.run()', () => {
       isResumed: false,
     });
 
-    const result = await engineer.run(baseInput);
+    const result = await engineer.run({
+      ...baseInput,
+      context: { task: 'implement-story', projectDir: '/workspace/acme' },
+    });
 
     expect(result.success).toBe(false);
     expect(result.summary).toContain('submit_result');
@@ -402,6 +433,7 @@ describe('engineer.run()', () => {
       ...baseInput,
       context: {
         task: 'implement-story',
+        projectDir: '/workspace/acme',
         ticket: {
           summary: 'Add feature',
           description: injection,
@@ -430,6 +462,7 @@ describe('engineer.run()', () => {
       ...baseInput,
       context: {
         task: 'address-feedback',
+        projectDir: '/workspace/acme',
         branchName: 'feature/CREW-50-001',
         comments: [injection],
       },
@@ -443,5 +476,88 @@ describe('engineer.run()', () => {
     expect(allowedTools).toBeDefined();
     expect(allowedTools).not.toContain('mcp__gitlab__merge_request');
     expect(allowedTools).not.toContain('mcp__gitlab__merge_merge_request');
+  });
+
+  it('Gherkin: implement-story uses workspace tools and passes bounds to resolveSession', async () => {
+    const session = makeSession([makeResultMessage()]);
+    mockResolveSession.mockResolvedValue({
+      session,
+      sessionId: 'sess-test-123',
+      isResumed: false,
+    });
+
+    await engineer.run({
+      ...baseInput,
+      context: {
+        task: 'implement-story',
+        projectDir: '/workspace/acme',
+        maxTurns: 40,
+        engineerCostCapUsd: 4,
+      },
+    });
+
+    expect(mockSyncPersona).toHaveBeenCalledOnce();
+    expect(mockPrepareWorkspace).toHaveBeenCalledWith('/workspace/acme', { branchName: undefined });
+
+    const callOptions = mockResolveSession.mock.calls[0]?.[0];
+    expect(callOptions?.workspaceCwd).toBe('/workspace/acme');
+    expect(callOptions?.maxTurns).toBe(40);
+    expect(callOptions?.maxBudgetUsd).toBe(4);
+    expect(callOptions?.sdkAgents).toMatchObject({
+      'test-runner': expect.objectContaining({ description: 'Runs tests' }),
+    });
+
+    const allowedTools = mockBuildAuditHook.mock.calls[0]?.[0] as string[];
+    expect(allowedTools).toContain('Read');
+    expect(allowedTools).toContain('Bash');
+    expect(allowedTools).toContain('Task');
+    expect(allowedTools).not.toContain('mcp__gitlab__push_file');
+  });
+
+  it('Gherkin: maxTurns exhaustion surfaces bounded-operation failure', async () => {
+    const session = makeSession([
+      makeResultMessage({
+        subtype: 'error_max_turns',
+        is_error: true,
+        errors: ['Max turns reached'],
+      } as Partial<SDKResultMessage>),
+    ]);
+    mockResolveSession.mockResolvedValue({
+      session,
+      sessionId: 'sess-test-123',
+      isResumed: false,
+    });
+
+    const result = await engineer.run({
+      ...baseInput,
+      context: {
+        task: 'implement-story',
+        projectDir: '/workspace/acme',
+        maxTurns: 5,
+      },
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.summary).toContain('maxTurns');
+    expect(result.artefacts).toMatchObject({ boundedReason: 'max_turns' });
+  });
+
+  it('Gherkin: test-runner subagent audit is wired via onSubagentAudit', async () => {
+    const session = makeSession([makeResultMessage()]);
+    mockResolveSession.mockResolvedValue({
+      session,
+      sessionId: 'sess-test-123',
+      isResumed: false,
+    });
+
+    await engineer.run({
+      ...baseInput,
+      context: {
+        task: 'implement-story',
+        projectDir: '/workspace/acme',
+      },
+    });
+
+    expect(mockResolveSession.mock.calls[0]?.[0]?.onSubagentAudit).toBeTypeOf('function');
   });
 });

@@ -50,14 +50,24 @@ blockers.
 For each finding:
 
 1. Identify the file(s) named or implied by the comment.
-2. Read each file in full via `mcp__gitlab__get_file_contents` against the
-   feature branch. Never modify a file you have not just re-read on the
-   branch — the engineer's earlier state is stale.
+2. Read each file in full with **Read** from the workspace checkout on
+   `context.branchName`. Never modify a file you have not just re-read.
 3. Compose the smallest correct change that addresses the finding. Do not
    touch lines that are not implicated by the finding.
-4. Push the change via `mcp__gitlab__push_file`. Commit message:
-   `fix(<scope>): <imperative summary>` or `refactor(<scope>): <summary>`.
-   Keep one finding per commit so the diff is auditable.
+4. Stage and commit with **Bash**:
+
+```bash
+git add <paths>
+git commit -m "fix(<scope>): <imperative summary>"
+```
+
+5. Push to the feature branch:
+
+```bash
+git push origin <branch-name>
+```
+
+Keep one finding per commit so the diff is auditable.
 
 If a fix would break correctness or leave the code in an inconsistent
 state, stop after pushing the partial work and return `success: false`

@@ -8,6 +8,7 @@ export interface GitlabClient {
   createMr(options: CreateMrOptions): Promise<string>;
   getPipelineStatus(mrWebUrl: string): Promise<PipelineStatus>;
   getMrDiff(mrWebUrl: string): Promise<string>;
+  getMrSourceBranch(mrWebUrl: string): Promise<string>;
   postReviewComment(mrWebUrl: string, body: string): Promise<void>;
 }
 
@@ -128,6 +129,15 @@ export function createGitlabClient(
       );
       const pipelines = (await res.json()) as Array<{ status: PipelineStatus }>;
       return pipelines[0]?.status ?? 'pending';
+    },
+
+    async getMrSourceBranch(mrWebUrl) {
+      const iid = extractMrIid(projectId, mrWebUrl);
+      const res = await gitlabFetch(
+        `/projects/${encodeURIComponent(projectId)}/merge_requests/${iid}`,
+      );
+      const data = (await res.json()) as { source_branch: string };
+      return data.source_branch;
     },
 
     async getMrDiff(mrWebUrl) {

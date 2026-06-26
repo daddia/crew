@@ -201,6 +201,24 @@ export function finalizeAgentRun(options: FinalizeAgentRunOptions): AgentResult 
     };
   }
 
+  if (resultMsg.subtype === 'error_max_turns') {
+    return {
+      success: false,
+      summary: 'Bounded operation: session terminated at maxTurns without completing',
+      artefacts: { sessionId, boundedReason: 'max_turns' },
+      costUsd: resultMsg.total_cost_usd,
+    };
+  }
+
+  if (resultMsg.subtype === 'error_max_budget_usd') {
+    return {
+      success: false,
+      summary: 'Bounded operation: session terminated at cost cap without completing',
+      artefacts: { sessionId, boundedReason: 'max_budget_usd' },
+      costUsd: resultMsg.total_cost_usd,
+    };
+  }
+
   if (resultMsg.subtype !== 'success') {
     return {
       success: false,

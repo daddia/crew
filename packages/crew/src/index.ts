@@ -9,9 +9,21 @@ export type { SDKMessage, SDKResultMessage } from '@anthropic-ai/claude-agent-sd
 export { readPromptFile, readSkillsDir, readSubagentsDir } from './loaders.js';
 
 export {
+  syncPersonaClaudeAssets,
+  prepareEngineerWorkspace,
+  skillNamesFromPaths,
+  WorkspaceError,
+} from './workspace.js';
+export type { PrepareWorkspaceOptions } from './workspace.js';
+
+export { parseSubagentFile, buildSdkAgentsMap } from './subagents.js';
+export type { ParsedSubagent, SdkSubagentDefinition } from './subagents.js';
+
+export {
   buildAuditHook,
   buildToolAllowlistGuard,
   toSDKHookCallback,
+  toSDKSubagentAuditCallback,
   boundedIterGuard,
   IterationCapReached,
 } from './hooks.js';
@@ -20,6 +32,8 @@ export type {
   PostToolUseHandler,
   ToolDenialEvent,
   ToolDenialHandler,
+  SubagentAuditEvent,
+  SubagentAuditHandler,
 } from './hooks.js';
 
 export { createLogger, initTracing, createTracer } from './observability/index.js';

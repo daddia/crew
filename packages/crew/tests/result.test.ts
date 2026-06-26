@@ -108,6 +108,32 @@ describe('submit_result capture (RH01-11)', () => {
     const capture = createEngineerSubmitResultCapture();
     expect(capture.toolName).toBe(SUBMIT_RESULT_TOOL_NAME);
   });
+
+  it('Gherkin: maxTurns exhaustion returns bounded-operation failure', () => {
+    const capture = createEngineerSubmitResultCapture();
+    const resultMsg = {
+      ...makeSuccessResultMessage(),
+      subtype: 'error_max_turns' as const,
+      is_error: true,
+      total_cost_usd: 1.5,
+    };
+
+    const agentResult = finalizeAgentRun({
+      sessionId: 'sess-1',
+      capture,
+      resultMsg,
+      buildResult: (submitted, costUsd) =>
+        buildEngineerAgentResult('sess-1', submitted, costUsd),
+    });
+
+    expect(agentResult.success).toBe(false);
+    expect(agentResult.summary).toContain('maxTurns');
+    expect(agentResult.artefacts).toMatchObject({
+      sessionId: 'sess-1',
+      boundedReason: 'max_turns',
+    });
+    expect(agentResult.costUsd).toBe(1.5);
+  });
 });
 
 describe('flattenReviewComments()', () => {

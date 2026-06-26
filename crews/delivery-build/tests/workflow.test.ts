@@ -54,6 +54,7 @@ function makeGitlabMock(): GitlabClient {
     getMrDiff: vi.fn().mockResolvedValue('--- file.ts\n+line'),
     postReviewComment: vi.fn().mockResolvedValue(undefined),
     getPipelineStatus: vi.fn().mockResolvedValue('success'),
+    getMrSourceBranch: vi.fn().mockResolvedValue('feature/CREW-1-test'),
   };
 }
 
@@ -71,6 +72,8 @@ function makeCtxBase(
       ciRetryCap: 3,
       ciPollIntervalMs: 0,
       ciWaitTimeoutMs: 1_800_000,
+      engineerMaxTurns: 50,
+      engineerCostCapUsd: 5,
       ...behaviourOverrides,
     },
     jira,

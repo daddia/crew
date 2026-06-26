@@ -12,6 +12,7 @@ commits to the MR's source branch so the next pipeline run can pass.
 | ---------- | ---------------------- | -------- |
 | `issueKey` | top-level `AgentInput` | yes      |
 | `mrUrl`    | `context`              | yes      |
+| `branchName` | `context` (MR source branch) | yes |
 
 ## Steps
 
@@ -49,12 +50,20 @@ cannot fix without guessing, return `success: false` with the blocker.
 For each corrective change:
 
 1. Identify the file(s) implicated by the failure.
-2. Read each file in full via `mcp__gitlab__get_file_contents` against the
-   feature branch. Never modify a file you have not just re-read.
-3. Compose the smallest correct change that addresses the CI failure.
-4. Push via `mcp__gitlab__push_file`. Commit message:
-   `fix(<scope>): <imperative summary>` or `test(<scope>): <summary>`.
-   One logical fix per commit.
+2. Read each file in full with **Read** from the workspace checkout on the
+   MR source branch (`context.branchName`).
+3. Compose the smallest correct change that addresses the CI failure using
+   **Edit** or **Write**.
+4. Commit and push with **Bash**:
+
+```bash
+git add <paths>
+git commit -m "fix(<scope>): <imperative summary>"
+git push origin <branch-name>
+```
+
+One logical fix per commit. Re-run the **test-runner** subagent via **Task**
+after fixes when feasible.
 
 If a fix would break correctness or leave the code inconsistent, stop after
 pushing partial work and return `success: false` with a precise blocker.

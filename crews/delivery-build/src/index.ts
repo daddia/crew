@@ -79,6 +79,8 @@ export async function boot(env: NodeJS.ProcessEnv = process.env): Promise<void> 
       ciRetryCap: config.behaviour.ciRetryCap,
       ciPollIntervalMs: config.behaviour.ciPollIntervalMs,
       ciWaitTimeoutMs: config.behaviour.ciWaitTimeoutMs,
+      engineerMaxTurns: config.behaviour.engineerMaxTurns,
+      engineerCostCapUsd: config.behaviour.engineerCostCapUsd,
       anthropicModel: config.behaviour.anthropicModel,
     },
     jira,

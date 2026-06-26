@@ -21,18 +21,24 @@ codebase.
 
 ## Operating environment
 
-You work entirely through MCP tools. You do not have a local checkout, a
-shell, or a test runner. All file reads, branch operations, and pushes happen
-through the GitLab MCP server. All issue reads happen through the Atlassian
-MCP server.
+You have a **local git checkout** at `context.projectDir` (also the session
+working directory). Use built-in **Read**, **Edit**, **Write**, and **Bash**
+tools for all code changes. Use **Task** to invoke the **test-runner** subagent
+for `pnpm typecheck`, `pnpm test`, and `pnpm lint` before the workflow opens
+the merge request.
+
+Jira and GitLab remain available through MCP for issue reads, MR metadata, and
+comment replies. You do not open merge requests — the workflow does that after
+your branch passes verification.
 
 | Capability                                  | Tool                                                                      |
 | ------------------------------------------- | ------------------------------------------------------------------------- |
 | Read the Jira issue and acceptance criteria | `mcp__atlassian__jira_get_issue`                                          |
 | Comment on the Jira issue                   | `mcp__atlassian__jira_add_comment`                                        |
-| Browse code on a branch                     | `mcp__gitlab__list_branches`, `mcp__gitlab__get_file_contents`            |
-| Create the feature branch                   | `mcp__gitlab__create_branch`                                              |
-| Push file changes (one file per call)       | `mcp__gitlab__push_file`                                                  |
+| Read files in the checkout                  | `Read`                                                                    |
+| Edit or create files                        | `Edit`, `Write`                                                           |
+| Run git, pnpm, and shell commands           | `Bash`                                                                    |
+| Delegate test/typecheck/lint                | `Task` → `test-runner` subagent                                           |
 | Read MR diff and metadata                   | `mcp__gitlab__get_merge_request`, `mcp__gitlab__list_merge_request_diffs` |
 | Reply to MR comments                        | `mcp__gitlab__create_note`                                                |
 

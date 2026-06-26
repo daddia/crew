@@ -467,4 +467,79 @@ describe('resolveSession', () => {
       expect(options['mcpServers']).toMatchObject(capture.mcpServers);
     });
   });
+
+  describe('workspace and bounds (RH01-12)', () => {
+    it('uses workspaceCwd as SDK cwd when provided', async () => {
+      await startSession(makeOptions({ workspaceCwd: '/workspace/acme' }));
+
+      const options = mockQuery.mock.calls[0]?.[0].options as Record<string, unknown>;
+      expect(options['cwd']).toBe('/workspace/acme');
+    });
+
+    it('passes maxTurns and maxBudgetUsd to the SDK', async () => {
+      await startSession(makeOptions({ maxTurns: 25, maxBudgetUsd: 3.5 }));
+
+      const options = mockQuery.mock.calls[0]?.[0].options as Record<string, unknown>;
+      expect(options['maxTurns']).toBe(25);
+      expect(options['maxBudgetUsd']).toBe(3.5);
+    });
+
+    it('passes inline sdkAgents and skill names', async () => {
+      const implementStorySkill = join(
+        engineerFixture,
+        '.claude',
+        'skills',
+        'implement-story',
+        'SKILL.md',
+      );
+      await startSession(
+        makeOptions({
+          workspaceCwd: '/workspace/acme',
+          sdkAgents: {
+            'test-runner': {
+              description: 'Runs tests',
+              prompt: 'Run pnpm test',
+              tools: ['Bash'],
+            },
+          },
+          definition: {
+            name: 'engineer',
+            promptPath: join(engineerFixture, 'prompt.md'),
+            skillPaths: [implementStorySkill],
+            subagentPaths: [],
+            allowedTools: ['Read', 'Bash', 'Task'],
+            mcpServerNames: ['gitlab'],
+          },
+        }),
+      );
+
+      const options = mockQuery.mock.calls[0]?.[0].options as Record<string, unknown>;
+      expect(options['agents']).toMatchObject({
+        'test-runner': { description: 'Runs tests' },
+      });
+      expect(options['skills']).toEqual(['implement-story']);
+    });
+
+    it('records subagent audit events when onSubagentAudit is provided', async () => {
+      const onSubagentAudit = vi.fn();
+      await startSession(makeOptions({ onSubagentAudit }));
+
+      const options = mockQuery.mock.calls[0]?.[0].options as {
+        hooks: {
+          SubagentStart: Array<{ hooks: Array<(input: { hook_event_name: string; agent_type: string; agent_id: string }) => Promise<unknown>> }>;
+        };
+      };
+      const hook = options.hooks.SubagentStart[0]?.hooks[0];
+      await hook?.({
+        hook_event_name: 'SubagentStart',
+        agent_type: 'test-runner',
+        agent_id: 'agent-1',
+      });
+      expect(onSubagentAudit).toHaveBeenCalledWith({
+        phase: 'start',
+        agentType: 'test-runner',
+        agentId: 'agent-1',
+      });
+    });
+  });
 });

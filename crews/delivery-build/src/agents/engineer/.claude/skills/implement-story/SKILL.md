@@ -7,6 +7,7 @@ You are running this skill when `context.task === "implement-story"`.
 | Field                                             | Source                 | Required     |
 | ------------------------------------------------- | ---------------------- | ------------ |
 | `issueKey`                                        | top-level `AgentInput` | yes          |
+| `projectDir`                                      | `context`              | yes          |
 | linked design (e.g. design.md path or attachment) | Jira issue body        | when present |
 
 ## Steps
@@ -32,7 +33,7 @@ without AC. Return `success: false` with `summary: "AC missing on
 ### 2. Read the design (if linked)
 
 If the issue references a design document (often `work/{epic}/design.md`
-or an attached file), read it via `mcp__gitlab__get_file_contents`.
+or an attached file), read it with **Read** from the workspace checkout.
 Extract:
 
 - The intended approach and component boundaries.
@@ -43,8 +44,8 @@ Extract:
 
 ### 3. Explore the codebase
 
-Before writing any code, use `mcp__gitlab__get_file_contents` and
-`mcp__gitlab__list_branches` to read:
+Before writing any code, use **Read** (and **Bash** `ls`/`find` if needed)
+to read:
 
 - The repo's `AGENTS.md`, `CLAUDE.md`, or `README.md` for conventions.
 - Files you will modify, in full.
@@ -71,43 +72,61 @@ Do not proceed if you cannot map every AC to a planned change.
 
 ### 5. Create the feature branch
 
-Call `mcp__gitlab__create_branch` with:
+Run in **Bash** from the workspace root:
 
-- `branch_name`: `feature/<issueKey>-<2-4-word-kebab-slug>`. The slug is
-  derived from the issue title; lowercase; hyphen-separated; do not include
-  the issue key in the slug.
-- `ref`: the project's default branch (typically `main`).
+```bash
+git checkout main && git pull --ff-only origin main
+git checkout -b feature/<issueKey>-<2-4-word-kebab-slug>
+```
 
-If the branch already exists, choose a fresh slug or add a numeric suffix
-rather than reusing or overwriting.
+The slug is derived from the issue title; lowercase; hyphen-separated; do
+not duplicate the issue key in the slug. If the branch already exists,
+choose a fresh slug or add a numeric suffix.
 
 ### 6. Implement file by file
 
 For each file in your plan:
 
-1. Read the current contents via `mcp__gitlab__get_file_contents`. (For new
-   files, skip this read — but you must already have the surrounding
-   directory context from step 3.)
-2. Compose the full new file contents in your working memory. Apply the
-   smallest correct change. Preserve unrelated lines exactly.
-3. Push via `mcp__gitlab__push_file`. The commit message must follow
-   `feat(<scope>): <imperative summary>` (or `fix`, `test`, `refactor`).
-   Keep commits atomic — one logical change per commit. Do not bundle
-   unrelated edits.
+1. **Read** the current contents. (For new files, skip — but you must
+   already have surrounding directory context from step 3.)
+2. Apply the smallest correct change with **Edit** or **Write**. Preserve
+   unrelated lines exactly.
+3. Stage and commit with **Bash**:
 
-Group test files with the code they cover (one commit per logical change,
-including its tests).
+```bash
+git add <paths>
+git commit -m "feat(<scope>): <imperative summary>"
+```
 
-### 7. Verify against AC
+Keep commits atomic — one logical change per commit including its tests.
+
+### 7. Verify before MR
+
+Invoke the **test-runner** subagent via **Task** to run `pnpm typecheck`,
+`pnpm test`, and `pnpm lint`.
+
+- If verification fails, fix the code and re-run test-runner until all
+  pass or you cannot proceed (return `success: false` with the failure).
+- Record the test-runner output in `artefacts.verificationSummary`.
+
+The workflow opens the MR only after verification passes.
+
+### 8. Push the branch
+
+```bash
+git push -u origin <branch-name>
+```
+
+### 9. Verify against AC
 
 Re-read the acceptance criteria. For each criterion, identify the file and
 test that satisfy it. If any AC is not satisfied by your changes, return
 to step 4 and add the missing work.
 
-### 8. Compose the MR description
+### 10. Compose the MR description
 
-You will not call the `create_merge_request` tool — the workflow does that
-using the artefacts you return. Compose the MR description as part of the
+You will not call any MR-creation tool — the workflow opens the MR using
+the artefacts you return. Compose the MR description as part of the
 artefact, using the template below.
 
 ```markdown
@@ -120,6 +139,10 @@ artefact, using the template below.
 | Criterion    | Evidence                                                          |
 | ------------ | ----------------------------------------------------------------- |
 | {AC summary} | `path/to/file.ts:lineRange` and `path/to/file.test.ts::test name` |
+
+## Verification
+
+{Paste test-runner pass output or summary.}
 
 ## Files Changed
 
@@ -136,10 +159,6 @@ open questions. Omit this section if there are none.}
 - Design: {path-to-design or "not applicable"}
 ```
 
-The description must be specific, free of marketing language, and contain
-no business or strategic commentary. It must not reference any Jira ID
-inside the code itself; only here in the description.
-
 ## Quality rules
 
 - Read every file before modifying it.
@@ -147,8 +166,7 @@ inside the code itself; only here in the description.
 - Every new public function, route, or boundary has a test.
 - No secrets, credentials, or environment values committed.
 - Commits are atomic and named per the convention.
-- Code comments explain non-obvious intent. Comments must not cite
-  external markdown documents, ticket IDs, or cross-repo paths.
+- Run test-runner before `submit_result` with `success: true`.
 - If you cannot complete a step, stop and return `success: false` — never
   fabricate progress.
 
@@ -164,8 +182,9 @@ inside the code itself; only here in the description.
   lockfile churn.
 - MUST NOT skip tests, mark failing tests as expected, or weaken existing
   tests to make a change pass.
-- MUST NOT call `mcp__gitlab__create_merge_request`. The workflow opens
-  the MR from the artefacts you return.
+- MUST NOT call any merge-request creation tool. The workflow opens the MR
+  from the artefacts you return.
+- MUST NOT return `success: true` if typecheck, test, or lint failed.
 
 ## Output contract
 
@@ -174,18 +193,17 @@ Call `submit_result` with this payload shape (not JSON in your final message):
 ```json
 {
   "success": true,
-  "summary": "Implemented POST /auth/login on feature/ENG-123-login-endpoint. 4 commits, 6 files. Every AC mapped to file and test.",
+  "summary": "Implemented POST /auth/login on feature/ENG-123-login-endpoint. Verification passed. Every AC mapped to file and test.",
   "artefacts": {
     "branchName": "feature/ENG-123-login-endpoint",
     "title": "Add login endpoint with bcrypt password check",
-    "description": "## Summary\n\nImplements POST /auth/login...\n\n## Acceptance Criteria Coverage\n\n| Criterion | Evidence |\n|---|---|\n| User can log in with valid credentials | `src/routes/auth.ts:L12-L40` and `src/routes/auth.test.ts::accepts valid login` |\n...",
+    "description": "## Summary\n\n...",
+    "verificationSummary": "All verification passed (typecheck, test, lint).",
     "filesChanged": [
-      { "path": "src/routes/auth.ts", "status": "created" },
-      { "path": "src/routes/auth.test.ts", "status": "created" }
+      { "path": "src/routes/auth.ts", "status": "created" }
     ],
     "commits": [
-      "a1b2c3d feat(auth): add login route with bcrypt verification",
-      "d4e5f6g test(auth): cover valid and invalid credential paths"
+      "a1b2c3d feat(auth): add login route with bcrypt verification"
     ]
   },
   "costUsd": 0
@@ -197,9 +215,10 @@ If you cannot complete the work, return:
 ```json
 {
   "success": false,
-  "summary": "Blocked: AC-3 references a JWT signing key with no source. Need clarification before proceeding.",
+  "summary": "Blocked: verification failed — pnpm test errors in auth.test.ts",
   "artefacts": {
-    "blocker": "AC-3 references a JWT signing key path that does not exist in config. Need product/architect input."
+    "blocker": "pnpm test failed after 3 fix attempts",
+    "verificationSummary": "..."
   },
   "costUsd": 0
 }

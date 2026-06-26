@@ -13,9 +13,13 @@ import type { SubmitResultCapture } from './result.js';
 import {
   buildToolAllowlistGuard,
   toSDKHookCallback,
+  toSDKSubagentAuditCallback,
   type PostToolUseHandler,
+  type SubagentAuditHandler,
   type ToolDenialHandler,
 } from './hooks.js';
+import type { SdkSubagentDefinition } from './subagents.js';
+import { skillNamesFromPaths } from './workspace.js';
 
 export interface SessionOptions {
   definition: AgentDefinition;
@@ -47,6 +51,21 @@ export interface SessionOptions {
    * allowedTools and wired into mcpServers for deterministic result capture.
    */
   resultCapture?: SubmitResultCapture;
+  /**
+   * Working tree directory for Read/Edit/Write/Bash. When omitted, cwd is the
+   * persona directory (`dirname(promptPath)`).
+   */
+  workspaceCwd?: string;
+  /** SDK turn ceiling — session terminates when exceeded. */
+  maxTurns?: number;
+  /** SDK per-run USD budget — session terminates when exceeded. */
+  maxBudgetUsd?: number;
+  /** Inline subagent definitions for the Task tool. */
+  sdkAgents?: Record<string, SdkSubagentDefinition>;
+  /** Skill names to enable when using a workspace cwd (defaults from skillPaths). */
+  skills?: string[];
+  /** Audit callback for SubagentStart/SubagentStop events. */
+  onSubagentAudit?: SubagentAuditHandler;
 }
 
 /**
@@ -135,35 +154,60 @@ export async function resolveSession(
   options: SessionOptions,
   previousSessionId?: string,
 ): Promise<ActiveSession> {
-  const { resumeWithinMs, model, definition, auditHook, onToolDeny, resultCapture } = options;
+  const {
+    resumeWithinMs,
+    model,
+    definition,
+    auditHook,
+    onToolDeny,
+    resultCapture,
+    workspaceCwd,
+    maxTurns,
+    maxBudgetUsd,
+    sdkAgents,
+    skills,
+    onSubagentAudit,
+  } = options;
 
   const [validSkillPaths, validSubagentPaths] = await Promise.all([
     filterExistingPaths(definition.skillPaths, 'skill'),
     filterExistingPaths(definition.subagentPaths, 'subagent'),
   ]);
 
-  const cwd = dirname(definition.promptPath);
+  const personaDir = dirname(definition.promptPath);
+  const sessionCwd = workspaceCwd ?? personaDir;
   const settingSources: SettingSource[] =
     validSkillPaths.length > 0 || validSubagentPaths.length > 0 ? ['project'] : [];
+
+  const skillList =
+    skills ?? (validSkillPaths.length > 0 ? skillNamesFromPaths(validSkillPaths) : undefined);
 
   const allowedTools = resultCapture
     ? [...definition.allowedTools, resultCapture.toolName]
     : definition.allowedTools;
 
+  const hookEntries: NonNullable<Options['hooks']> = {};
+  if (auditHook) {
+    hookEntries.PostToolUse = [{ hooks: [toSDKHookCallback(auditHook)] }];
+  }
+  if (onSubagentAudit) {
+    const subagentHook = toSDKSubagentAuditCallback(onSubagentAudit);
+    hookEntries.SubagentStart = [{ hooks: [subagentHook] }];
+    hookEntries.SubagentStop = [{ hooks: [subagentHook] }];
+  }
+
   const baseOptions: Options = {
     model,
     allowedTools,
     canUseTool: buildToolAllowlistGuard(allowedTools, onToolDeny),
-    cwd,
+    cwd: sessionCwd,
     ...(settingSources.length > 0 ? { settingSources } : {}),
+    ...(skillList && skillList.length > 0 ? { skills: skillList } : {}),
+    ...(sdkAgents && Object.keys(sdkAgents).length > 0 ? { agents: sdkAgents } : {}),
+    ...(maxTurns !== undefined ? { maxTurns } : {}),
+    ...(maxBudgetUsd !== undefined ? { maxBudgetUsd } : {}),
     ...(resultCapture ? { mcpServers: resultCapture.mcpServers } : {}),
-    ...(auditHook
-      ? {
-          hooks: {
-            PostToolUse: [{ hooks: [toSDKHookCallback(auditHook)] }],
-          },
-        }
-      : {}),
+    ...(Object.keys(hookEntries).length > 0 ? { hooks: hookEntries } : {}),
   };
 
   const shouldResume = Boolean(previousSessionId && resumeWithinMs > 0);

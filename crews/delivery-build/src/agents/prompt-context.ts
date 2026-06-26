@@ -58,7 +58,7 @@ export function formatAgentContext(context: Record<string, unknown>): string {
     lines.push(`task: ${task}`);
   }
 
-  for (const key of ['branchName', 'mrUrl', 'previousSessionId'] as const) {
+  for (const key of ['branchName', 'mrUrl', 'previousSessionId', 'projectDir'] as const) {
     const value = context[key];
     if (typeof value === 'string' && value.length > 0) {
       lines.push(`${key}: ${value}`);

@@ -29,6 +29,8 @@ export interface PollerDeps {
     ciRetryCap: number;
     ciPollIntervalMs: number;
     ciWaitTimeoutMs: number;
+    engineerMaxTurns: number;
+    engineerCostCapUsd: number;
     anthropicModel?: string;
   };
   jira: JiraClient;
@@ -75,6 +77,8 @@ export async function pollTick(deps: PollerDeps, state: StateStore): Promise<voi
       ciRetryCap: deps.behaviour.ciRetryCap,
       ciPollIntervalMs: deps.behaviour.ciPollIntervalMs,
       ciWaitTimeoutMs: deps.behaviour.ciWaitTimeoutMs,
+      engineerMaxTurns: deps.behaviour.engineerMaxTurns,
+      engineerCostCapUsd: deps.behaviour.engineerCostCapUsd,
       anthropicModel: deps.behaviour.anthropicModel,
     },
     jira: deps.jira,

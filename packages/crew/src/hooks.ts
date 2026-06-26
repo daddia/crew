@@ -22,11 +22,40 @@ export interface ToolDenialEvent {
 
 export type ToolDenialHandler = (event: ToolDenialEvent) => void;
 
+export interface SubagentAuditEvent {
+  phase: 'start' | 'stop';
+  agentType: string;
+  agentId: string;
+  lastMessage?: string;
+}
+
+export type SubagentAuditHandler = (event: SubagentAuditEvent) => void;
+
 /**
  * Adapt a PostToolUseHandler to the SDK's HookCallback shape so it can be
  * attached to SDKSessionOptions.hooks.PostToolUse. Calls the handler with a
  * normalised ToolUseEvent for audit logging after a tool completes.
  */
+export function toSDKSubagentAuditCallback(handler: SubagentAuditHandler): HookCallback {
+  return async (input: HookInput): Promise<HookJSONOutput> => {
+    if (input.hook_event_name === 'SubagentStart') {
+      handler({
+        phase: 'start',
+        agentType: input.agent_type,
+        agentId: input.agent_id,
+      });
+    } else if (input.hook_event_name === 'SubagentStop') {
+      handler({
+        phase: 'stop',
+        agentType: input.agent_type,
+        agentId: input.agent_id,
+        lastMessage: input.last_assistant_message,
+      });
+    }
+    return {};
+  };
+}
+
 export function toSDKHookCallback(handler: PostToolUseHandler): HookCallback {
   return async (input: HookInput): Promise<HookJSONOutput> => {
     if (input.hook_event_name === 'PostToolUse') {

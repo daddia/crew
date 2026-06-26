@@ -85,6 +85,16 @@ describe('loadConfig – behaviour defaults', () => {
     expect(config.behaviour.diffSizeCapBytes).toBe(500_000);
   });
 
+  it('defaults engineerMaxTurns to 50 when ENGINEER_MAX_TURNS is absent', () => {
+    const config = loadConfig(REQUIRED_ENV);
+    expect(config.behaviour.engineerMaxTurns).toBe(50);
+  });
+
+  it('defaults engineerCostCapUsd to 5 when ENGINEER_COST_CAP_USD is absent', () => {
+    const config = loadConfig(REQUIRED_ENV);
+    expect(config.behaviour.engineerCostCapUsd).toBe(5);
+  });
+
   it('coerces DIFF_FILE_CAP and DIFF_SIZE_CAP_BYTES from numeric strings', () => {
     const config = loadConfig({
       ...REQUIRED_ENV,

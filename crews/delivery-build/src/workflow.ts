@@ -16,6 +16,8 @@ export interface WorkflowContext {
     ciRetryCap: number;
     ciPollIntervalMs: number;
     ciWaitTimeoutMs: number;
+    engineerMaxTurns: number;
+    engineerCostCapUsd: number;
     anthropicModel?: string;
   };
   jira: JiraClient;
@@ -143,6 +145,19 @@ export async function runStory(ctx: WorkflowContext): Promise<void> {
   }
 }
 
+function engineerContext(
+  ctx: WorkflowContext,
+  extra: Record<string, unknown>,
+): Record<string, unknown> {
+  return {
+    projectDir: ctx.projectDir,
+    maxTurns: ctx.behaviour.engineerMaxTurns,
+    engineerCostCapUsd: ctx.behaviour.engineerCostCapUsd,
+    model: ctx.behaviour.anthropicModel,
+    ...extra,
+  };
+}
+
 async function runStoryInner(ctx: WorkflowContext, input: AgentInput): Promise<void> {
   const { issueKey, state, jira, gitlab, behaviour, projectDir } = ctx;
 
@@ -184,12 +199,11 @@ async function runStoryInner(ctx: WorkflowContext, input: AgentInput): Promise<v
 
   const assessResult = await engineer.run({
     ...input,
-    context: {
+    context: engineerContext(ctx, {
       task: 'assess-clarification',
       ticket,
       parentTicket,
-      model: behaviour.anthropicModel,
-    },
+    }),
   });
 
   const assessSessionId = assessResult.artefacts['sessionId'] as string | undefined;
@@ -236,12 +250,11 @@ async function runStoryInner(ctx: WorkflowContext, input: AgentInput): Promise<v
 
   const implResult = await engineer.run({
     ...input,
-    context: {
+    context: engineerContext(ctx, {
       task: 'implement-story',
       ticket,
       parentTicket,
-      model: behaviour.anthropicModel,
-    },
+    }),
   });
 
   const branchNameRaw = implResult.artefacts['branchName'];
@@ -256,7 +269,12 @@ async function runStoryInner(ctx: WorkflowContext, input: AgentInput): Promise<v
   });
 
   if (!implResult.success) {
-    await escalateToHumanReview(jira, issueKey, 'Engineer failed to implement story', [], state);
+    const boundedReason = implResult.artefacts['boundedReason'];
+    const reason =
+      typeof boundedReason === 'string'
+        ? implResult.summary
+        : 'Engineer failed to implement story';
+    await escalateToHumanReview(jira, issueKey, reason, [], state);
     return;
   }
 
@@ -304,15 +322,14 @@ async function runStoryInner(ctx: WorkflowContext, input: AgentInput): Promise<v
 
     const feedbackResult = await engineer.run({
       ...input,
-      context: {
+      context: engineerContext(ctx, {
         task: 'address-feedback',
         branchName,
         ticket,
         parentTicket,
         comments: unresolvedItems,
         previousSessionId: engineerSessionId,
-        model: behaviour.anthropicModel,
-      },
+      }),
     });
 
     engineerSessionId = feedbackResult.artefacts['sessionId'] as string | undefined;
@@ -374,11 +391,11 @@ async function runStoryInner(ctx: WorkflowContext, input: AgentInput): Promise<v
     // Pipeline failed — ask the engineer to fix CI.
     const ciFixResult = await engineer.run({
       ...input,
-      context: {
+      context: engineerContext(ctx, {
         task: 'fix-ci',
         mrUrl,
-        model: behaviour.anthropicModel,
-      },
+        branchName,
+      }),
     });
 
     if (!ciFixResult.success) {
@@ -476,22 +493,29 @@ export async function addressFeedback(
   comment: string,
   mrUrl: string,
 ): Promise<void> {
-  const { issueKey, state, jira } = ctx;
+  const { issueKey, state, jira, gitlab } = ctx;
   const input: AgentInput = { issueKey, context: {} };
 
   log.info('workflow.address-feedback.start', { issueKey, mrUrl });
+
+  let branchName: string | undefined;
+  try {
+    branchName = await gitlab.getMrSourceBranch(mrUrl);
+  } catch (err) {
+    log.warn('workflow.address-feedback.branch-failed', { issueKey, mrUrl, err: String(err) });
+  }
 
   try {
     state.upsertStory(issueKey, 'address-feedback');
 
     const result = await engineer.run({
       ...input,
-      context: {
+      context: engineerContext(ctx, {
         task: 'address-feedback',
         mrUrl,
+        branchName,
         comments: [comment],
-        model: ctx.behaviour.anthropicModel,
-      },
+      }),
     });
 
     const sessionId = result.artefacts['sessionId'] as string | undefined;
