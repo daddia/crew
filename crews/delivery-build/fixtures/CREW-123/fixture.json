@@ -1,0 +1,39 @@
+{
+  "issueKey": "CREW-123",
+  "jira": {
+    "issue": {
+      "summary": "Add local fixture story driver for offline persona iteration",
+      "description": "Ship pnpm dev:story and crew run --fixture so engineers can iterate on the implement persona without a live Jira board.",
+      "acceptanceCriteria": "Given fixtures/CREW-123/, when the story driver runs implement, the engineer session completes without live Jira credentials.",
+      "parentKey": "CREW-14"
+    },
+    "parentIssue": {
+      "summary": "Platform Authoring & Quality Loop",
+      "description": "Close platform gaps: scaffolding, CrewBench, harness hardening, and dev ergonomics.",
+      "acceptanceCriteria": null
+    }
+  },
+  "gitlab": {
+    "pipelineStatus": "success",
+    "mrUrl": "https://gitlab.example.com/mr/crew-123-fixture"
+  },
+  "engineer": {
+    "assess": {
+      "success": true,
+      "summary": "Ticket is clear — acceptance criteria are testable.",
+      "artefacts": {
+        "questionsRequired": false,
+        "sessionId": "fixture-crew-123-assess"
+      }
+    },
+    "implement": {
+      "success": true,
+      "summary": "Implemented fixture story driver with mocked integrations.",
+      "artefacts": {
+        "branchName": "feature/CREW-123-fixture-story-driver",
+        "title": "Add local fixture story driver",
+        "sessionId": "fixture-crew-123-implement"
+      }
+    }
+  }
+}

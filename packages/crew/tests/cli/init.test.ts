@@ -58,6 +58,21 @@ describe('parseCliArgs', () => {
       output: 'out.xml',
     });
   });
+
+  it('parses run with fixture options', () => {
+    expect(
+      parseCliArgs(['run', '--fixture', 'CREW-123', '--crew', 'delivery-build', '--mode', 'mock']),
+    ).toEqual({
+      command: 'run',
+      fixture: 'CREW-123',
+      runCrew: 'delivery-build',
+      fixtureMode: 'mock',
+    });
+  });
+
+  it('rejects run without fixture', () => {
+    expect(() => parseCliArgs(['run'])).toThrow(/Missing fixture issue key/);
+  });
 });
 
 describe('initCrew', () => {

@@ -49,6 +49,8 @@ export interface WorkflowAgents {
 
 export interface RunStoryOptions {
   agents?: WorkflowAgents;
+  /** Stop after this step completes (used by the offline fixture story driver). */
+  stopAfter?: Step;
 }
 
 const PIPELINE_SETTLING: ReadonlySet<PipelineStatus> = new Set(['created', 'pending', 'running']);
@@ -159,7 +161,7 @@ export async function runStory(ctx: WorkflowContext, options?: RunStoryOptions):
   log.info('workflow.start', { issueKey });
 
   try {
-    await runStoryInner(ctx, input, agents);
+    await runStoryInner(ctx, input, agents, options?.stopAfter);
   } catch (err) {
     log.error('workflow.unhandled-error', { issueKey, err: String(err) });
     await escalateToHumanReview(ctx.jira, issueKey, 'Unexpected workflow error', [], ctx.state);
@@ -201,6 +203,7 @@ async function runStoryInner(
   ctx: WorkflowContext,
   input: AgentInput,
   agents: WorkflowAgents,
+  stopAfter?: Step,
 ): Promise<void> {
   const { issueKey, state, jira, gitlab, behaviour, projectDir } = ctx;
   const { engineer: eng, seniorEngineer: sr } = agents;
@@ -334,6 +337,12 @@ async function runStoryInner(
       [],
       state,
     );
+    return;
+  }
+
+  if (stopAfter === 'implement') {
+    log.info('workflow.stopped', { issueKey, stopAfter: 'implement' });
+    emitWorkflowComplete(issueKey, state, 'implement', true);
     return;
   }
 

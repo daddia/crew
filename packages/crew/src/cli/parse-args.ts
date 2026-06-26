@@ -3,7 +3,7 @@ export type CrewShape = 'server' | 'cli';
 export type EvalReporter = 'text' | 'junit';
 
 export interface ParsedCliArgs {
-  command: 'init' | 'eval' | 'help';
+  command: 'init' | 'eval' | 'run' | 'help';
   crewName?: string;
   shape?: CrewShape;
   evalFiles?: string[];
@@ -12,6 +12,9 @@ export interface ParsedCliArgs {
   strict?: boolean;
   reporter?: EvalReporter;
   output?: string;
+  fixture?: string;
+  runCrew?: string;
+  fixtureMode?: 'mock' | 'live';
 }
 
 const CREW_NAME_PATTERN = /^[a-z][a-z0-9-]*[a-z0-9]$|^[a-z]$/;
@@ -117,6 +120,58 @@ function parseEvalArgs(argv: string[]): ParsedCliArgs {
   };
 }
 
+function parseRunArgs(argv: string[]): ParsedCliArgs {
+  let fixture: string | undefined;
+  let runCrew: string | undefined;
+  let fixtureMode: 'mock' | 'live' | undefined;
+
+  for (let i = 1; i < argv.length; i++) {
+    const arg = argv[i];
+    if (!arg) {
+      continue;
+    }
+    if (arg === '--fixture') {
+      fixture = argv[i + 1];
+      if (!fixture) {
+        throw new Error('--fixture requires an issue key (e.g. CREW-123)');
+      }
+      i += 1;
+      continue;
+    }
+    if (arg === '--crew') {
+      runCrew = argv[i + 1];
+      if (!runCrew) {
+        throw new Error('--crew requires a crew name');
+      }
+      i += 1;
+      continue;
+    }
+    if (arg === '--mode') {
+      const value = argv[i + 1];
+      if (value !== 'mock' && value !== 'live') {
+        throw new Error('--mode must be "mock" or "live"');
+      }
+      fixtureMode = value;
+      i += 1;
+      continue;
+    }
+    if (arg.startsWith('-')) {
+      throw new Error(`Unknown option: ${arg}`);
+    }
+    if (!fixture) {
+      fixture = arg;
+      continue;
+    }
+    throw new Error(`Unexpected argument: ${arg}`);
+  }
+
+  if (!fixture) {
+    throw new Error('Missing fixture issue key. Usage: crew run --fixture CREW-123');
+  }
+
+  return { command: 'run', fixture, runCrew, fixtureMode };
+}
+
 export function parseCliArgs(argv: string[]): ParsedCliArgs {
   if (argv.length === 0 || argv[0] === '--help' || argv[0] === '-h') {
     return { command: 'help' };
@@ -128,6 +183,10 @@ export function parseCliArgs(argv: string[]): ParsedCliArgs {
 
   if (argv[0] === 'eval') {
     return parseEvalArgs(argv);
+  }
+
+  if (argv[0] === 'run') {
+    return parseRunArgs(argv);
   }
 
   throw new Error(`Unknown command: ${argv[0]}. Run \`crew --help\` for usage.`);

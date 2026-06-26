@@ -163,6 +163,20 @@ describe('runStory', () => {
     expect(ctxBase.gitlab.createMr).toHaveBeenCalledTimes(1);
   });
 
+  it('stops after implement when stopAfter is set', async () => {
+    const ctxBase = makeCtxBase();
+    mockEngineer.mockResolvedValue(successResult());
+    mockSeniorEngineer.mockResolvedValue(successResult());
+
+    const state = makeState();
+    await runStory({ issueKey: 'ENG-1', state, ...ctxBase }, { stopAfter: 'implement' });
+
+    expect(mockSeniorEngineer).not.toHaveBeenCalled();
+    expect(ctxBase.gitlab.createMr).not.toHaveBeenCalled();
+    expect(ctxBase.jira.transitionIssue).toHaveBeenCalledWith('ENG-1', 'In Progress');
+    expect(ctxBase.jira.transitionIssue).not.toHaveBeenCalledWith('ENG-1', 'In QA');
+  });
+
   it("records verdict 'failed' on implement step when engineer returns no branchName", async () => {
     const ctxBase = makeCtxBase();
     mockEngineer.mockResolvedValue(successResult({ artefacts: { title: 'Test' } }));

@@ -11,6 +11,7 @@
     "lint:fix": "eslint src/ --fix",
     "start": "node dist/index.js",
     "dev": "node --watch dist/index.js",
+    "dev:story": "node dist/fixtures/run-cli.js",
     "diagnose": "node dist/diagnose.js",
     "eval:ci": "node dist/eval/run-ci.js",
     "test": "vitest run",

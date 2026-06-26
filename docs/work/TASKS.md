@@ -213,8 +213,8 @@ context compaction; run-stream for operators; security model doc.
       Then tool-use and subagent events arrive in order with issueKey
     ```
 
-- [ ] **[RH02-10] Local fixture story driver**
-  - **Status:** Not started | **Priority:** P2 | **Estimate:** 5
+- [x] **[RH02-10] Local fixture story driver**
+  - **Status:** Done | **Priority:** P2 | **Estimate:** 5
   - **Epic:** RH02 | **Labels:** phase:next, area:delivery-build, type:feature
   - **Depends on:** RH02-05
   - **Deliverable:** `pnpm dev:story CREW-123` (or `crew run --fixture`) drives one workflow path with mocked Jira/GitLab; no live board required for persona iteration.

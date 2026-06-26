@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 import { initCrew, InitError } from './init.js';
 import { runEvalCli, EvalCliError } from './eval.js';
+import { runStoryCli, RunCliError } from './run.js';
 import { parseCliArgs } from './parse-args.js';
 
 const HELP = `Usage:
   crew init <name> --shape server|cli
   crew eval [files...] [options]
+  crew run --fixture <issueKey> [options]
 
 Scaffold a new crew under crews/<name>/ in the current workspace, or run CrewBench evals.
 
@@ -20,11 +22,17 @@ Eval options:
   --reporter text|junit  Output format (default: text)
   --output <path>      JUnit report path (default: junit.xml)
 
+Run options:
+  --fixture <issueKey> Story fixture under crews/<crew>/fixtures/<issueKey>/ (required)
+  --crew <name>        Crew package (default: delivery-build when fixtures exist)
+  --mode mock|live     Engineer mode (default: mock without ANTHROPIC_API_KEY, else live)
+
 Examples:
   crew init my-crew --shape server
   npx @daddia/crew init code-reviewer --shape cli
   crew eval evals/smoke.eval.ts --base-url http://localhost:3000
   crew eval --crew delivery-build --reporter junit --output eval-results.xml
+  crew run --fixture CREW-123 --crew delivery-build --mode mock
 `;
 
 async function main(argv: string[]): Promise<void> {
@@ -63,6 +71,18 @@ async function main(argv: string[]): Promise<void> {
     }
     return;
   }
+
+  if (parsed.command === 'run') {
+    const { exitCode } = await runStoryCli({
+      crewName: parsed.runCrew,
+      fixture: parsed.fixture!,
+      mode: parsed.fixtureMode,
+    });
+    if (exitCode !== 0) {
+      process.exit(exitCode);
+    }
+    return;
+  }
 }
 
 main(process.argv.slice(2)).catch((err: unknown) => {
@@ -73,6 +93,11 @@ main(process.argv.slice(2)).catch((err: unknown) => {
   }
   if (err instanceof EvalCliError) {
     process.stderr.write(`crew eval: ${err.message}\n`);
+    process.exit(1);
+    return;
+  }
+  if (err instanceof RunCliError) {
+    process.stderr.write(`crew run: ${err.message}\n`);
     process.exit(1);
     return;
   }
