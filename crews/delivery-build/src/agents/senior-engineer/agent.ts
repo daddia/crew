@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import {
   resolveSession,
   readPromptFile,
-  buildAuditHook,
+  createRunStreamBridge,
   createPeerReviewSubmitResultCapture,
   collectSessionOutcome,
   finalizeAgentRun,
@@ -16,6 +16,7 @@ import {
   type AgentResult,
 } from '@daddia/crew';
 import { buildTaskPrompt } from '../prompt-context.js';
+import { runStreamHub } from '../../run-stream-hub.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -73,7 +74,14 @@ async function run(input: AgentInput): Promise<AgentResult> {
   const maxTurns =
     typeof input.context['maxTurns'] === 'number' ? input.context['maxTurns'] : undefined;
 
-  const auditHook = buildAuditHook(definition.allowedTools, () => {});
+  const sessionIdRef = { current: '' };
+
+  const { auditHook, onSubagentAudit } = createRunStreamBridge(
+    runStreamHub,
+    input.issueKey,
+    () => sessionIdRef.current,
+    { allowedTools: definition.allowedTools },
+  );
 
   const { session, sessionId, skillCatalog } = await resolveSession({
     definition,
@@ -81,9 +89,12 @@ async function run(input: AgentInput): Promise<AgentResult> {
     resumeWithinMs: RESUME_WITHIN_MS,
     model,
     auditHook,
+    onSubagentAudit,
     resultCapture,
     maxTurns,
   });
+
+  sessionIdRef.current = sessionId;
 
   const taskPrompt = buildTaskPrompt({
     personaPrompt: prompt,

@@ -14,6 +14,7 @@ import { seedEngineerMemory } from './memory.js';
 import { log, tracer } from './observability.js';
 import { resolveModelForTask, type ModelRouting } from './model-routing.js';
 import type { StateStore, Step } from './state.js';
+import { publishRunStep, runStreamHub } from './run-stream-hub.js';
 
 export interface WorkflowContext {
   issueKey: string;
@@ -129,6 +130,7 @@ function emitWorkflowComplete(
       durationMs,
       ...(mrUrl !== undefined ? { mrUrl } : {}),
     });
+    runStreamHub.closeIssue(issueKey);
   } catch (err) {
     log.warn('workflow.complete.failed', { issueKey, err: String(err) });
   }
@@ -211,6 +213,7 @@ async function runStoryInner(
 
   await withWorkflowStepSpan('context-seed', issueKey, async () => {
     state.upsertStory(issueKey, 'context-seed');
+    publishRunStep(issueKey, 'context-seed');
     state.startStep(issueKey, 'context-seed');
 
     try {
@@ -238,6 +241,7 @@ async function runStoryInner(
   // Run before transitioning to In Progress so that an ambiguous ticket never
   // touches the board until the engineer is ready to commit to it.
   state.upsertStory(issueKey, 'assess-clarification');
+  publishRunStep(issueKey, 'assess-clarification');
 
   const assessResult = await eng.run({
     ...input,
@@ -276,6 +280,7 @@ async function runStoryInner(
     await jira.transitionIssue(issueKey, 'Clarification Needed');
 
     state.upsertStory(issueKey, 'clarification-pending');
+    publishRunStep(issueKey, 'clarification-pending');
     state.startStep(issueKey, 'clarification-pending');
     state.finishStep(issueKey, 'clarification-pending', { verdict: 'pending' });
 
@@ -289,6 +294,7 @@ async function runStoryInner(
 
   // ── Step 4: Implement ─────────────────────────────────────────────────────
   state.upsertStory(issueKey, 'implement');
+  publishRunStep(issueKey, 'implement');
 
   const implResult = await eng.run({
     ...input,
@@ -338,6 +344,7 @@ async function runStoryInner(
 
   for (let iteration = 0; iteration < behaviour.refactorLoopCap + 1; iteration++) {
     state.upsertStory(issueKey, 'peer-code-review');
+    publishRunStep(issueKey, 'peer-code-review');
     state.startStep(issueKey, 'peer-code-review');
 
     const reviewResult = await sr.run({
@@ -372,6 +379,7 @@ async function runStoryInner(
     }
 
     state.upsertStory(issueKey, 'address-feedback');
+    publishRunStep(issueKey, 'address-feedback');
 
     const feedbackResult = await eng.run({
       ...input,
@@ -406,6 +414,7 @@ async function runStoryInner(
 
   // ── Step 6: Open MR ───────────────────────────────────────────────────────
   state.upsertStory(issueKey, 'open-mr');
+  publishRunStep(issueKey, 'open-mr');
   state.startStep(issueKey, 'open-mr');
 
   const mrUrl = await gitlab.createMr({
@@ -453,6 +462,7 @@ async function runStoryInner(
 
     // Pipeline failed — ask the engineer to fix CI.
     state.upsertStory(issueKey, 'ci-check');
+    publishRunStep(issueKey, 'ci-check');
     const ciFixResult = await eng.run({
       ...input,
       context: engineerContext(ctx, {
@@ -474,6 +484,7 @@ async function runStoryInner(
 
   // ── Done: transition to In QA ─────────────────────────────────────────────
   state.upsertStory(issueKey, 'in-qa');
+  publishRunStep(issueKey, 'in-qa');
   state.startStep(issueKey, 'in-qa');
   await jira.transitionIssue(issueKey, 'In QA');
   state.finishStep(issueKey, 'in-qa', { verdict: 'ok' });
@@ -571,6 +582,7 @@ export async function addressFeedback(
 
   try {
     state.upsertStory(issueKey, 'address-feedback');
+    publishRunStep(issueKey, 'address-feedback');
 
     const result = await engineer.run({
       ...input,

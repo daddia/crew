@@ -27,17 +27,20 @@ vi.mock('@daddia/crew', async (importOriginal) => {
     readPromptFile: vi.fn().mockResolvedValue('You are a senior-engineer persona.'),
     readSkillsDir: vi.fn().mockResolvedValue([]),
     readSubagentsDir: vi.fn().mockResolvedValue([]),
-    buildAuditHook: vi.fn().mockReturnValue(() => {}),
+    createRunStreamBridge: vi.fn().mockReturnValue({
+      auditHook: vi.fn(),
+      onSubagentAudit: vi.fn(),
+    }),
     createPeerReviewSubmitResultCapture: vi.fn(() => makeCapture()),
   };
 });
 
-import { resolveSession, readPromptFile, buildAuditHook } from '@daddia/crew';
+import { resolveSession, readPromptFile, createRunStreamBridge } from '@daddia/crew';
 import { seniorEngineer } from '../src/agents/senior-engineer/agent.js';
 
 const mockResolveSession = vi.mocked(resolveSession);
 const mockReadPromptFile = vi.mocked(readPromptFile);
-const mockBuildAuditHook = vi.mocked(buildAuditHook);
+const mockCreateRunStreamBridge = vi.mocked(createRunStreamBridge);
 
 function makeResultMessage(overrides: Partial<SDKResultMessage> = {}): SDKResultMessage {
   return {
@@ -156,7 +159,7 @@ describe('seniorEngineer.run()', () => {
     expect(result.summary).toContain('Connection refused');
   });
 
-  it('calls buildAuditHook() once before SDK execution', async () => {
+  it('calls createRunStreamBridge() once before SDK execution', async () => {
     const session = makeSession([makeResultMessage()]);
     mockResolveSession.mockResolvedValue({
       session,
@@ -166,13 +169,17 @@ describe('seniorEngineer.run()', () => {
 
     await seniorEngineer.run(baseInput);
 
-    expect(mockBuildAuditHook).toHaveBeenCalledOnce();
-    expect(mockBuildAuditHook).toHaveBeenCalledBefore(session.send as ReturnType<typeof vi.fn>);
+    expect(mockCreateRunStreamBridge).toHaveBeenCalledOnce();
+    expect(mockCreateRunStreamBridge).toHaveBeenCalledBefore(session.send as ReturnType<typeof vi.fn>);
   });
 
   it('passes the audit hook to resolveSession as auditHook', async () => {
     const fakeHook = vi.fn();
-    mockBuildAuditHook.mockReturnValue(fakeHook);
+    const fakeSubagentHook = vi.fn();
+    mockCreateRunStreamBridge.mockReturnValue({
+      auditHook: fakeHook,
+      onSubagentAudit: fakeSubagentHook,
+    });
     const session = makeSession([makeResultMessage()]);
     mockResolveSession.mockResolvedValue({
       session,
@@ -183,7 +190,10 @@ describe('seniorEngineer.run()', () => {
     await seniorEngineer.run(baseInput);
 
     expect(mockResolveSession).toHaveBeenCalledWith(
-      expect.objectContaining({ auditHook: fakeHook }),
+      expect.objectContaining({
+        auditHook: fakeHook,
+        onSubagentAudit: fakeSubagentHook,
+      }),
     );
   });
 

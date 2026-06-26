@@ -7,8 +7,8 @@ import {
   readSubagentsDir,
   personaSkillsDir,
   personaAgentsDir,
-  buildAuditHook,
   createEngineerSubmitResultCapture,
+  createRunStreamBridge,
   collectSessionOutcome,
   finalizeAgentRun,
   buildEngineerAgentResult,
@@ -24,6 +24,7 @@ import {
 import { buildTaskPrompt } from '../prompt-context.js';
 import { log } from '../../observability.js';
 import { withWorkspaceLock } from '../../workspace-lock.js';
+import { runStreamHub } from '../../run-stream-hub.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -137,24 +138,33 @@ async function run(input: AgentInput): Promise<AgentResult> {
     const resultCapture = createEngineerSubmitResultCapture();
 
     const auditEvents: Array<ToolUseEvent | SubagentAuditEvent> = [];
-    const auditHook = buildAuditHook(definition.allowedTools, (event) => {
-      auditEvents.push(event);
-      log.info('agent.tool', {
-        issueKey: input.issueKey,
-        tool: event.tool,
-        durationMs: event.durationMs,
-      });
-    });
+    const sessionIdRef = { current: '' };
 
-    const onSubagentAudit = (event: SubagentAuditEvent) => {
-      auditEvents.push(event);
-      log.info('agent.subagent', {
-        issueKey: input.issueKey,
-        phase: event.phase,
-        agentType: event.agentType,
-        agentId: event.agentId,
-      });
-    };
+    const { auditHook, onSubagentAudit } = createRunStreamBridge(
+      runStreamHub,
+      input.issueKey,
+      () => sessionIdRef.current,
+      {
+        allowedTools: definition.allowedTools,
+        onToolUse: (event) => {
+          auditEvents.push(event);
+          log.info('agent.tool', {
+            issueKey: input.issueKey,
+            tool: event.tool,
+            durationMs: event.durationMs,
+          });
+        },
+        onSubagent: (event) => {
+          auditEvents.push(event);
+          log.info('agent.subagent', {
+            issueKey: input.issueKey,
+            phase: event.phase,
+            agentType: event.agentType,
+            agentId: event.agentId,
+          });
+        },
+      },
+    );
 
     const previousSessionId =
       typeof input.context['previousSessionId'] === 'string'
@@ -177,6 +187,8 @@ async function run(input: AgentInput): Promise<AgentResult> {
       },
       previousSessionId,
     );
+
+    sessionIdRef.current = sessionId;
 
     const taskPrompt = buildTaskPrompt({
       personaPrompt: prompt,

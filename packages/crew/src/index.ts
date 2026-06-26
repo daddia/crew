@@ -69,6 +69,22 @@ export type {
   SubagentAuditHandler,
 } from './hooks.js';
 
+export {
+  createRunStreamHub,
+  createRunStreamBridge,
+  formatRunProgressSse,
+} from './run-stream.js';
+export type {
+  RunProgressEnvelope,
+  RunStepProgressEvent,
+  RunToolUseProgressEvent,
+  RunSubagentProgressEvent,
+  RunProgressEvent,
+  RunProgressPublishInput,
+  RunStreamHub,
+  RunStreamBridgeOptions,
+} from './run-stream.js';
+
 export { createLogger, initTracing, createTracer } from './observability/index.js';
 export type { Logger, LogLevel, LogRecord, TracingOptions, Tracer } from './observability/index.js';
 

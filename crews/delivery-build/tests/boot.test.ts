@@ -59,6 +59,15 @@ vi.mock('../src/config.js', async (importOriginal) => {
   return { ...actual, loadConfig: vi.fn(actual.loadConfig) };
 });
 
+vi.mock('../src/run-stream-hub.js', () => ({
+  runStreamHub: {
+    publish: vi.fn(),
+    subscribe: vi.fn(),
+    closeIssue: vi.fn(),
+  },
+  publishRunStep: vi.fn(),
+}));
+
 vi.mock('@daddia/crew', () => ({
   initTracing: vi.fn(),
 }));

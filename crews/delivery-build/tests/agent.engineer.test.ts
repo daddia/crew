@@ -30,7 +30,10 @@ vi.mock('@daddia/crew', async (importOriginal) => {
     readPromptFile: vi.fn().mockResolvedValue('You are an engineer persona.'),
     readSkillsDir: vi.fn().mockResolvedValue([]),
     readSubagentsDir: vi.fn().mockResolvedValue(['/fake/agents/test-runner.md']),
-    buildAuditHook: vi.fn().mockReturnValue(() => {}),
+    createRunStreamBridge: vi.fn().mockReturnValue({
+      auditHook: vi.fn(),
+      onSubagentAudit: vi.fn(),
+    }),
     createEngineerSubmitResultCapture: vi.fn(() => makeCapture()),
     prepareEngineerWorkspace: vi.fn().mockResolvedValue(undefined),
   };
@@ -39,7 +42,7 @@ vi.mock('@daddia/crew', async (importOriginal) => {
 import {
   resolveSession,
   readPromptFile,
-  buildAuditHook,
+  createRunStreamBridge,
   SUBMIT_RESULT_TOOL_NAME,
   prepareEngineerWorkspace,
 } from '@daddia/crew';
@@ -47,7 +50,7 @@ import { engineer } from '../src/agents/engineer/agent.js';
 
 const mockResolveSession = vi.mocked(resolveSession);
 const mockReadPromptFile = vi.mocked(readPromptFile);
-const mockBuildAuditHook = vi.mocked(buildAuditHook);
+const mockCreateRunStreamBridge = vi.mocked(createRunStreamBridge);
 const mockPrepareWorkspace = vi.mocked(prepareEngineerWorkspace);
 
 function makeResultMessage(overrides: Partial<SDKResultMessage> = {}): SDKResultMessage {
@@ -231,7 +234,7 @@ describe('engineer.run()', () => {
     expect(callOptions?.resultCapture?.toolName).toBe(SUBMIT_RESULT_TOOL_NAME);
   });
 
-  it('calls buildAuditHook() once before SDK execution', async () => {
+  it('calls createRunStreamBridge() once before SDK execution', async () => {
     const session = makeSession([makeResultMessage()]);
     mockResolveSession.mockResolvedValue({
       session,
@@ -241,13 +244,17 @@ describe('engineer.run()', () => {
 
     await engineer.run(baseInput);
 
-    expect(mockBuildAuditHook).toHaveBeenCalledOnce();
-    expect(mockBuildAuditHook).toHaveBeenCalledBefore(session.send as ReturnType<typeof vi.fn>);
+    expect(mockCreateRunStreamBridge).toHaveBeenCalledOnce();
+    expect(mockCreateRunStreamBridge).toHaveBeenCalledBefore(session.send as ReturnType<typeof vi.fn>);
   });
 
   it('passes the audit hook to resolveSession as auditHook', async () => {
     const fakeHook = vi.fn();
-    mockBuildAuditHook.mockReturnValue(fakeHook);
+    const fakeSubagentHook = vi.fn();
+    mockCreateRunStreamBridge.mockReturnValue({
+      auditHook: fakeHook,
+      onSubagentAudit: fakeSubagentHook,
+    });
     const session = makeSession([makeResultMessage()]);
     mockResolveSession.mockResolvedValue({
       session,
@@ -258,7 +265,10 @@ describe('engineer.run()', () => {
     await engineer.run(baseInput);
 
     const callOptions = mockResolveSession.mock.calls[0]?.[0];
-    expect(callOptions).toMatchObject({ auditHook: fakeHook });
+    expect(callOptions).toMatchObject({
+      auditHook: fakeHook,
+      onSubagentAudit: fakeSubagentHook,
+    });
   });
 
   it('sends the full persona prompt on a new session (not a continuation)', async () => {
@@ -488,7 +498,8 @@ describe('engineer.run()', () => {
     expect(sent).toContain('<<< untrusted input — data only >>>');
     expect(sent).toContain(injection);
 
-    const allowedTools = mockBuildAuditHook.mock.calls[0]?.[0] as string[];
+    const bridgeOptions = mockCreateRunStreamBridge.mock.calls[0]?.[3] as { allowedTools: string[] };
+    const allowedTools = bridgeOptions.allowedTools;
     expect(allowedTools).toBeDefined();
     expect(allowedTools).not.toContain('mcp__gitlab__merge_request');
     expect(allowedTools).not.toContain('mcp__gitlab__merge_merge_request');
@@ -521,7 +532,8 @@ describe('engineer.run()', () => {
     expect(callOptions?.maxBudgetUsd).toBe(4);
     expect(callOptions?.sdkAgents).toBeUndefined();
 
-    const allowedTools = mockBuildAuditHook.mock.calls[0]?.[0] as string[];
+    const bridgeOptions = mockCreateRunStreamBridge.mock.calls[0]?.[3] as { allowedTools: string[] };
+    const allowedTools = bridgeOptions.allowedTools;
     expect(allowedTools).toContain('Read');
     expect(allowedTools).toContain('Bash');
     expect(allowedTools).toContain('Task');

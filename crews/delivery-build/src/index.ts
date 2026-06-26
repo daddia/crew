@@ -4,6 +4,7 @@ import { Hono } from 'hono';
 import { jiraHandler } from './handlers/jira.js';
 import { gitlabHandler } from './handlers/gitlab.js';
 import { healthzHandler } from './handlers/healthz.js';
+import { runsStreamHandler } from './handlers/runs-stream.js';
 import { createJiraClient } from './integrations/jira.js';
 import { createGitlabClient } from './integrations/gitlab.js';
 import { log } from './observability.js';
@@ -16,6 +17,7 @@ import { createEvalFetchHandler } from '@daddia/crew/evals';
 import { SchemaValidationError, ConfigNotFoundError, redact } from '@daddia/crew/config';
 import type { WorkflowCtxBase } from './workflow.js';
 import { createEvalFixtures } from './eval/fixtures.js';
+import { runStreamHub } from './run-stream-hub.js';
 
 /**
  * Full application boot sequence. Exported so integration tests can drive it
@@ -105,6 +107,8 @@ export async function boot(env: NodeJS.ProcessEnv = process.env): Promise<void> 
   );
 
   app.get('/healthz', (c) => healthzHandler(c, state, config.infrastructure.dbPath));
+
+  app.get('/runs/:issueKey/stream', (c) => runsStreamHandler(c, runStreamHub, state));
 
   const evalHandler = createEvalFetchHandler({
     fixtures: createEvalFixtures(config.behaviour.evalFixtureMode),
