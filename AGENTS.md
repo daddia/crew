@@ -15,11 +15,11 @@ Two layers:
 
 ## Crews in this repo
 
-| Folder (code) | Role | Planned name (architecture / docs) | Status |
-|---------------|------|------------------------------------|--------|
-| `crews/delivery-build/` | Pick up story → implement → peer review → open MR → CI → hand off | `delivery-build` | Implemented |
-| `crews/delivery-code-review/` | Standalone code-review crew (post-MR, planned CLI-shaped) | `code-reviewer` | Scaffold only |
-| `crews/delivery-final-review/` | Tech-lead final review → PM stakeholder review → merge | `delivery-review` | Scaffold only |
+| Folder (code)                  | Role                                                              | Planned name (architecture / docs) | Status        |
+| ------------------------------ | ----------------------------------------------------------------- | ---------------------------------- | ------------- |
+| `crews/delivery-build/`        | Pick up story → implement → peer review → open MR → CI → hand off | `delivery-build`                   | Implemented   |
+| `crews/delivery-code-review/`  | Standalone code-review crew (post-MR, planned CLI-shaped)         | `code-reviewer`                    | Scaffold only |
+| `crews/delivery-final-review/` | Tech-lead final review → PM stakeholder review → merge            | `delivery-review`                  | Scaffold only |
 
 The QA crew (`delivery-qa`) named in [`docs/design/crew-flows/`](docs/design/crew-flows/) is not yet scaffolded in code. When it lands it will own the `In QA → In Review` transition.
 
@@ -67,14 +67,14 @@ tooling/
 
 Every persona module implements `Agent`. Every deployable service satisfies `AgentCrew`. The package source is the authoritative API reference; this table lists the entry points an agent needs to know about.
 
-| Subpath | What you get | When to import it |
-|---------|--------------|-------------------|
-| `@daddia/crew` | `Agent`, `AgentCrew`, `AgentInput`, `AgentResult`, `AgentDefinition`, `PersonaName`, `resolveSession`, `readPromptFile`, `readSkillsDir`, `readSubagentsDir`, `buildAuditHook`, `toSDKHookCallback`, `boundedIterGuard`, `IterationCapReached`, `seedProjectMemory`, `createLogger`, `initTracing`, `createTracer`, `Orchestrator`, `AgentRegistry`. | Every crew, every persona. |
-| `@daddia/crew/webhooks` | `verifySignature`, `checkReplayWindow`, `createIdempotencyStore`, `SignatureError`, `ReplayError`. | Server-shaped crews that accept inbound webhooks. |
-| `@daddia/crew/state` | `StateStore`, `StoryRow`, `StepRow`, `StepResult`, `createSqliteStateStore(dbPath)`. | Server-shaped crews; do not roll your own SQLite layer. |
-| `@daddia/crew/workflow` | `WorkflowPlan`, `WorkflowStep`, `FailurePolicy`, `WorkflowEngine`, `WorkflowEngineOptions`, `createWorkflowEngine(options)`. | New crews — prefer the engine over hand-rolled run loops. |
-| `@daddia/crew/evals` | `defineEval`, `createEvalFetchHandler`, `runEvalSession`, gate/soft assertions, JUnit reporter; `crew eval` CLI. | CrewBench fixture-owned evals per crew; mount `/eval/*` on server-shaped crews. |
-| `@daddia/crew/config` | `loadEnv`, `loadYaml`, `Secret`, `redact`, `SchemaValidationError`, `ConfigNotFoundError`. | Every crew (typed config schema). |
+| Subpath                 | What you get                                                                                                                                                                                                                                                                                                                                         | When to import it                                                               |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `@daddia/crew`          | `Agent`, `AgentCrew`, `AgentInput`, `AgentResult`, `AgentDefinition`, `PersonaName`, `resolveSession`, `readPromptFile`, `readSkillsDir`, `readSubagentsDir`, `buildAuditHook`, `toSDKHookCallback`, `boundedIterGuard`, `IterationCapReached`, `seedProjectMemory`, `createLogger`, `initTracing`, `createTracer`, `Orchestrator`, `AgentRegistry`. | Every crew, every persona.                                                      |
+| `@daddia/crew/webhooks` | `verifySignature`, `checkReplayWindow`, `createIdempotencyStore`, `SignatureError`, `ReplayError`.                                                                                                                                                                                                                                                   | Server-shaped crews that accept inbound webhooks.                               |
+| `@daddia/crew/state`    | `StateStore`, `StoryRow`, `StepRow`, `StepResult`, `createSqliteStateStore(dbPath)`.                                                                                                                                                                                                                                                                 | Server-shaped crews; do not roll your own SQLite layer.                         |
+| `@daddia/crew/workflow` | `WorkflowPlan`, `WorkflowStep`, `FailurePolicy`, `WorkflowEngine`, `WorkflowEngineOptions`, `createWorkflowEngine(options)`.                                                                                                                                                                                                                         | New crews — prefer the engine over hand-rolled run loops.                       |
+| `@daddia/crew/evals`    | `defineEval`, `createEvalFetchHandler`, `runEvalSession`, gate/soft assertions, JUnit reporter; `crew eval` CLI.                                                                                                                                                                                                                                     | CrewBench fixture-owned evals per crew; mount `/eval/*` on server-shaped crews. |
+| `@daddia/crew/config`   | `loadEnv`, `loadYaml`, `Secret`, `redact`, `SchemaValidationError`, `ConfigNotFoundError`.                                                                                                                                                                                                                                                           | Every crew (typed config schema).                                               |
 
 `@daddia/crew/control` (Pro-tier managed control plane) is described in [`docs/architecture/solution.md`](docs/architecture/solution.md) as a future surface. It is **not** shipped yet.
 
@@ -196,13 +196,13 @@ Non-negotiable. Boundary violations must not merge.
 
 ## Development commands
 
-| Command | Description |
-|---------|-------------|
-| `pnpm build` | Build all packages and crews |
-| `pnpm typecheck` | Type-check everything |
-| `pnpm test` | Run Vitest suite |
-| `pnpm lint` | Dependency boundaries + ESLint |
-| `pnpm clean` | Remove build artefacts |
+| Command          | Description                    |
+| ---------------- | ------------------------------ |
+| `pnpm build`     | Build all packages and crews   |
+| `pnpm typecheck` | Type-check everything          |
+| `pnpm test`      | Run Vitest suite               |
+| `pnpm lint`      | Dependency boundaries + ESLint |
+| `pnpm clean`     | Remove build artefacts         |
 
 Per-crew: `pnpm build`, `pnpm dev`, `pnpm typecheck`, `pnpm diagnose` (where the script exists).
 
@@ -222,13 +222,13 @@ Per-crew: `pnpm build`, `pnpm dev`, `pnpm typecheck`, `pnpm diagnose` (where the
 
 **Error handling by layer:**
 
-| Layer | Pattern |
-|-------|---------|
-| `agent.ts` | Return `AgentResult { success: false }`. Do not throw to the workflow. |
-| `integrations/` | Throw typed subclasses (`JiraApiError`, `GitLabApiError`). |
-| `config.ts` | Zod + `SchemaValidationError`. Fail fast at boot. |
-| `workflow.ts` | `try/catch` every step; on catch call `escalateToHumanReview` and return. |
-| `handlers/` | Structured JSON errors only. No stack traces or internal details in bodies. |
+| Layer           | Pattern                                                                     |
+| --------------- | --------------------------------------------------------------------------- |
+| `agent.ts`      | Return `AgentResult { success: false }`. Do not throw to the workflow.      |
+| `integrations/` | Throw typed subclasses (`JiraApiError`, `GitLabApiError`).                  |
+| `config.ts`     | Zod + `SchemaValidationError`. Fail fast at boot.                           |
+| `workflow.ts`   | `try/catch` every step; on catch call `escalateToHumanReview` and return.   |
+| `handlers/`     | Structured JSON errors only. No stack traces or internal details in bodies. |
 
 **Testing:** `vi.mock` calls go at the top of the file before imports; re-import the subject after. Use `satisfies` on factory helpers for type-safe mocks. Test handlers via `app.request()`. New workflow branches (escalation, loop cap, deduplication) require unit tests; agent integration tests are not required per PR.
 
@@ -260,16 +260,16 @@ Per-crew: `pnpm build`, `pnpm dev`, `pnpm typecheck`, `pnpm diagnose` (where the
 
 Start with [`docs/README.md`](docs/README.md). The hierarchy:
 
-| Layer | Where |
-|-------|-------|
-| Product strategy | [`docs/product/strategy.md`](docs/product/strategy.md) |
-| Solution architecture | [`docs/architecture/solution.md`](docs/architecture/solution.md) |
-| Roadmap | [`docs/product/roadmap.md`](docs/product/roadmap.md) |
-| Active backlog | Jira (`CREW` project) |
-| Guiding principles | [`docs/architecture/principles.md`](docs/architecture/principles.md) |
-| ADRs | [`docs/architecture/decisions/`](docs/architecture/decisions/) |
-| Crew flow contracts | [`docs/design/crew-flows/`](docs/design/crew-flows/) |
-| Delivery approach | [`docs/design/delivery/approach.md`](docs/design/delivery/approach.md) |
-| Runbooks | [`docs/runbook/`](docs/runbook/) |
-| Contributor guides | [`contributing/`](contributing/) |
-| Research and ideas | [Confluence CREW space](https://carinyaparc.atlassian.net/wiki/spaces/CREW/pages/753668/03+Research) |
+| Layer                 | Where                                                                                                |
+| --------------------- | ---------------------------------------------------------------------------------------------------- |
+| Product strategy      | [`docs/product/strategy.md`](docs/product/strategy.md)                                               |
+| Solution architecture | [`docs/architecture/solution.md`](docs/architecture/solution.md)                                     |
+| Roadmap               | [`docs/product/roadmap.md`](docs/product/roadmap.md)                                                 |
+| Active backlog        | Jira (`CREW` project)                                                                                |
+| Guiding principles    | [`docs/architecture/principles.md`](docs/architecture/principles.md)                                 |
+| ADRs                  | [`docs/architecture/decisions/`](docs/architecture/decisions/)                                       |
+| Crew flow contracts   | [`docs/design/crew-flows/`](docs/design/crew-flows/)                                                 |
+| Delivery approach     | [`docs/design/delivery/approach.md`](docs/design/delivery/approach.md)                               |
+| Runbooks              | [`docs/runbook/`](docs/runbook/)                                                                     |
+| Contributor guides    | [`contributing/`](contributing/)                                                                     |
+| Research and ideas    | [Confluence CREW space](https://carinyaparc.atlassian.net/wiki/spaces/CREW/pages/753668/03+Research) |

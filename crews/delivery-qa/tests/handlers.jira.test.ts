@@ -9,8 +9,9 @@ vi.mock('../src/workflow.js', () => ({
 vi.mock('../src/observability.js', () => ({
   log: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
   tracer: {
-    startActiveSpan: vi.fn((_name: string, fn: (span: { setAttribute: () => void; end: () => void }) => unknown) =>
-      fn({ setAttribute: vi.fn(), end: vi.fn() }),
+    startActiveSpan: vi.fn(
+      (_name: string, fn: (span: { setAttribute: () => void; end: () => void }) => unknown) =>
+        fn({ setAttribute: vi.fn(), end: vi.fn() }),
     ),
   },
 }));
@@ -120,9 +121,7 @@ describe('POST /webhooks/jira', () => {
     });
     expect(res.status).toBe(200);
     await new Promise((r) => setImmediate(r));
-    expect(runQaWorkflow).toHaveBeenCalledWith(
-      expect.objectContaining({ issueKey: 'CREW-99' }),
-    );
+    expect(runQaWorkflow).toHaveBeenCalledWith(expect.objectContaining({ issueKey: 'CREW-99' }));
   });
 
   it('returns 200 with duplicate true for a replayed event id', async () => {

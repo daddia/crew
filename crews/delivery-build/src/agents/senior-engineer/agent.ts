@@ -38,12 +38,7 @@ function requireModel(context: Record<string, unknown>): string | undefined {
 
 async function buildDefinition(): Promise<AgentDefinition> {
   const base = __dirname;
-  const codeReviewSkill = join(
-    CODE_REVIEW_PLUGIN_PATH,
-    'skills',
-    'code-review',
-    'SKILL.md',
-  );
+  const codeReviewSkill = join(CODE_REVIEW_PLUGIN_PATH, 'skills', 'code-review', 'SKILL.md');
 
   return {
     name: 'senior-engineer',

@@ -370,26 +370,26 @@ Trust-boundary detail: [`docs/architecture/security-model.md`](../architecture/s
 
 Each item maps to an **existing control** (✓) or a **tracked gap** (○).
 
-| # | Check | How to verify | Control / gap |
-| - | ----- | ------------- | ------------- |
-| 1 | Jira webhook URL points at `/webhooks/jira` with HMAC secret configured | Jira admin → Webhooks; secret matches `JIRA_WEBHOOK_SECRET` | ✓ `verifySignature('jira', …)` in `handlers/jira.ts` |
-| 2 | GitLab webhook URL points at `/webhooks/gitlab` with shared token | GitLab project → Webhooks; secret matches `GITLAB_WEBHOOK_SECRET` | ✓ `verifySignature('gitlab', …)` in `handlers/gitlab.ts` |
-| 3 | Webhook secrets meet minimum length | Railway env: both secrets ≥ 16 characters | ✓ `config.ts` `Secret(z.string().min(16))` |
-| 4 | Unsigned or replayed Jira events are rejected | Send a test payload with bad signature → expect `403`; stale timestamp → `400` | ✓ `verifySignature` + `checkReplayWindow` |
-| 5 | Duplicate webhook deliveries are idempotent | Re-post the same Jira `id` → `{ duplicate: true }`, no second workflow | ✓ `webhook_events` + `checkAndRecord()` |
-| 6 | API tokens live in platform env only | No tokens in Dockerfile, git, or `mcp.json` literals; `${VAR}` interpolation only | ✓ `mcp.json` + `Secret()` in `config.ts` |
-| 7 | Boot log redacts secrets | Deploy; confirm `config.loaded` omits token values | ✓ `@daddia/crew/config` `redact()` |
-| 8 | MCP servers boot with injected credentials | `pnpm diagnose` → "MCP servers boot" passes | ✓ diagnostics script |
-| 9 | SQLite state persists across redeploys | Volume mounted at `/data`; `DB_PATH=/data/delivery-build.db` | ✓ runbook §2.3 |
-| 10 | Engineer allowlist excludes merge / protected-branch tools | Review `engineer/agent.ts` and `senior-engineer/agent.ts` `allowedTools`; no `merge_merge_request` | ✓ `isProtectedBranchTool()` + `buildToolAllowlistGuard` |
-| 11 | Author-controlled Jira/MR text is delimiter-fenced | `pnpm test` in `crews/delivery-build` — `prompt-context` and engineer agent tests pass | ✓ `formatAgentContext()` / `wrapUntrustedText()` |
-| 12 | Workflow passes integration-fetched context, not raw webhooks | Handlers pass `issueKey` / MR identifiers only into `runStory` / `addressFeedback` | ✓ `AGENTS.md` context provenance |
-| 13 | Loop caps set for production load | `REFACTOR_LOOP_CAP` and `CI_RETRY_CAP` reviewed in Railway env | ✓ `workflow.ts` + `boundedIterGuard` |
-| 14 | CI invariant guard is green | `pnpm guard:invariants` exits 0 on `main` | ✓ `tooling/invariants-guard` |
-| 15 | Tool allowlist denial is eval-covered | `crew eval` / CI eval suite includes `tool-allowlist-denial.eval.ts` | ✓ RH02-06 eval suite |
-| 16 | Kernel-level workspace sandbox | Not required for org-owned target repos | ○ `CREW-19` (Later) |
-| 17 | OTel trace export to collector | Optional for initial deploy | ○ `CREW-08` (Next) |
-| 18 | Live run-stream for overnight batches | Use structured logs + `/healthz` until shipped | ○ `RH02-09` (Next) |
+| #   | Check                                                                   | How to verify                                                                                      | Control / gap                                            |
+| --- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| 1   | Jira webhook URL points at `/webhooks/jira` with HMAC secret configured | Jira admin → Webhooks; secret matches `JIRA_WEBHOOK_SECRET`                                        | ✓ `verifySignature('jira', …)` in `handlers/jira.ts`     |
+| 2   | GitLab webhook URL points at `/webhooks/gitlab` with shared token       | GitLab project → Webhooks; secret matches `GITLAB_WEBHOOK_SECRET`                                  | ✓ `verifySignature('gitlab', …)` in `handlers/gitlab.ts` |
+| 3   | Webhook secrets meet minimum length                                     | Railway env: both secrets ≥ 16 characters                                                          | ✓ `config.ts` `Secret(z.string().min(16))`               |
+| 4   | Unsigned or replayed Jira events are rejected                           | Send a test payload with bad signature → expect `403`; stale timestamp → `400`                     | ✓ `verifySignature` + `checkReplayWindow`                |
+| 5   | Duplicate webhook deliveries are idempotent                             | Re-post the same Jira `id` → `{ duplicate: true }`, no second workflow                             | ✓ `webhook_events` + `checkAndRecord()`                  |
+| 6   | API tokens live in platform env only                                    | No tokens in Dockerfile, git, or `mcp.json` literals; `${VAR}` interpolation only                  | ✓ `mcp.json` + `Secret()` in `config.ts`                 |
+| 7   | Boot log redacts secrets                                                | Deploy; confirm `config.loaded` omits token values                                                 | ✓ `@daddia/crew/config` `redact()`                       |
+| 8   | MCP servers boot with injected credentials                              | `pnpm diagnose` → "MCP servers boot" passes                                                        | ✓ diagnostics script                                     |
+| 9   | SQLite state persists across redeploys                                  | Volume mounted at `/data`; `DB_PATH=/data/delivery-build.db`                                       | ✓ runbook §2.3                                           |
+| 10  | Engineer allowlist excludes merge / protected-branch tools              | Review `engineer/agent.ts` and `senior-engineer/agent.ts` `allowedTools`; no `merge_merge_request` | ✓ `isProtectedBranchTool()` + `buildToolAllowlistGuard`  |
+| 11  | Author-controlled Jira/MR text is delimiter-fenced                      | `pnpm test` in `crews/delivery-build` — `prompt-context` and engineer agent tests pass             | ✓ `formatAgentContext()` / `wrapUntrustedText()`         |
+| 12  | Workflow passes integration-fetched context, not raw webhooks           | Handlers pass `issueKey` / MR identifiers only into `runStory` / `addressFeedback`                 | ✓ `AGENTS.md` context provenance                         |
+| 13  | Loop caps set for production load                                       | `REFACTOR_LOOP_CAP` and `CI_RETRY_CAP` reviewed in Railway env                                     | ✓ `workflow.ts` + `boundedIterGuard`                     |
+| 14  | CI invariant guard is green                                             | `pnpm guard:invariants` exits 0 on `main`                                                          | ✓ `tooling/invariants-guard`                             |
+| 15  | Tool allowlist denial is eval-covered                                   | `crew eval` / CI eval suite includes `tool-allowlist-denial.eval.ts`                               | ✓ RH02-06 eval suite                                     |
+| 16  | Kernel-level workspace sandbox                                          | Not required for org-owned target repos                                                            | ○ `CREW-19` (Later)                                      |
+| 17  | OTel trace export to collector                                          | Optional for initial deploy                                                                        | ○ `CREW-08` (Next)                                       |
+| 18  | Live run-stream for overnight batches                                   | Use structured logs + `/healthz` until shipped                                                     | ○ `RH02-09` (Next)                                       |
 
 Do not deploy while any ✓ item fails verification. ○ items are documented
 acceptances — note them in the deployment record and track via backlog.

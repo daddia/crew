@@ -103,11 +103,9 @@ export function buildTaskPrompt(options: {
       : '';
 
   if (options.isResumed) {
-    return [
-      'Continue with the current task.',
-      `Issue: ${options.issueKey}`,
-      formattedContext,
-    ].join('\n');
+    return ['Continue with the current task.', `Issue: ${options.issueKey}`, formattedContext].join(
+      '\n',
+    );
   }
 
   return [

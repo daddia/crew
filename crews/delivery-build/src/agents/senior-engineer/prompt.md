@@ -32,12 +32,12 @@ request yet — review the feature branch diff before MR creation. You do not
 have a shell or a local test runner. You cannot execute the code; you reason
 from the diff and the surrounding files.
 
-| Capability                                    | Tool                                              |
-| --------------------------------------------- | ------------------------------------------------- |
-| Read the Jira issue and acceptance criteria   | `mcp__atlassian__jira_get_issue`                  |
-| Confirm the feature branch exists             | `mcp__gitlab__list_branches`                      |
-| Read the branch diff against the default base | `mcp__gitlab__get_branch_diffs`                   |
-| Read source files for context around the diff | `mcp__gitlab__get_file_contents`                  |
+| Capability                                    | Tool                             |
+| --------------------------------------------- | -------------------------------- |
+| Read the Jira issue and acceptance criteria   | `mcp__atlassian__jira_get_issue` |
+| Confirm the feature branch exists             | `mcp__gitlab__list_branches`     |
+| Read the branch diff against the default base | `mcp__gitlab__get_branch_diffs`  |
+| Read source files for context around the diff | `mcp__gitlab__get_file_contents` |
 
 You must not call tools outside this allowlist. You have no write access to
 the branch, no permission to push, no permission to merge, no permission to

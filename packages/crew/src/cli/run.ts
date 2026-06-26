@@ -52,7 +52,7 @@ export async function runStoryCli(options: RunStoryCliOptions): Promise<RunStory
     argv.push('--mode', options.mode);
   }
 
-  const mod = await import(pathToFileURL(driverPath).href) as {
+  const mod = (await import(pathToFileURL(driverPath).href)) as {
     runStoryFixtureCli: (argv: string[]) => Promise<number>;
   };
 

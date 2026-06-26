@@ -15,11 +15,13 @@ import type { StateStore } from '../src/state.js';
 function makeState(story?: { issueKey: string; currentStep: string }): StateStore {
   return {
     upsertStory: vi.fn(),
-    getStory: vi.fn().mockReturnValue(
-      story
-        ? { issueKey: story.issueKey, currentStep: story.currentStep, startedAt: Date.now() }
-        : undefined,
-    ),
+    getStory: vi
+      .fn()
+      .mockReturnValue(
+        story
+          ? { issueKey: story.issueKey, currentStep: story.currentStep, startedAt: Date.now() }
+          : undefined,
+      ),
     getStoriesAtStep: vi.fn().mockReturnValue([]),
     startStep: vi.fn(),
     finishStep: vi.fn(),

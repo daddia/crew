@@ -16,12 +16,12 @@ This sits **outside** the `delivery-build → delivery-qa → delivery-review` p
 
 ## Status
 
-| Component | Status |
-|-----------|--------|
-| `src/index.ts` | Scaffold placeholder (no workflow wired) |
-| `cli.ts` entry point | Not yet added |
-| Personas | Not yet added |
-| Remote audit sink (`@daddia/crew/audit`) | Not yet shipped — blocker |
+| Component                                | Status                                   |
+| ---------------------------------------- | ---------------------------------------- |
+| `src/index.ts`                           | Scaffold placeholder (no workflow wired) |
+| `cli.ts` entry point                     | Not yet added                            |
+| Personas                                 | Not yet added                            |
+| Remote audit sink (`@daddia/crew/audit`) | Not yet shipped — blocker                |
 
 ## Why a separate crew
 

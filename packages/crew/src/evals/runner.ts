@@ -103,7 +103,9 @@ export function formatEvalResult(result: EvalRunResult): string {
   for (const assertion of result.assertions) {
     if (!assertion.passed) {
       const tag = assertion.severity === 'soft' ? 'soft' : 'gate';
-      lines.push(`  ✗ [${tag}] ${assertion.name}${assertion.message ? `: ${assertion.message}` : ''}`);
+      lines.push(
+        `  ✗ [${tag}] ${assertion.name}${assertion.message ? `: ${assertion.message}` : ''}`,
+      );
     }
   }
   if (!result.passed && result.assertions.every((a) => a.passed)) {

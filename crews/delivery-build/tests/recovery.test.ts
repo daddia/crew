@@ -3,8 +3,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('../src/observability.js', () => ({
   log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
   tracer: {
-    startActiveSpan: vi.fn((_name: string, fn: (span: { setAttribute: () => void; end: () => void }) => unknown) =>
-      fn({ setAttribute: vi.fn(), end: vi.fn() }),
+    startActiveSpan: vi.fn(
+      (_name: string, fn: (span: { setAttribute: () => void; end: () => void }) => unknown) =>
+        fn({ setAttribute: vi.fn(), end: vi.fn() }),
     ),
   },
 }));
@@ -68,7 +69,16 @@ function makeCtxBase(): WorkflowCtxBase & {
   gitlab: ReturnType<typeof makeMockGitlab>;
 } {
   return {
-    behaviour: { refactorLoopCap: 2, ciRetryCap: 3, ciPollIntervalMs: 0, ciWaitTimeoutMs: 1_800_000, engineerMaxTurns: 50, engineerCompactionThreshold: 160_000, engineerCostCapUsd: 5, modelRouting: { lowCost: 'claude-sonnet-test', implementation: 'claude-opus-test' } },
+    behaviour: {
+      refactorLoopCap: 2,
+      ciRetryCap: 3,
+      ciPollIntervalMs: 0,
+      ciWaitTimeoutMs: 1_800_000,
+      engineerMaxTurns: 50,
+      engineerCompactionThreshold: 160_000,
+      engineerCostCapUsd: 5,
+      modelRouting: { lowCost: 'claude-sonnet-test', implementation: 'claude-opus-test' },
+    },
     jira: makeMockJira(),
     gitlab: makeMockGitlab(),
     projectDir: '/project',

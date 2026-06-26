@@ -45,10 +45,7 @@ export function resolveFixtureDir(crewRoot: string, issueKey: string): string {
 }
 
 /** Load and validate a story fixture from fixtures/{issueKey}/fixture.json. */
-export async function loadStoryFixture(
-  crewRoot: string,
-  issueKey: string,
-): Promise<StoryFixture> {
+export async function loadStoryFixture(crewRoot: string, issueKey: string): Promise<StoryFixture> {
   const fixturePath = join(resolveFixtureDir(crewRoot, issueKey), 'fixture.json');
   let raw: string;
   try {

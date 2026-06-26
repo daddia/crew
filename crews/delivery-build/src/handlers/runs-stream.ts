@@ -6,11 +6,7 @@ import type { StateStore } from '../state.js';
  * GET /runs/:issueKey/stream — Server-Sent Events feed of structured progress
  * for an in-flight story (tool-use, subagent, step transitions).
  */
-export function runsStreamHandler(
-  c: Context,
-  hub: RunStreamHub,
-  state: StateStore,
-): Response {
+export function runsStreamHandler(c: Context, hub: RunStreamHub, state: StateStore): Response {
   const issueKey = c.req.param('issueKey');
   if (!issueKey || issueKey.length > 64 || !/^[\w-]+$/.test(issueKey)) {
     return c.json({ error: 'Invalid issue key' }, 400);

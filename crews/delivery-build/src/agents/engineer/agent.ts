@@ -35,10 +35,7 @@ const WORKSPACE_TASKS = new Set([
   'fix-qa-defects',
 ]);
 
-const MCP_ONLY_TOOLS = [
-  'mcp__atlassian__jira_get_issue',
-  'mcp__atlassian__jira_add_comment',
-];
+const MCP_ONLY_TOOLS = ['mcp__atlassian__jira_get_issue', 'mcp__atlassian__jira_add_comment'];
 
 const WORKSPACE_TOOLS = [
   'Read',

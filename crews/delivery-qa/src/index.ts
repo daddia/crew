@@ -73,10 +73,9 @@ export async function boot(env: NodeJS.ProcessEnv = process.env): Promise<void> 
   const jira = createJiraClient(config.identity.jira, {
     atlassianApiToken: config.secrets.atlassianApiToken,
   });
-  const gitlab = createGitlabClient(
-    config.identity.gitlab,
-    { gitlabAccessToken: config.secrets.gitlabAccessToken },
-  );
+  const gitlab = createGitlabClient(config.identity.gitlab, {
+    gitlabAccessToken: config.secrets.gitlabAccessToken,
+  });
 
   const ctxBase: WorkflowCtxBase = {
     behaviour: {
@@ -100,15 +99,12 @@ export async function boot(env: NodeJS.ProcessEnv = process.env): Promise<void> 
 
   const app = createApp(state, config, ctxBase);
 
-  const server = serve(
-    { fetch: app.fetch, port: config.infrastructure.port },
-    () => {
-      log.info('server.start', {
-        port: config.infrastructure.port,
-        db: config.infrastructure.dbPath,
-      });
-    },
-  );
+  const server = serve({ fetch: app.fetch, port: config.infrastructure.port }, () => {
+    log.info('server.start', {
+      port: config.infrastructure.port,
+      db: config.infrastructure.dbPath,
+    });
+  });
 
   const pollerDeps = {
     identity: config.identity,

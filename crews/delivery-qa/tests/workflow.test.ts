@@ -4,8 +4,9 @@ import type { Agent, AgentInput, AgentResult } from '@daddia/crew';
 vi.mock('../src/observability.js', () => ({
   log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
   tracer: {
-    startActiveSpan: vi.fn((_name: string, fn: (span: { setAttribute: () => void; end: () => void }) => unknown) =>
-      fn({ setAttribute: vi.fn(), end: vi.fn() }),
+    startActiveSpan: vi.fn(
+      (_name: string, fn: (span: { setAttribute: () => void; end: () => void }) => unknown) =>
+        fn({ setAttribute: vi.fn(), end: vi.fn() }),
     ),
   },
 }));
@@ -83,7 +84,10 @@ function makeCtxBase(
   };
 }
 
-function makeState(): StateStore & { stepHistory: StepRow[]; stories: Map<string, { currentStep: Step; startedAt: number }> } {
+function makeState(): StateStore & {
+  stepHistory: StepRow[];
+  stories: Map<string, { currentStep: Step; startedAt: number }>;
+} {
   const stepHistory: StepRow[] = [];
   const stories = new Map<string, { currentStep: Step; startedAt: number }>();
 
@@ -100,7 +104,9 @@ function makeState(): StateStore & { stepHistory: StepRow[]; stories: Map<string
     }),
     getStory: vi.fn((issueKey: string) => {
       const story = stories.get(issueKey);
-      return story ? { issueKey, currentStep: story.currentStep, startedAt: story.startedAt } : undefined;
+      return story
+        ? { issueKey, currentStep: story.currentStep, startedAt: story.startedAt }
+        : undefined;
     }),
     getStoriesAtStep: vi.fn((step: Step) => {
       const results: Array<{ issueKey: string; currentStep: Step; startedAt: number }> = [];
@@ -122,17 +128,20 @@ function makeState(): StateStore & { stepHistory: StepRow[]; stories: Map<string
         verdict: null,
       });
     }),
-    finishStep: vi.fn((issueKey: string, step: Step, result: { costUsd?: number; verdict: string | null }) => {
-      const row = stepHistory.find((r) => r.step === step && r.finishedAt === null);
-      if (row) {
-        row.finishedAt = Date.now();
-        row.costUsd = result.costUsd ?? null;
-        row.verdict = result.verdict;
-      }
-    }),
+    finishStep: vi.fn(
+      (issueKey: string, step: Step, result: { costUsd?: number; verdict: string | null }) => {
+        const row = stepHistory.find((r) => r.step === step && r.finishedAt === null);
+        if (row) {
+          row.finishedAt = Date.now();
+          row.costUsd = result.costUsd ?? null;
+          row.verdict = result.verdict;
+        }
+      },
+    ),
     getStepHistory: vi.fn(() => stepHistory),
-    countStepOccurrences: vi.fn((issueKey: string, step: Step) =>
-      stepHistory.filter((r) => r.issueKey === issueKey && r.step === step).length,
+    countStepOccurrences: vi.fn(
+      (issueKey: string, step: Step) =>
+        stepHistory.filter((r) => r.issueKey === issueKey && r.step === step).length,
     ),
     getInterruptedSteps: vi.fn().mockReturnValue([]),
     ping: vi.fn(),
@@ -426,10 +435,7 @@ describe('runQaWorkflow', () => {
       return passResult({ success: false, summary: 'unexpected task' });
     });
 
-    await runQaWorkflow(
-      { issueKey: 'CREW-55', state, ...ctxBase },
-      { workspace },
-    );
+    await runQaWorkflow({ issueKey: 'CREW-55', state, ...ctxBase }, { workspace });
 
     expect(workspace.checkoutMrRef).not.toHaveBeenCalled();
     expect(workspace.runDeployScript).not.toHaveBeenCalled();

@@ -10,12 +10,18 @@ export default defineEval({
     const handoff = t.session.artefacts['handoffEvent'] as
       | { issueKey: string; mrUrl: string }
       | undefined;
-    t.expect(typeof handoff?.issueKey === 'string' && handoff.issueKey.length > 0, 'handoff has issueKey');
+    t.expect(
+      typeof handoff?.issueKey === 'string' && handoff.issueKey.length > 0,
+      'handoff has issueKey',
+    );
     t.expect(
       typeof handoff?.mrUrl === 'string' && handoff.mrUrl.startsWith('https://'),
       'handoff has mrUrl',
     );
-    t.expect(handoff?.issueKey === t.session.artefacts['issueKey'], 'handoff issueKey matches fixture');
+    t.expect(
+      handoff?.issueKey === t.session.artefacts['issueKey'],
+      'handoff issueKey matches fixture',
+    );
     t.expect(handoff?.mrUrl === t.session.artefacts['mrUrl'], 'handoff mrUrl matches fixture');
   },
 });

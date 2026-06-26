@@ -8,11 +8,11 @@ commits to the MR's source branch so the next pipeline run can pass.
 
 ## Inputs
 
-| Field      | Source                 | Required |
-| ---------- | ---------------------- | -------- |
-| `issueKey` | top-level `AgentInput` | yes      |
-| `mrUrl`    | `context`              | yes      |
-| `branchName` | `context` (MR source branch) | yes |
+| Field        | Source                       | Required |
+| ------------ | ---------------------------- | -------- |
+| `issueKey`   | top-level `AgentInput`       | yes      |
+| `mrUrl`      | `context`                    | yes      |
+| `branchName` | `context` (MR source branch) | yes      |
 
 ## Steps
 

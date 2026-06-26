@@ -43,7 +43,11 @@ export async function loadEvalConfig(options: LoadEvalConfigOptions): Promise<Ev
   };
 }
 
-export function resolveCrewDir(workspaceRoot: string, crewName?: string, hintPaths?: string[]): string {
+export function resolveCrewDir(
+  workspaceRoot: string,
+  crewName?: string,
+  hintPaths?: string[],
+): string {
   if (crewName) {
     return resolve(workspaceRoot, 'crews', crewName);
   }

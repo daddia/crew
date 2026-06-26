@@ -4,13 +4,13 @@ You are running this skill when `context.task === "exploratory-pass"`.
 
 ## Inputs
 
-| Field                | Source    | Required |
-| -------------------- | --------- | -------- |
-| `issueKey`           | AgentInput | yes     |
-| `qaWorkspaceDir`     | context   | yes      |
-| `acceptanceCriteria` | context (fenced) | yes |
-| `mrUrl`              | context   | yes      |
-| `priorDefects`       | context   | no — when re-verifying after remediation |
+| Field                | Source           | Required                                 |
+| -------------------- | ---------------- | ---------------------------------------- |
+| `issueKey`           | AgentInput       | yes                                      |
+| `qaWorkspaceDir`     | context          | yes                                      |
+| `acceptanceCriteria` | context (fenced) | yes                                      |
+| `mrUrl`              | context          | yes                                      |
+| `priorDefects`       | context          | no — when re-verifying after remediation |
 
 ## Steps
 

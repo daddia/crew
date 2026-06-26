@@ -62,7 +62,10 @@ export function renderJUnit(results: EvalRunResult[]): string {
   );
 }
 
-export async function writeJUnitReport(results: EvalRunResult[], outputPath: string): Promise<void> {
+export async function writeJUnitReport(
+  results: EvalRunResult[],
+  outputPath: string,
+): Promise<void> {
   await mkdir(dirname(outputPath), { recursive: true });
   await writeFile(outputPath, renderJUnit(results), 'utf8');
 }

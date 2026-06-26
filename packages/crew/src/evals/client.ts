@@ -71,7 +71,9 @@ function parseSessionResult(value: unknown): EvalSessionResult {
     throw new EvalClientError('Invalid session result: costUsd must be number');
   }
   const artefacts =
-    typeof obj['artefacts'] === 'object' && obj['artefacts'] !== null && !Array.isArray(obj['artefacts'])
+    typeof obj['artefacts'] === 'object' &&
+    obj['artefacts'] !== null &&
+    !Array.isArray(obj['artefacts'])
       ? (obj['artefacts'] as Record<string, unknown>)
       : {};
   const sessionId = typeof obj['sessionId'] === 'string' ? obj['sessionId'] : undefined;

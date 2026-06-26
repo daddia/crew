@@ -8,8 +8,9 @@ vi.mock('../src/memory.js', () => ({
 vi.mock('../src/observability.js', () => ({
   log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
   tracer: {
-    startActiveSpan: vi.fn((_name: string, fn: (span: { setAttribute: () => void; end: () => void }) => unknown) =>
-      fn({ setAttribute: vi.fn(), end: vi.fn() }),
+    startActiveSpan: vi.fn(
+      (_name: string, fn: (span: { setAttribute: () => void; end: () => void }) => unknown) =>
+        fn({ setAttribute: vi.fn(), end: vi.fn() }),
     ),
   },
 }));
@@ -128,10 +129,7 @@ describe('runStory', () => {
     const state = makeState();
     await runStory({ issueKey: 'ENG-1', state, ...ctxBase });
 
-    expect(tracer.startActiveSpan).toHaveBeenCalledWith(
-      'workflow.step',
-      expect.any(Function),
-    );
+    expect(tracer.startActiveSpan).toHaveBeenCalledWith('workflow.step', expect.any(Function));
   });
 
   it('runs the happy-path sequence: implement then peer-review then MR', async () => {

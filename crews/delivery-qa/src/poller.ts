@@ -35,7 +35,10 @@ export interface PollerDeps {
   qaWorkspaceDir: string;
 }
 
-function workflowCtxBase(deps: PollerDeps, state: StateStore): WorkflowCtxBase & { state: StateStore } {
+function workflowCtxBase(
+  deps: PollerDeps,
+  state: StateStore,
+): WorkflowCtxBase & { state: StateStore } {
   return {
     state,
     behaviour: deps.behaviour,
@@ -45,11 +48,7 @@ function workflowCtxBase(deps: PollerDeps, state: StateStore): WorkflowCtxBase &
   };
 }
 
-function dispatchQaWorkflow(
-  issueKey: string,
-  deps: PollerDeps,
-  state: StateStore,
-): void {
+function dispatchQaWorkflow(issueKey: string, deps: PollerDeps, state: StateStore): void {
   const ctx = { issueKey, ...workflowCtxBase(deps, state) };
   runQaWorkflowWithLock(
     issueKey,

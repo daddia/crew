@@ -66,15 +66,18 @@ async function withWorkflowStepSpan<T>(
   issueKey: string,
   fn: () => Promise<T>,
 ): Promise<T> {
-  return tracer.startActiveSpan('workflow.step', async (span: { setAttribute(key: string, value: string): void; end(): void }) => {
-    span.setAttribute('workflow.step', stepName);
-    span.setAttribute('issueKey', issueKey);
-    try {
-      return await fn();
-    } finally {
-      span.end();
-    }
-  });
+  return tracer.startActiveSpan(
+    'workflow.step',
+    async (span: { setAttribute(key: string, value: string): void; end(): void }) => {
+      span.setAttribute('workflow.step', stepName);
+      span.setAttribute('issueKey', issueKey);
+      try {
+        return await fn();
+      } finally {
+        span.end();
+      }
+    },
+  );
 }
 
 type PipelineWaitResult = { status: string; timedOut: false } | { status: string; timedOut: true };
@@ -328,9 +331,7 @@ async function runStoryInner(
   if (!implResult.success) {
     const boundedReason = implResult.artefacts['boundedReason'];
     const reason =
-      typeof boundedReason === 'string'
-        ? implResult.summary
-        : 'Engineer failed to implement story';
+      typeof boundedReason === 'string' ? implResult.summary : 'Engineer failed to implement story';
     await escalateToHumanReview(jira, issueKey, reason, [], state);
     return;
   }
@@ -447,10 +448,10 @@ const QA_DEFECT_COMMENT_PREFIX = '*QA defects found';
 // Must stay aligned with the defect comment header written by delivery-qa
 // when handing off to remediation (same string prefix, different crews).
 
-function extractQaDefectComments(comments: Awaited<ReturnType<JiraClient['getComments']>>): string[] {
-  return comments
-    .filter((c) => c.body.includes(QA_DEFECT_COMMENT_PREFIX))
-    .map((c) => c.body);
+function extractQaDefectComments(
+  comments: Awaited<ReturnType<JiraClient['getComments']>>,
+): string[] {
+  return comments.filter((c) => c.body.includes(QA_DEFECT_COMMENT_PREFIX)).map((c) => c.body);
 }
 
 /**
@@ -480,7 +481,13 @@ async function runQaRemediationInner(
 
   if (!mrUrl) {
     state.finishStep(issueKey, 'qa-remediation', { verdict: 'failed' });
-    await escalateToHumanReview(jira, issueKey, 'No open merge request found for remediation', [], state);
+    await escalateToHumanReview(
+      jira,
+      issueKey,
+      'No open merge request found for remediation',
+      [],
+      state,
+    );
     return;
   }
 
@@ -490,7 +497,14 @@ async function runQaRemediationInner(
   } catch (err) {
     log.warn('workflow.qa-remediation.branch-failed', { issueKey, mrUrl, err: String(err) });
     state.finishStep(issueKey, 'qa-remediation', { verdict: 'failed' });
-    await escalateToHumanReview(jira, issueKey, 'Failed to resolve MR source branch', [], state, mrUrl);
+    await escalateToHumanReview(
+      jira,
+      issueKey,
+      'Failed to resolve MR source branch',
+      [],
+      state,
+      mrUrl,
+    );
     return;
   }
 

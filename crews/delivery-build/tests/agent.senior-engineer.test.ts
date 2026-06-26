@@ -170,7 +170,9 @@ describe('seniorEngineer.run()', () => {
     await seniorEngineer.run(baseInput);
 
     expect(mockCreateRunStreamBridge).toHaveBeenCalledOnce();
-    expect(mockCreateRunStreamBridge).toHaveBeenCalledBefore(session.send as ReturnType<typeof vi.fn>);
+    expect(mockCreateRunStreamBridge).toHaveBeenCalledBefore(
+      session.send as ReturnType<typeof vi.fn>,
+    );
   });
 
   it('passes the audit hook to resolveSession as auditHook', async () => {

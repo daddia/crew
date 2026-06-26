@@ -5,7 +5,12 @@ export function createEvalContext(session: EvalSessionResult): EvalContext & {
 } {
   const assertions: EvalAssertion[] = [];
 
-  function record(name: string, passed: boolean, severity: EvalAssertion['severity'], message?: string): void {
+  function record(
+    name: string,
+    passed: boolean,
+    severity: EvalAssertion['severity'],
+    message?: string,
+  ): void {
     assertions.push({ name, severity, passed, message });
   }
 

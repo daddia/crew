@@ -24,9 +24,9 @@ ADRs live in [`docs/architecture/decisions/`](.) in this repo. Use the template 
 
 ## Foundation decisions
 
-| ID   | Title | Status |
-| ---- | ----- | ------ |
-| _(none yet)_ | Crew-specific ADRs will be added as consequential runtime decisions are recorded. | — |
+| ID           | Title                                                                             | Status |
+| ------------ | --------------------------------------------------------------------------------- | ------ |
+| _(none yet)_ | Crew-specific ADRs will be added as consequential runtime decisions are recorded. | —      |
 
 ---
 
@@ -34,9 +34,9 @@ ADRs live in [`docs/architecture/decisions/`](.) in this repo. Use the template 
 
 Write the ADR before starting implementation of the blocking feature.
 
-| ID  | Title | Priority | Blocks |
-| --- | ----- | -------- | ------ |
-| ADR-0001 | Turn-level checkpointing for in-run tool replay | P1 | CREW-20 implementation; informs CREW-13 orchestrator design |
+| ID       | Title                                           | Priority | Blocks                                                      |
+| -------- | ----------------------------------------------- | -------- | ----------------------------------------------------------- |
+| ADR-0001 | Turn-level checkpointing for in-run tool replay | P1       | CREW-20 implementation; informs CREW-13 orchestrator design |
 
 ---
 

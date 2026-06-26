@@ -26,37 +26,37 @@ On loop-cap exhaustion or any unrecoverable failure, the ticket transitions to "
 
 ### Required
 
-| Variable | Description |
-|----------|-------------|
-| `ANTHROPIC_API_KEY` | Anthropic API key |
-| `ATLASSIAN_EMAIL` | Atlassian account email |
-| `ATLASSIAN_API_TOKEN` | Atlassian API token |
-| `ATLASSIAN_BASE_URL` | e.g. `https://yourorg.atlassian.net` |
-| `JIRA_PROJECT_KEY` | Jira project key (e.g. `CREW`) |
-| `JIRA_ASSIGNEE_ACCOUNT_ID` | Jira account ID of the engineer this crew picks stories for |
-| `GITLAB_PERSONAL_ACCESS_TOKEN` | GitLab PAT with `api` scope |
-| `GITLAB_API_URL` | e.g. `https://gitlab.com/api/v4` |
-| `GITLAB_PROJECT_ID` | Numeric project ID |
-| `JIRA_WEBHOOK_SECRET` | Shared secret for Jira webhook HMAC verification |
-| `GITLAB_WEBHOOK_SECRET` | Shared token for GitLab webhook verification |
-| `DB_PATH` | SQLite file path (e.g. `/data/delivery-build.db` in production) |
-| `PROJECT_DIR` | Absolute path to the repository root for engineer memory seeding |
+| Variable                       | Description                                                      |
+| ------------------------------ | ---------------------------------------------------------------- |
+| `ANTHROPIC_API_KEY`            | Anthropic API key                                                |
+| `ATLASSIAN_EMAIL`              | Atlassian account email                                          |
+| `ATLASSIAN_API_TOKEN`          | Atlassian API token                                              |
+| `ATLASSIAN_BASE_URL`           | e.g. `https://yourorg.atlassian.net`                             |
+| `JIRA_PROJECT_KEY`             | Jira project key (e.g. `CREW`)                                   |
+| `JIRA_ASSIGNEE_ACCOUNT_ID`     | Jira account ID of the engineer this crew picks stories for      |
+| `GITLAB_PERSONAL_ACCESS_TOKEN` | GitLab PAT with `api` scope                                      |
+| `GITLAB_API_URL`               | e.g. `https://gitlab.com/api/v4`                                 |
+| `GITLAB_PROJECT_ID`            | Numeric project ID                                               |
+| `JIRA_WEBHOOK_SECRET`          | Shared secret for Jira webhook HMAC verification                 |
+| `GITLAB_WEBHOOK_SECRET`        | Shared token for GitLab webhook verification                     |
+| `DB_PATH`                      | SQLite file path (e.g. `/data/delivery-build.db` in production)  |
+| `PROJECT_DIR`                  | Absolute path to the repository root for engineer memory seeding |
 
 ### Optional
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `MODEL_ROUTING_LOW_COST` | `claude-sonnet-4-6` | Model for triage and peer review (`assess-clarification`, `peer-code-review`) |
-| `MODEL_ROUTING_IMPLEMENTATION` | `claude-opus-4-5` | Model for implementation and remediation (`implement-story`, `address-feedback`, `fix-ci`) |
-| `POLL_INTERVAL_MS` | `300000` | Milliseconds between Jira polling ticks |
-| `REFACTOR_LOOP_CAP` | `2` | Max peer-review iterations before escalation |
-| `CI_RETRY_CAP` | `3` | Max CI fix attempts before escalation |
-| `CI_POLL_INTERVAL_MS` | `30000` | Milliseconds between CI pipeline polls |
-| `CI_WAIT_TIMEOUT_MS` | `1800000` | Maximum milliseconds to wait for a pipeline to settle before escalating |
-| `CLARIFICATION_TIMEOUT_HOURS` | `24` | Hours to wait for PM clarification before escalating |
-| `ATLASSIAN_ACCOUNT_ID` | — | Bot account ID for reliable bot-vs-human comment detection (falls back to `ATLASSIAN_EMAIL` comparison when unset) |
-| `DIFF_FILE_CAP` | `50` | Maximum number of files included in an MR diff sent to the agent |
-| `DIFF_SIZE_CAP_BYTES` | `500000` | Maximum byte size of an MR diff sent to the agent |
+| Variable                       | Default             | Description                                                                                                        |
+| ------------------------------ | ------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `MODEL_ROUTING_LOW_COST`       | `claude-sonnet-4-6` | Model for triage and peer review (`assess-clarification`, `peer-code-review`)                                      |
+| `MODEL_ROUTING_IMPLEMENTATION` | `claude-opus-4-5`   | Model for implementation and remediation (`implement-story`, `address-feedback`, `fix-ci`)                         |
+| `POLL_INTERVAL_MS`             | `300000`            | Milliseconds between Jira polling ticks                                                                            |
+| `REFACTOR_LOOP_CAP`            | `2`                 | Max peer-review iterations before escalation                                                                       |
+| `CI_RETRY_CAP`                 | `3`                 | Max CI fix attempts before escalation                                                                              |
+| `CI_POLL_INTERVAL_MS`          | `30000`             | Milliseconds between CI pipeline polls                                                                             |
+| `CI_WAIT_TIMEOUT_MS`           | `1800000`           | Maximum milliseconds to wait for a pipeline to settle before escalating                                            |
+| `CLARIFICATION_TIMEOUT_HOURS`  | `24`                | Hours to wait for PM clarification before escalating                                                               |
+| `ATLASSIAN_ACCOUNT_ID`         | —                   | Bot account ID for reliable bot-vs-human comment detection (falls back to `ATLASSIAN_EMAIL` comparison when unset) |
+| `DIFF_FILE_CAP`                | `50`                | Maximum number of files included in an MR diff sent to the agent                                                   |
+| `DIFF_SIZE_CAP_BYTES`          | `500000`            | Maximum byte size of an MR diff sent to the agent                                                                  |
 
 ## Running locally
 

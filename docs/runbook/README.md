@@ -13,16 +13,15 @@ Step-by-step procedures for running deployed crews. Supports [`roadmap.md`](../p
 
 ## Operating model
 
-| Rule | Meaning |
-|------|---------|
-| One process per crew | Scale out = more containers, not more threads |
-| Fire-and-forget ingress | Webhooks return `200`; the workflow runs async |
-| Escalation, not throw | Loop cap / failure → human review in Jira, then return |
+| Rule                    | Meaning                                                |
+| ----------------------- | ------------------------------------------------------ |
+| One process per crew    | Scale out = more containers, not more threads          |
+| Fire-and-forget ingress | Webhooks return `200`; the workflow runs async         |
+| Escalation, not throw   | Loop cap / failure → human review in Jira, then return |
 
 ```text
 delivery-build  ──(In QA)──►  delivery-qa  ──(In Review)──►  delivery-review
 ```
-
 
 Handoffs are encoded as work-source state transitions plus `ready-for-*` events. Per-crew sequences: [`../design/crew-flows/`](../design/crew-flows/).
 
@@ -36,11 +35,11 @@ Handoffs are encoded as work-source state transitions plus `ready-for-*` events.
 
 ## Runbooks
 
-| Topic | Document |
-|-------|----------|
-| `delivery-build` operations | [delivery-build.md](delivery-build.md) |
-| `delivery-qa` operations | [delivery-qa.md](delivery-qa.md) |
-| Local container build + smoke | [container.md](container.md) |
-| Publishing `@daddia/crew` | [publish.md](publish.md) |
+| Topic                         | Document                               |
+| ----------------------------- | -------------------------------------- |
+| `delivery-build` operations   | [delivery-build.md](delivery-build.md) |
+| `delivery-qa` operations      | [delivery-qa.md](delivery-qa.md)       |
+| Local container build + smoke | [container.md](container.md)           |
+| Publishing `@daddia/crew`     | [publish.md](publish.md)               |
 
 Additional runbooks (`delivery-review`) land alongside that crew — see [`../product/roadmap.md`](../product/roadmap.md).
