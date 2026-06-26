@@ -41,6 +41,22 @@ function makeMockGitlab(): GitlabClient {
 }
 
 function makePollerDeps(overrides: Partial<PollerDeps> = {}): PollerDeps {
+  const { behaviour: behaviourOverrides, ...rest } = overrides;
+  const defaultBehaviour: PollerDeps['behaviour'] = {
+    pollIntervalMs: 300_000,
+    clarificationTimeoutHours: 24,
+    refactorLoopCap: 2,
+    ciRetryCap: 3,
+    ciPollIntervalMs: 30_000,
+    ciWaitTimeoutMs: 1_800_000,
+    engineerMaxTurns: 50,
+    engineerCostCapUsd: 5,
+    modelRouting: {
+      lowCost: 'claude-sonnet-test',
+      implementation: 'claude-opus-test',
+    },
+  };
+
   return {
     identity: {
       jira: {
@@ -49,17 +65,14 @@ function makePollerDeps(overrides: Partial<PollerDeps> = {}): PollerDeps {
         email: 'bot@example.com',
       },
     },
-    behaviour: {
-      pollIntervalMs: 300_000,
-      clarificationTimeoutHours: 24,
-      refactorLoopCap: 2,
-      ciRetryCap: 3,
-      ciPollIntervalMs: 30_000,
-    },
     jira: makeMockJira(),
     gitlab: makeMockGitlab(),
     projectDir: '/project',
-    ...overrides,
+    ...rest,
+    behaviour: {
+      ...defaultBehaviour,
+      ...behaviourOverrides,
+    },
   };
 }
 

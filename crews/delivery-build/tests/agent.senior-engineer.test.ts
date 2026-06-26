@@ -80,13 +80,28 @@ function makeSession(messages: SDKResultMessage[] = []): AgentSession {
 
 const baseInput: AgentInput = {
   issueKey: 'CREW-50-003',
-  context: { task: 'peer-code-review', branchName: 'feature/CREW-50-003-test' },
+  context: {
+    task: 'peer-code-review',
+    branchName: 'feature/CREW-50-003-test',
+    model: 'claude-test-model',
+  },
 };
 
 describe('seniorEngineer.run()', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     submittedResult = DEFAULT_SUBMITTED;
+  });
+
+  it('returns success false when model is absent from context', async () => {
+    const result = await seniorEngineer.run({
+      issueKey: 'CREW-50-003',
+      context: { task: 'peer-code-review', branchName: 'feature/test' },
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.summary).toContain('model');
+    expect(mockResolveSession).not.toHaveBeenCalled();
   });
 
   it('returns AgentResult with success true when SDK session completes with approved verdict', async () => {

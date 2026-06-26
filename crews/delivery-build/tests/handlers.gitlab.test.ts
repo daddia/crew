@@ -40,7 +40,7 @@ const mockGitlab = {
 } satisfies GitlabClient;
 
 const ctxBase: WorkflowCtxBase = {
-  behaviour: { refactorLoopCap: 2, ciRetryCap: 3, ciPollIntervalMs: 0, ciWaitTimeoutMs: 1_800_000, engineerMaxTurns: 50, engineerCostCapUsd: 5 },
+  behaviour: { refactorLoopCap: 2, ciRetryCap: 3, ciPollIntervalMs: 0, ciWaitTimeoutMs: 1_800_000, engineerMaxTurns: 50, engineerCostCapUsd: 5, modelRouting: { lowCost: 'claude-sonnet-test', implementation: 'claude-opus-test' } },
   jira: mockJira,
   gitlab: mockGitlab,
   projectDir: '/project',

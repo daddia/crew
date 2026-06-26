@@ -81,7 +81,7 @@ export async function boot(env: NodeJS.ProcessEnv = process.env): Promise<void> 
       ciWaitTimeoutMs: config.behaviour.ciWaitTimeoutMs,
       engineerMaxTurns: config.behaviour.engineerMaxTurns,
       engineerCostCapUsd: config.behaviour.engineerCostCapUsd,
-      anthropicModel: config.behaviour.anthropicModel,
+      modelRouting: config.behaviour.modelRouting,
     },
     jira,
     gitlab,

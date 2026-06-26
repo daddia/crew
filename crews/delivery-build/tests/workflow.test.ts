@@ -58,6 +58,11 @@ function makeGitlabMock(): GitlabClient {
   };
 }
 
+const DEFAULT_MODEL_ROUTING = {
+  lowCost: 'claude-sonnet-test',
+  implementation: 'claude-opus-test',
+} as const;
+
 function makeCtxBase(
   behaviourOverrides: Partial<WorkflowCtxBase['behaviour']> = {},
 ): WorkflowCtxBase & {
@@ -74,6 +79,7 @@ function makeCtxBase(
       ciWaitTimeoutMs: 1_800_000,
       engineerMaxTurns: 50,
       engineerCostCapUsd: 5,
+      modelRouting: DEFAULT_MODEL_ROUTING,
       ...behaviourOverrides,
     },
     jira,
@@ -238,6 +244,7 @@ describe('runStory', () => {
         context: expect.objectContaining({
           task: 'peer-code-review',
           branchName: 'feature/ENG-1-test',
+          model: 'claude-sonnet-test',
         }),
       }),
     );
@@ -544,6 +551,56 @@ describe('runStory', () => {
 
     expect(ctxBase.jira.transitionIssue).not.toHaveBeenCalledWith('ENG-1', 'In Review');
     expect(ctxBase.jira.transitionIssue).toHaveBeenCalledWith('ENG-1', 'In QA');
+  });
+
+  // ── Model routing ─────────────────────────────────────────────────────────
+
+  it('routes assess-clarification to the configured low-cost model', async () => {
+    const ctxBase = makeCtxBase({
+      modelRouting: { lowCost: 'claude-haiku-routing', implementation: 'claude-opus-routing' },
+    });
+    mockEngineer.mockResolvedValue(successResult());
+    mockSeniorEngineer.mockResolvedValue(successResult());
+
+    const state = makeState();
+    await runStory({ issueKey: 'ENG-1', state, ...ctxBase });
+
+    const assessCall = mockEngineer.mock.calls.find(
+      (call) => (call[0] as AgentInput).context['task'] === 'assess-clarification',
+    );
+    expect(assessCall?.[0].context['model']).toBe('claude-haiku-routing');
+  });
+
+  it('routes implement-story to the configured implementation model', async () => {
+    const ctxBase = makeCtxBase({
+      modelRouting: { lowCost: 'claude-haiku-routing', implementation: 'claude-opus-routing' },
+    });
+    mockEngineer.mockResolvedValue(successResult());
+    mockSeniorEngineer.mockResolvedValue(successResult());
+
+    const state = makeState();
+    await runStory({ issueKey: 'ENG-1', state, ...ctxBase });
+
+    const implementCall = mockEngineer.mock.calls.find(
+      (call) => (call[0] as AgentInput).context['task'] === 'implement-story',
+    );
+    expect(implementCall?.[0].context['model']).toBe('claude-opus-routing');
+  });
+
+  it('routes peer-code-review to the configured low-cost model', async () => {
+    const ctxBase = makeCtxBase({
+      modelRouting: { lowCost: 'claude-haiku-routing', implementation: 'claude-opus-routing' },
+    });
+    mockEngineer.mockResolvedValue(successResult());
+    mockSeniorEngineer.mockResolvedValue(successResult());
+
+    const state = makeState();
+    await runStory({ issueKey: 'ENG-1', state, ...ctxBase });
+
+    const reviewCall = mockSeniorEngineer.mock.calls.find(
+      (call) => (call[0] as AgentInput).context['task'] === 'peer-code-review',
+    );
+    expect(reviewCall?.[0].context['model']).toBe('claude-haiku-routing');
   });
 
   // ── Clarification assessment ─────────────────────────────────────────────

@@ -115,7 +115,7 @@ function makeSession(messages: SDKResultMessage[] = []): AgentSession {
 
 const baseInput: AgentInput = {
   issueKey: 'CREW-50-001',
-  context: { task: 'assess-clarification' },
+  context: { task: 'assess-clarification', model: 'claude-test-model' },
 };
 
 describe('engineer.run()', () => {
@@ -134,7 +134,7 @@ describe('engineer.run()', () => {
 
     const result = await engineer.run({
       ...baseInput,
-      context: { task: 'implement-story', projectDir: '/workspace/acme' },
+      context: { task: 'implement-story', projectDir: '/workspace/acme', model: 'claude-test-model' },
     });
 
     expect(result.success).toBe(true);
@@ -153,7 +153,7 @@ describe('engineer.run()', () => {
 
     const result = await engineer.run({
       ...baseInput,
-      context: { task: 'implement-story', projectDir: '/workspace/acme' },
+      context: { task: 'implement-story', projectDir: '/workspace/acme', model: 'claude-test-model' },
     });
 
     expect(result.success).toBe(false);
@@ -172,11 +172,35 @@ describe('engineer.run()', () => {
 
     const result = await engineer.run({
       ...baseInput,
-      context: { task: 'implement-story', projectDir: '/workspace/acme' },
+      context: { task: 'implement-story', projectDir: '/workspace/acme', model: 'claude-test-model' },
     });
 
     expect(result.success).toBe(false);
     expect(result.summary).toContain('Network error');
+  });
+
+  it('returns success false when model is absent from context', async () => {
+    const result = await engineer.run({
+      issueKey: 'CREW-50-001',
+      context: { task: 'assess-clarification' },
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.summary).toContain('model');
+    expect(mockResolveSession).not.toHaveBeenCalled();
+  });
+
+  it('passes the routed model to resolveSession', async () => {
+    const session = makeSession([makeResultMessage()]);
+    mockResolveSession.mockResolvedValue({
+      session,
+      sessionId: 'sess-test-123',
+      isResumed: false,
+    });
+
+    await engineer.run(baseInput);
+
+    expect(mockResolveSession.mock.calls[0]?.[0]?.model).toBe('claude-test-model');
   });
 
   it('calls resolveSession() before sending to the SDK', async () => {
@@ -326,7 +350,7 @@ describe('engineer.run()', () => {
 
     const result = await engineer.run({
       ...baseInput,
-      context: { task: 'implement-story', projectDir: '/workspace/acme' },
+      context: { task: 'implement-story', projectDir: '/workspace/acme', model: 'claude-test-model' },
     });
 
     expect(result.success).toBe(true);
@@ -355,7 +379,7 @@ describe('engineer.run()', () => {
 
     const result = await engineer.run({
       ...baseInput,
-      context: { task: 'assess-clarification' },
+      context: { task: 'assess-clarification', model: 'claude-test-model' },
     });
 
     expect(result.success).toBe(true);
@@ -379,7 +403,7 @@ describe('engineer.run()', () => {
 
     const result = await engineer.run({
       ...baseInput,
-      context: { task: 'implement-story', projectDir: '/workspace/acme' },
+      context: { task: 'implement-story', projectDir: '/workspace/acme', model: 'claude-test-model' },
     });
 
     expect(result.success).toBe(false);
@@ -400,7 +424,7 @@ describe('engineer.run()', () => {
 
     const result = await engineer.run({
       ...baseInput,
-      context: { task: 'implement-story', projectDir: '/workspace/acme' },
+      context: { task: 'implement-story', projectDir: '/workspace/acme', model: 'claude-test-model' },
     });
 
     expect(result.success).toBe(false);
@@ -424,6 +448,7 @@ describe('engineer.run()', () => {
       context: {
         task: 'implement-story',
         projectDir: '/workspace/acme',
+        model: 'claude-test-model',
         ticket: {
           summary: 'Add feature',
           description: injection,
@@ -454,6 +479,7 @@ describe('engineer.run()', () => {
         task: 'address-feedback',
         projectDir: '/workspace/acme',
         branchName: 'feature/CREW-50-001',
+        model: 'claude-test-model',
         comments: [injection],
       },
     });
@@ -481,6 +507,7 @@ describe('engineer.run()', () => {
       context: {
         task: 'implement-story',
         projectDir: '/workspace/acme',
+        model: 'claude-test-model',
         maxTurns: 40,
         engineerCostCapUsd: 4,
       },
@@ -520,6 +547,7 @@ describe('engineer.run()', () => {
       context: {
         task: 'implement-story',
         projectDir: '/workspace/acme',
+        model: 'claude-test-model',
         maxTurns: 5,
       },
     });
@@ -542,6 +570,7 @@ describe('engineer.run()', () => {
       context: {
         task: 'implement-story',
         projectDir: '/workspace/acme',
+        model: 'claude-test-model',
       },
     });
 

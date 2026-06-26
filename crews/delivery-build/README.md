@@ -46,7 +46,8 @@ On loop-cap exhaustion or any unrecoverable failure, the ticket transitions to "
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `ANTHROPIC_MODEL` | SDK default | Claude model override |
+| `MODEL_ROUTING_LOW_COST` | `claude-sonnet-4-6` | Model for triage and peer review (`assess-clarification`, `peer-code-review`) |
+| `MODEL_ROUTING_IMPLEMENTATION` | `claude-opus-4-5` | Model for implementation and remediation (`implement-story`, `address-feedback`, `fix-ci`) |
 | `POLL_INTERVAL_MS` | `300000` | Milliseconds between Jira polling ticks |
 | `REFACTOR_LOOP_CAP` | `2` | Max peer-review iterations before escalation |
 | `CI_RETRY_CAP` | `3` | Max CI fix attempts before escalation |

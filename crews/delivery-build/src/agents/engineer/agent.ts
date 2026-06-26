@@ -47,7 +47,11 @@ const WORKSPACE_TOOLS = [
 ];
 
 const RESUME_WITHIN_MS = 24 * 60 * 60 * 1000; // 24 hours
-const DEFAULT_MODEL = 'claude-opus-4-5';
+
+function requireModel(context: Record<string, unknown>): string | undefined {
+  const model = context['model'];
+  return typeof model === 'string' && model.length > 0 ? model : undefined;
+}
 
 function usesWorkspace(task: unknown): boolean {
   return typeof task === 'string' && WORKSPACE_TASKS.has(task);
@@ -94,6 +98,16 @@ async function run(input: AgentInput): Promise<AgentResult> {
     return {
       success: false,
       summary: 'Workspace task requires projectDir in context',
+      artefacts: {},
+      costUsd: 0,
+    };
+  }
+
+  const model = requireModel(input.context);
+  if (!model) {
+    return {
+      success: false,
+      summary: 'Model routing requires model in context',
       artefacts: {},
       costUsd: 0,
     };
@@ -147,7 +161,7 @@ async function run(input: AgentInput): Promise<AgentResult> {
         definition,
         input,
         resumeWithinMs: RESUME_WITHIN_MS,
-        model: (input.context['model'] as string | undefined) ?? DEFAULT_MODEL,
+        model,
         auditHook,
         onSubagentAudit,
         resultCapture,

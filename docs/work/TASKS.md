@@ -349,8 +349,8 @@ and implementation of the scaffold crews' workflows beyond config hygiene.
       Then neither crew contains a copied SKILL.md of that skill
     ```
 
-- [ ] **[RH01-14] Per-task model routing (local-tier seed of the Pro-tier router)**
-  - **Status:** Not started | **Priority:** P1 | **Estimate:** 3
+- [x] **[RH01-14] Per-task model routing (local-tier seed of the Pro-tier router)**
+  - **Status:** Done | **Priority:** P1 | **Estimate:** 3
   - **Epic:** RH01 | **Labels:** phase:next, area:runtime, type:feature
   - **Depends on:** -
   - **Deliverable:** Task-level model selection via config — a cheaper/faster model for `assess-clarification` and `peer-code-review`, the strongest model for `implement-story`; the hard-coded `claude-opus-4-5` default is removed in favour of config-driven routing. Closes review §3.7; aligns with `solution.md §7` model routing.
@@ -370,8 +370,8 @@ and implementation of the scaffold crews' workflows beyond config hygiene.
       And no model identifier is hard-coded in a persona module
     ```
 
-- [ ] **[RH01-15] Add an SDK-level per-run turn ceiling (`maxTurns`)**
-  - **Status:** Not started | **Priority:** P2 | **Estimate:** 2
+- [x] **[RH01-15] Add an SDK-level per-run turn ceiling (`maxTurns`)**
+  - **Status:** Done | **Priority:** P2 | **Estimate:** 2
   - **Epic:** RH01 | **Labels:** phase:next, area:runtime, type:feature
   - **Depends on:** -
   - **Deliverable:** Every session passes a config-driven `maxTurns`, complementing the workflow loop caps; optionally `boundedIterGuard` is applied to the hand-rolled loops where it is currently unused. Closes review §3.6.

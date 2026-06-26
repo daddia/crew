@@ -6,6 +6,7 @@ import type { GitlabClient, PipelineStatus } from './integrations/gitlab.js';
 import type { JiraClient, JiraIssue } from './integrations/jira.js';
 import { seedEngineerMemory } from './memory.js';
 import { log, tracer } from './observability.js';
+import { resolveModelForTask, type ModelRouting } from './model-routing.js';
 import type { StateStore, Step } from './state.js';
 
 export interface WorkflowContext {
@@ -18,7 +19,7 @@ export interface WorkflowContext {
     ciWaitTimeoutMs: number;
     engineerMaxTurns: number;
     engineerCostCapUsd: number;
-    anthropicModel?: string;
+    modelRouting: ModelRouting;
   };
   jira: JiraClient;
   gitlab: GitlabClient;
@@ -149,12 +150,16 @@ function engineerContext(
   ctx: WorkflowContext,
   extra: Record<string, unknown>,
 ): Record<string, unknown> {
+  const task = extra['task'];
   return {
     projectDir: ctx.projectDir,
     maxTurns: ctx.behaviour.engineerMaxTurns,
     engineerCostCapUsd: ctx.behaviour.engineerCostCapUsd,
-    model: ctx.behaviour.anthropicModel,
     ...extra,
+    model:
+      typeof task === 'string'
+        ? resolveModelForTask(ctx.behaviour.modelRouting, task)
+        : ctx.behaviour.modelRouting.implementation,
   };
 }
 
@@ -299,7 +304,11 @@ async function runStoryInner(ctx: WorkflowContext, input: AgentInput): Promise<v
 
     const reviewResult = await seniorEngineer.run({
       ...input,
-      context: { task: 'peer-code-review', branchName, model: behaviour.anthropicModel },
+      context: {
+        task: 'peer-code-review',
+        branchName,
+        model: resolveModelForTask(behaviour.modelRouting, 'peer-code-review'),
+      },
     });
 
     state.finishStep(issueKey, 'peer-code-review', {

@@ -28,7 +28,11 @@ const ALLOWED_TOOLS = [
 ];
 
 const RESUME_WITHIN_MS = 0; // peer review always starts fresh
-const DEFAULT_MODEL = 'claude-opus-4-5';
+
+function requireModel(context: Record<string, unknown>): string | undefined {
+  const model = context['model'];
+  return typeof model === 'string' && model.length > 0 ? model : undefined;
+}
 
 async function buildDefinition(): Promise<AgentDefinition> {
   const base = __dirname;
@@ -52,6 +56,16 @@ async function buildDefinition(): Promise<AgentDefinition> {
 }
 
 async function run(input: AgentInput): Promise<AgentResult> {
+  const model = requireModel(input.context);
+  if (!model) {
+    return {
+      success: false,
+      summary: 'Model routing requires model in context',
+      artefacts: {},
+      costUsd: 0,
+    };
+  }
+
   const definition = await buildDefinition();
   const prompt = await readPromptFile(definition.promptPath);
   const resultCapture = createPeerReviewSubmitResultCapture();
@@ -62,7 +76,7 @@ async function run(input: AgentInput): Promise<AgentResult> {
     definition,
     input,
     resumeWithinMs: RESUME_WITHIN_MS,
-    model: (input.context['model'] as string | undefined) ?? DEFAULT_MODEL,
+    model,
     auditHook,
     resultCapture,
   });

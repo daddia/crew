@@ -34,7 +34,15 @@ export const ConfigSchema = z.object({
     diffSizeCapBytes: z.coerce.number().int().positive().default(500_000),
     engineerMaxTurns: z.coerce.number().int().positive().default(50),
     engineerCostCapUsd: z.coerce.number().positive().default(5),
-    anthropicModel: z.string().min(1).optional(),
+    modelRouting: z
+      .object({
+        lowCost: z.string().min(1).default('claude-sonnet-4-6'),
+        implementation: z.string().min(1).default('claude-opus-4-5'),
+      })
+      .default({
+        lowCost: 'claude-sonnet-4-6',
+        implementation: 'claude-opus-4-5',
+      }),
     logLevel: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
   }),
   infrastructure: z.object({
@@ -73,7 +81,8 @@ const ENV_MAPPING: EnvMapping = {
   'behaviour.diffSizeCapBytes': 'DIFF_SIZE_CAP_BYTES',
   'behaviour.engineerMaxTurns': 'ENGINEER_MAX_TURNS',
   'behaviour.engineerCostCapUsd': 'ENGINEER_COST_CAP_USD',
-  'behaviour.anthropicModel': 'ANTHROPIC_MODEL',
+  'behaviour.modelRouting.lowCost': 'MODEL_ROUTING_LOW_COST',
+  'behaviour.modelRouting.implementation': 'MODEL_ROUTING_IMPLEMENTATION',
   'behaviour.logLevel': 'LOG_LEVEL',
   'infrastructure.port': 'PORT',
   'infrastructure.dbPath': 'DB_PATH',

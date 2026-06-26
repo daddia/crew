@@ -124,14 +124,27 @@ describe('loadConfig – behaviour defaults', () => {
 });
 
 describe('loadConfig – optional fields', () => {
-  it('anthropicModel is undefined when ANTHROPIC_MODEL is absent', () => {
+  it('modelRouting defaults when env vars are absent', () => {
     const config = loadConfig(REQUIRED_ENV);
-    expect(config.behaviour.anthropicModel).toBeUndefined();
+    expect(config.behaviour.modelRouting).toEqual({
+      lowCost: 'claude-sonnet-4-6',
+      implementation: 'claude-opus-4-5',
+    });
   });
 
-  it('anthropicModel is set when ANTHROPIC_MODEL is present', () => {
-    const config = loadConfig({ ...REQUIRED_ENV, ANTHROPIC_MODEL: 'claude-opus-4-7' });
-    expect(config.behaviour.anthropicModel).toBe('claude-opus-4-7');
+  it('modelRouting.lowCost is set when MODEL_ROUTING_LOW_COST is present', () => {
+    const config = loadConfig({ ...REQUIRED_ENV, MODEL_ROUTING_LOW_COST: 'claude-haiku-test' });
+    expect(config.behaviour.modelRouting.lowCost).toBe('claude-haiku-test');
+    expect(config.behaviour.modelRouting.implementation).toBe('claude-opus-4-5');
+  });
+
+  it('modelRouting.implementation is set when MODEL_ROUTING_IMPLEMENTATION is present', () => {
+    const config = loadConfig({
+      ...REQUIRED_ENV,
+      MODEL_ROUTING_IMPLEMENTATION: 'claude-opus-4-7',
+    });
+    expect(config.behaviour.modelRouting.implementation).toBe('claude-opus-4-7');
+    expect(config.behaviour.modelRouting.lowCost).toBe('claude-sonnet-4-6');
   });
 
   it('botAccountId is undefined when ATLASSIAN_ACCOUNT_ID is absent', () => {
