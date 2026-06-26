@@ -428,6 +428,7 @@ async function runStoryInner(ctx: WorkflowContext, input: AgentInput): Promise<v
     }
 
     // Pipeline failed — ask the engineer to fix CI.
+    state.upsertStory(issueKey, 'ci-check');
     const ciFixResult = await engineer.run({
       ...input,
       context: engineerContext(ctx, {

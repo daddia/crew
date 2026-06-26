@@ -1,0 +1,23 @@
+{
+  "name": "@repo/invariants-guard",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "guard-invariants": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "typescript": "^6.0.3"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@repo/vitest-config": "workspace:*",
+    "@types/node": "^26.0.1",
+    "vitest": "^4.1.9"
+  }
+}

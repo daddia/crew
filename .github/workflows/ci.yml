@@ -31,6 +31,8 @@ jobs:
             run: pnpm lint:eslint
           - name: dependencies
             run: pnpm lint:dependencies
+          - name: invariants
+            run: pnpm guard:invariants
           - name: typecheck
             run: pnpm typecheck
 
