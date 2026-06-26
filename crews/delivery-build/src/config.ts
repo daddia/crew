@@ -48,6 +48,8 @@ export const ConfigSchema = z.object({
         implementation: 'claude-opus-4-5',
       }),
     logLevel: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
+    /** CrewBench fixture mode: mock (default) or live agent sessions. */
+    evalFixtureMode: z.enum(['mock', 'live']).default('mock'),
   }),
   infrastructure: z.object({
     port: z.coerce.number().int().positive().default(3000),
@@ -89,6 +91,7 @@ const ENV_MAPPING: EnvMapping = {
   'behaviour.modelRouting.lowCost': 'MODEL_ROUTING_LOW_COST',
   'behaviour.modelRouting.implementation': 'MODEL_ROUTING_IMPLEMENTATION',
   'behaviour.logLevel': 'LOG_LEVEL',
+  'behaviour.evalFixtureMode': 'CREW_EVAL_FIXTURE_MODE',
   'infrastructure.port': 'PORT',
   'infrastructure.dbPath': 'DB_PATH',
   'infrastructure.projectDir': 'PROJECT_DIR',

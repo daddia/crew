@@ -73,6 +73,7 @@ Every persona module implements `Agent`. Every deployable service satisfies `Age
 | `@daddia/crew/webhooks` | `verifySignature`, `checkReplayWindow`, `createIdempotencyStore`, `SignatureError`, `ReplayError`. | Server-shaped crews that accept inbound webhooks. |
 | `@daddia/crew/state` | `StateStore`, `StoryRow`, `StepRow`, `StepResult`, `createSqliteStateStore(dbPath)`. | Server-shaped crews; do not roll your own SQLite layer. |
 | `@daddia/crew/workflow` | `WorkflowPlan`, `WorkflowStep`, `FailurePolicy`, `WorkflowEngine`, `WorkflowEngineOptions`, `createWorkflowEngine(options)`. | New crews — prefer the engine over hand-rolled run loops. |
+| `@daddia/crew/evals` | `defineEval`, `createEvalFetchHandler`, `runEvalSession`, gate/soft assertions, JUnit reporter; `crew eval` CLI. | CrewBench fixture-owned evals per crew; mount `/eval/*` on server-shaped crews. |
 | `@daddia/crew/config` | `loadEnv`, `loadYaml`, `Secret`, `redact`, `SchemaValidationError`, `ConfigNotFoundError`. | Every crew (typed config schema). |
 
 `@daddia/crew/control` (Pro-tier managed control plane) is described in [`docs/architecture/solution.md`](docs/architecture/solution.md) as a future surface. It is **not** shipped yet.

@@ -1,18 +1,30 @@
 #!/usr/bin/env node
 import { initCrew, InitError } from './init.js';
+import { runEvalCli, EvalCliError } from './eval.js';
 import { parseCliArgs } from './parse-args.js';
 
-const HELP = `Usage: crew init <name> --shape server|cli
+const HELP = `Usage:
+  crew init <name> --shape server|cli
+  crew eval [files...] [options]
 
-Scaffold a new crew under crews/<name>/ in the current workspace.
+Scaffold a new crew under crews/<name>/ in the current workspace, or run CrewBench evals.
 
-Options:
+Init options:
   --shape server   Long-lived Hono server with SQLite state (default delivery topology)
   --shape cli      Ephemeral npm package invoked from CI; no persistent state
+
+Eval options:
+  --crew <name>        Crew under crews/<name>/ (default: infer from file path or cwd)
+  --base-url <url>     Crew base URL (default: evals.config.ts or http://localhost:3000)
+  --strict             Treat soft assertion failures as gate failures
+  --reporter text|junit  Output format (default: text)
+  --output <path>      JUnit report path (default: junit.xml)
 
 Examples:
   crew init my-crew --shape server
   npx @daddia/crew init code-reviewer --shape cli
+  crew eval evals/smoke.eval.ts --base-url http://localhost:3000
+  crew eval --crew delivery-build --reporter junit --output eval-results.xml
 `;
 
 async function main(argv: string[]): Promise<void> {
@@ -23,16 +35,34 @@ async function main(argv: string[]): Promise<void> {
     return;
   }
 
-  const result = await initCrew({
-    name: parsed.crewName!,
-    shape: parsed.shape!,
-  });
+  if (parsed.command === 'init') {
+    const result = await initCrew({
+      name: parsed.crewName!,
+      shape: parsed.shape!,
+    });
 
-  process.stdout.write(
-    `Created ${result.shape}-shaped crew at ${result.targetDir}\n` +
-      `Pinned @daddia/crew@${result.runtimeVersion}\n` +
-      `Next: pnpm install && pnpm --filter @daddia/crew-${parsed.crewName} typecheck\n`,
-  );
+    process.stdout.write(
+      `Created ${result.shape}-shaped crew at ${result.targetDir}\n` +
+        `Pinned @daddia/crew@${result.runtimeVersion}\n` +
+        `Next: pnpm install && pnpm --filter @daddia/crew-${parsed.crewName} typecheck\n`,
+    );
+    return;
+  }
+
+  if (parsed.command === 'eval') {
+    const { exitCode } = await runEvalCli({
+      crewName: parsed.evalCrew,
+      files: parsed.evalFiles,
+      baseUrl: parsed.baseUrl,
+      strict: parsed.strict,
+      reporter: parsed.reporter,
+      output: parsed.output,
+    });
+    if (exitCode !== 0) {
+      process.exit(exitCode);
+    }
+    return;
+  }
 }
 
 main(process.argv.slice(2)).catch((err: unknown) => {
@@ -41,7 +71,12 @@ main(process.argv.slice(2)).catch((err: unknown) => {
     process.exit(1);
     return;
   }
+  if (err instanceof EvalCliError) {
+    process.stderr.write(`crew eval: ${err.message}\n`);
+    process.exit(1);
+    return;
+  }
   const message = err instanceof Error ? err.message : String(err);
-  process.stderr.write(`crew init: ${message}\n`);
+  process.stderr.write(`crew: ${message}\n`);
   process.exit(1);
 });

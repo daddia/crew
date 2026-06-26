@@ -5,7 +5,8 @@
     "paths": {
       "@daddia/crew/webhooks": ["./packages/crew/src/webhooks/index.ts"],
       "@daddia/crew/config": ["./packages/crew/src/config/index.ts"],
-      "@daddia/crew/state": ["./packages/crew/src/state/index.ts"]
+      "@daddia/crew/state": ["./packages/crew/src/state/index.ts"],
+      "@daddia/crew/evals": ["./packages/crew/src/evals/index.ts"]
     }
   }
 }

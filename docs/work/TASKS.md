@@ -131,8 +131,8 @@ context compaction; run-stream for operators; security model doc.
 
 ### CrewBench (CREW-15)
 
-- [ ] **[RH02-05] Ship `@daddia/crew/evals` and `crew eval` CLI**
-  - **Status:** Not started | **Priority:** P0 | **Estimate:** 13
+- [x] **[RH02-05] Ship `@daddia/crew/evals` and `crew eval` CLI**
+  - **Status:** Done | **Priority:** P0 | **Estimate:** 13
   - **Epic:** RH02 | **Labels:** phase:next, area:runtime, type:feature
   - **Depends on:** RH02-01
   - **Deliverable:** `defineEval`, eval config, gate/soft assertions, `crew eval` command targeting local dev server or deployment URL; JUnit reporter for CI.

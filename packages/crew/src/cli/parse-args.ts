@@ -1,22 +1,22 @@
 export type CrewShape = 'server' | 'cli';
 
+export type EvalReporter = 'text' | 'junit';
+
 export interface ParsedCliArgs {
-  command: 'init' | 'help';
+  command: 'init' | 'eval' | 'help';
   crewName?: string;
   shape?: CrewShape;
+  evalFiles?: string[];
+  evalCrew?: string;
+  baseUrl?: string;
+  strict?: boolean;
+  reporter?: EvalReporter;
+  output?: string;
 }
 
 const CREW_NAME_PATTERN = /^[a-z][a-z0-9-]*[a-z0-9]$|^[a-z]$/;
 
-export function parseCliArgs(argv: string[]): ParsedCliArgs {
-  if (argv.length === 0 || argv[0] === '--help' || argv[0] === '-h') {
-    return { command: 'help' };
-  }
-
-  if (argv[0] !== 'init') {
-    throw new Error(`Unknown command: ${argv[0]}. Run \`crew --help\` for usage.`);
-  }
-
+function parseInitArgs(argv: string[]): ParsedCliArgs {
   const crewName = argv[1];
   if (!crewName) {
     throw new Error('Missing crew name. Usage: crew init <name> --shape server|cli');
@@ -48,4 +48,87 @@ export function parseCliArgs(argv: string[]): ParsedCliArgs {
   }
 
   return { command: 'init', crewName, shape };
+}
+
+function parseEvalArgs(argv: string[]): ParsedCliArgs {
+  const evalFiles: string[] = [];
+  let evalCrew: string | undefined;
+  let baseUrl: string | undefined;
+  let strict = false;
+  let reporter: EvalReporter = 'text';
+  let output: string | undefined;
+
+  for (let i = 1; i < argv.length; i++) {
+    const arg = argv[i];
+    if (!arg) {
+      continue;
+    }
+    if (arg === '--crew') {
+      evalCrew = argv[i + 1];
+      if (!evalCrew) {
+        throw new Error('--crew requires a crew name');
+      }
+      i += 1;
+      continue;
+    }
+    if (arg === '--base-url') {
+      baseUrl = argv[i + 1];
+      if (!baseUrl) {
+        throw new Error('--base-url requires a URL');
+      }
+      i += 1;
+      continue;
+    }
+    if (arg === '--strict') {
+      strict = true;
+      continue;
+    }
+    if (arg === '--reporter') {
+      const value = argv[i + 1];
+      if (value !== 'text' && value !== 'junit') {
+        throw new Error('--reporter must be "text" or "junit"');
+      }
+      reporter = value;
+      i += 1;
+      continue;
+    }
+    if (arg === '--output') {
+      output = argv[i + 1];
+      if (!output) {
+        throw new Error('--output requires a file path');
+      }
+      i += 1;
+      continue;
+    }
+    if (arg.startsWith('-')) {
+      throw new Error(`Unknown option: ${arg}`);
+    }
+    evalFiles.push(arg);
+  }
+
+  return {
+    command: 'eval',
+    evalFiles: evalFiles.length > 0 ? evalFiles : undefined,
+    evalCrew,
+    baseUrl,
+    strict,
+    reporter,
+    output,
+  };
+}
+
+export function parseCliArgs(argv: string[]): ParsedCliArgs {
+  if (argv.length === 0 || argv[0] === '--help' || argv[0] === '-h') {
+    return { command: 'help' };
+  }
+
+  if (argv[0] === 'init') {
+    return parseInitArgs(argv);
+  }
+
+  if (argv[0] === 'eval') {
+    return parseEvalArgs(argv);
+  }
+
+  throw new Error(`Unknown command: ${argv[0]}. Run \`crew --help\` for usage.`);
 }

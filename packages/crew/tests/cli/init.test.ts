@@ -32,6 +32,32 @@ describe('parseCliArgs', () => {
   it('rejects invalid crew names', () => {
     expect(() => parseCliArgs(['init', 'My_Crew', '--shape', 'cli'])).toThrow(/Invalid crew name/);
   });
+
+  it('parses eval with options', () => {
+    expect(
+      parseCliArgs([
+        'eval',
+        'evals/smoke.eval.ts',
+        '--crew',
+        'delivery-build',
+        '--base-url',
+        'http://localhost:3000',
+        '--strict',
+        '--reporter',
+        'junit',
+        '--output',
+        'out.xml',
+      ]),
+    ).toEqual({
+      command: 'eval',
+      evalFiles: ['evals/smoke.eval.ts'],
+      evalCrew: 'delivery-build',
+      baseUrl: 'http://localhost:3000',
+      strict: true,
+      reporter: 'junit',
+      output: 'out.xml',
+    });
+  });
 });
 
 describe('initCrew', () => {
@@ -75,11 +101,12 @@ describe('initCrew', () => {
     ).resolves.toContain('Run task');
   });
 
-  it('includes a smoke eval stub documenting the pending evals subpath', async () => {
+  it('includes a wired smoke eval importing @daddia/crew/evals', async () => {
     const result = await initCrew({ name: 'eval-crew', shape: 'server', cwd: workspace });
     const smoke = await readFile(join(result.targetDir, 'evals', 'smoke.eval.ts'), 'utf8');
-    expect(smoke).toContain('@daddia/crew/evals');
+    expect(smoke).toContain("from '@daddia/crew/evals'");
     expect(smoke).toContain('defineEval');
+    expect(smoke).toContain('t.succeeded()');
   });
 
   it('refuses to overwrite an existing crew directory', async () => {

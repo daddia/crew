@@ -12,8 +12,10 @@ import { createStateStore } from './state.js';
 import { recoverInterruptedSteps } from './workflow.js';
 import { loadConfig, CONFIG_SCHEMA_VERSION, type Config } from './config.js';
 import { initTracing } from '@daddia/crew';
+import { createEvalFetchHandler } from '@daddia/crew/evals';
 import { SchemaValidationError, ConfigNotFoundError, redact } from '@daddia/crew/config';
 import type { WorkflowCtxBase } from './workflow.js';
+import { createEvalFixtures } from './eval/fixtures.js';
 
 /**
  * Full application boot sequence. Exported so integration tests can drive it
@@ -102,6 +104,11 @@ export async function boot(env: NodeJS.ProcessEnv = process.env): Promise<void> 
   );
 
   app.get('/healthz', (c) => healthzHandler(c, state, config.infrastructure.dbPath));
+
+  const evalHandler = createEvalFetchHandler({
+    fixtures: createEvalFixtures(config.behaviour.evalFixtureMode),
+  });
+  app.all('/eval/*', (c) => evalHandler(c.req.raw));
 
   const server = serve({ fetch: app.fetch, port: config.infrastructure.port }, () => {
     log.info('server.start', {
