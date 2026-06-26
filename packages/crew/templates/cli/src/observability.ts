@@ -1,0 +1,3 @@
+import { createLogger } from '@daddia/crew';
+
+export const log = createLogger('{{CREW_NAME}}');
