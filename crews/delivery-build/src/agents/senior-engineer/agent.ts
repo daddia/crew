@@ -9,6 +9,7 @@ import {
   finalizeAgentRun,
   buildPeerReviewAgentResult,
   CODE_REVIEW_PLUGIN_PATH,
+  formatSkillCatalogSection,
   type Agent,
   type AgentDefinition,
   type AgentInput,
@@ -74,7 +75,7 @@ async function run(input: AgentInput): Promise<AgentResult> {
 
   const auditHook = buildAuditHook(definition.allowedTools, () => {});
 
-  const { session, sessionId } = await resolveSession({
+  const { session, sessionId, skillCatalog } = await resolveSession({
     definition,
     input,
     resumeWithinMs: RESUME_WITHIN_MS,
@@ -88,6 +89,7 @@ async function run(input: AgentInput): Promise<AgentResult> {
     personaPrompt: prompt,
     issueKey: input.issueKey,
     context: input.context,
+    skillCatalogSection: formatSkillCatalogSection(skillCatalog),
   });
 
   try {

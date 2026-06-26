@@ -9,6 +9,17 @@ export type { SDKMessage, SDKResultMessage } from '@anthropic-ai/claude-agent-sd
 export { readPromptFile, readSkillsDir, readSubagentsDir, personaPluginDir, personaSkillsDir, personaAgentsDir } from './loaders.js';
 
 export {
+  skillNameFromPath,
+  parseSkillMetadata,
+  readSkillCatalog,
+  skillMatchesTask,
+  resolveSkillsForTask,
+  activeNamespacedSkillsForTask,
+  formatSkillCatalogSection,
+} from './skills.js';
+export type { SkillCatalogEntry } from './skills.js';
+
+export {
   CODE_REVIEW_PLUGIN_PATH,
   PERSONA_PLUGIN_DIR,
   sharedPluginRef,

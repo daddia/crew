@@ -337,6 +337,48 @@ describe('resolveSession', () => {
       expect(options['skills']).toEqual(['code-review:code-review']);
       warnSpy.mockRestore();
     });
+
+    it('Gherkin: clarify-only task enables only the matching skill body', async () => {
+      const implementStorySkill = join(
+        engineerFixture,
+        'plugin',
+        'skills',
+        'implement-story',
+        'SKILL.md',
+      );
+      const assessClarificationSkill = join(
+        engineerFixture,
+        'plugin',
+        'skills',
+        'assess-clarification',
+        'SKILL.md',
+      );
+
+      const active = await startSession(
+        makeOptions({
+          input: {
+            issueKey: 'CREW-50-001',
+            context: { task: 'assess-clarification' },
+          },
+          definition: {
+            name: 'engineer',
+            promptPath: join(engineerFixture, 'prompt.md'),
+            skillPaths: [implementStorySkill, assessClarificationSkill],
+            subagentPaths: [],
+            allowedTools: ['Read', 'Edit'],
+            mcpServerNames: ['atlassian'],
+          },
+        }),
+      );
+
+      const options = mockQuery.mock.calls[0]?.[0].options as Record<string, unknown>;
+      expect(options['skills']).toEqual(['engineer:assess-clarification']);
+      expect(active.skillCatalog).toHaveLength(2);
+      expect(active.skillCatalog.map((entry) => entry.name).sort()).toEqual([
+        'assess-clarification',
+        'implement-story',
+      ]);
+    });
   });
 
   describe('audit hook wiring', () => {

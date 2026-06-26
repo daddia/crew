@@ -168,8 +168,8 @@ context compaction; run-stream for operators; security model doc.
 
 ### Harness hardening (CREW-16)
 
-- [ ] **[RH02-07] Progressive skill loading**
-  - **Status:** Not started | **Priority:** P1 | **Estimate:** 5
+- [x] **[RH02-07] Progressive skill loading**
+  - **Status:** Done | **Priority:** P1 | **Estimate:** 5
   - **Epic:** RH02 | **Labels:** phase:next, area:runtime, type:feature
   - **Depends on:** -
   - **Deliverable:** Skill descriptions advertised to the model; full SKILL.md bodies loaded only when the task matches (SDK skill loading or runtime `load_skill` equivalent).

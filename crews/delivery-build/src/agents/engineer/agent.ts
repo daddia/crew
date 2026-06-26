@@ -13,6 +13,7 @@ import {
   finalizeAgentRun,
   buildEngineerAgentResult,
   prepareEngineerWorkspace,
+  formatSkillCatalogSection,
   type Agent,
   type AgentDefinition,
   type AgentInput,
@@ -156,7 +157,7 @@ async function run(input: AgentInput): Promise<AgentResult> {
         ? input.context['previousSessionId']
         : undefined;
 
-    const { session, sessionId, isResumed } = await resolveSession(
+    const { session, sessionId, isResumed, skillCatalog } = await resolveSession(
       {
         definition,
         input,
@@ -177,6 +178,7 @@ async function run(input: AgentInput): Promise<AgentResult> {
       issueKey: input.issueKey,
       context: input.context,
       isResumed,
+      skillCatalogSection: formatSkillCatalogSection(skillCatalog),
     });
 
     try {

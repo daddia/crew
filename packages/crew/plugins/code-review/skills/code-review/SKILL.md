@@ -1,3 +1,11 @@
+---
+name: code-review
+description: Code quality review for pre-MR peer review and post-MR review.
+tasks:
+  - peer-code-review
+  - code-review
+---
+
 # Skill: code-review
 
 Shared code-quality review skill used by `senior-engineer` (pre-MR peer review)

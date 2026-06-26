@@ -19,6 +19,7 @@ import {
 } from './hooks.js';
 import type { SdkSubagentDefinition } from './subagents.js';
 import { resolvePluginBundles } from './plugins.js';
+import { readSkillCatalog, resolveSkillsForTask, type SkillCatalogEntry } from './skills.js';
 
 export interface SessionOptions {
   definition: AgentDefinition;
@@ -82,6 +83,8 @@ export interface ActiveSession {
   sessionId: string;
   isResumed: boolean;
   session: AgentSession;
+  /** Description-only metadata for every discovered skill on this persona. */
+  skillCatalog: SkillCatalogEntry[];
 }
 
 class QueryBackedSession implements AgentSession {
@@ -181,7 +184,19 @@ export async function resolveSession(
     sharedPlugins: definition.sharedPlugins,
   });
 
-  const skillList = skills ?? (pluginSkillNames.length > 0 ? pluginSkillNames : undefined);
+  const skillCatalog =
+    validSkillPaths.length > 0 ? await readSkillCatalog(validSkillPaths) : [];
+
+  const task =
+    typeof options.input.context['task'] === 'string' ? options.input.context['task'] : undefined;
+
+  let skillList = skills;
+  if (!skillList && task && skillCatalog.length > 0) {
+    const taskSkills = resolveSkillsForTask(task, skillCatalog, pluginSkillNames);
+    skillList = taskSkills.length > 0 ? taskSkills : undefined;
+  } else if (!skillList) {
+    skillList = pluginSkillNames.length > 0 ? pluginSkillNames : undefined;
+  }
 
   const allowedTools = resultCapture
     ? [...definition.allowedTools, resultCapture.toolName]
@@ -218,5 +233,6 @@ export async function resolveSession(
     sessionId,
     isResumed: shouldResume,
     session: new QueryBackedSession(sessionId, shouldResume, baseOptions),
+    skillCatalog,
   };
 }

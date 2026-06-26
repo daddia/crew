@@ -88,22 +88,34 @@ export function formatAgentContext(context: Record<string, unknown>): string {
   return lines.join('\n');
 }
 
-/** Merge persona prompt, issue key, and delimited context into the SDK task message. */
+/** Merge persona prompt, issue key, skill catalog, and delimited context into the SDK task message. */
 export function buildTaskPrompt(options: {
   personaPrompt: string;
   issueKey: string;
   context: Record<string, unknown>;
   isResumed?: boolean;
+  skillCatalogSection?: string;
 }): string {
   const formattedContext = formatAgentContext(options.context);
+  const catalog =
+    options.skillCatalogSection && options.skillCatalogSection.length > 0
+      ? `${options.skillCatalogSection}\n\n---\n\n`
+      : '';
 
   if (options.isResumed) {
-    return ['Continue with the current task.', `Issue: ${options.issueKey}`, formattedContext].join(
-      '\n',
-    );
+    return [
+      'Continue with the current task.',
+      `Issue: ${options.issueKey}`,
+      formattedContext,
+    ].join('\n');
   }
 
-  return [options.personaPrompt, '---', `Issue: ${options.issueKey}`, formattedContext].join('\n\n');
+  return [
+    options.personaPrompt,
+    '---',
+    catalog + `Issue: ${options.issueKey}`,
+    formattedContext,
+  ].join('\n\n');
 }
 
 /** Tools that must never appear on a persona allowlist (merge / protected-branch). */
