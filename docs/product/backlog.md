@@ -75,7 +75,7 @@ Phase-gated deferrals live in [`roadmap.md`](roadmap.md) §6 (Deferred beyond th
 | Epic ID | Title | Phase | Priority | Deps | Points | Work path | Status |
 | ------- | ----- | ----- | -------- | ---- | ------ | --------- | ------ |
 | CREW-01 | Shared runtime (`@daddia/crew`) | Now | P0 | — | 40 | `docs/work/01-shared-runtime/` | Done |
-| CREW-02 | `delivery-build` crew | Now | P0 | CREW-01 | 21 | `docs/work/02-delivery-build/` | In progress |
+| CREW-02 | `delivery-build` crew | Now | P0 | CREW-01 | 21 | `docs/work/02-delivery-build/` | Done |
 | CREW-03 | Production readiness — build crew | Now | P0 | CREW-02 | 13 | `docs/work/03-build-production/` | In progress |
 
 ### Next phase
@@ -152,8 +152,10 @@ without crashing the server.
 **Dependencies.** CREW-01 (published `@daddia/crew` with `state`, `workflow`,
 `webhooks`, `config` subpaths).
 
-**Status.** In progress — core workflow and runtime hardening complete;
-production-readiness items (CREW-03) remain. **Work path:** `docs/work/02-delivery-build/`.
+**Status.** In progress — validated 2026-06-26: 10/11 tasks done; CREW-02-01
+Docker CI build scenario not evidenced in GitHub Actions (Dockerfile + registry pin
+in place). Production-readiness items (CREW-03) remain. **Work path:**
+`docs/work/02-delivery-build/`.
 
 ### CREW-03 -- Production readiness — build crew
 
