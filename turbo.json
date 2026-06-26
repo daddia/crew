@@ -7,9 +7,45 @@
       "dependsOn": ["^build"],
       "outputs": ["dist/**", "docs/**"]
     },
+    "@daddia/crew-delivery-build#build": {
+      "dependsOn": ["@daddia/crew#build", "^build"],
+      "outputs": ["dist/**"]
+    },
+    "@daddia/crew-delivery-code-review#build": {
+      "dependsOn": ["@daddia/crew#build", "^build"],
+      "outputs": ["dist/**"]
+    },
+    "@daddia/crew-delivery-final-review#build": {
+      "dependsOn": ["@daddia/crew#build", "^build"],
+      "outputs": ["dist/**"]
+    },
+    "@daddia/crew-delivery-qa#build": {
+      "dependsOn": ["@daddia/crew#build", "^build"],
+      "outputs": ["dist/**"]
+    },
     "typecheck": {
       "dependsOn": ["^typecheck"],
       "outputs": []
+    },
+    "@daddia/crew-delivery-build#typecheck": {
+      "dependsOn": ["@daddia/crew#build", "^typecheck"],
+      "outputs": []
+    },
+    "@daddia/crew-delivery-code-review#typecheck": {
+      "dependsOn": ["@daddia/crew#build", "^typecheck"],
+      "outputs": []
+    },
+    "@daddia/crew-delivery-final-review#typecheck": {
+      "dependsOn": ["@daddia/crew#build", "^typecheck"],
+      "outputs": []
+    },
+    "@daddia/crew-delivery-qa#typecheck": {
+      "dependsOn": ["@daddia/crew#build", "^typecheck"],
+      "outputs": []
+    },
+    "lint:dependencies": {
+      "dependsOn": ["@daddia/crew#build"],
+      "cache": false
     },
     "lint": {
       "dependsOn": [],
