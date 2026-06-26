@@ -1,3 +1,4 @@
+import { getSessionInfo } from '@anthropic-ai/claude-agent-sdk';
 import type { Agent, AgentInput, AgentResult } from '@daddia/crew';
 import { boundedIterGuard, IterationCapReached } from '@daddia/crew';
 import { qaEngineer } from './agents/qa-engineer/agent.js';
@@ -591,6 +592,47 @@ async function runQaWorkflowInner(
   }
 
   emitWorkflowComplete(issueKey, state, 'exploratory-pass', true, qaSeed.mrUrl);
+}
+
+/**
+ * Scan for agent steps that started a session but never finished (process
+ * crash mid-run). For each interrupted row, attempt to reconnect the SDK
+ * session: if the session is still accessible, log info and restart the QA
+ * workflow; if the reconnect throws, log a warning and escalate.
+ *
+ * Called once on startup, before the HTTP server and poller are initialised,
+ * so no new stories begin processing while recovery is in progress.
+ */
+export async function recoverInterruptedSteps(
+  state: StateStore,
+  ctxBase: WorkflowCtxBase,
+): Promise<void> {
+  const interrupted = state.getInterruptedSteps();
+
+  for (const row of interrupted) {
+    const { issueKey, step, sessionId } = row;
+
+    try {
+      const sessionInfo = await getSessionInfo(sessionId!, { dir: ctxBase.qaWorkspaceDir });
+      if (!sessionInfo) {
+        throw new Error(`Session not found: ${sessionId}`);
+      }
+      log.info('recovery.session-resumed', { issueKey, step, sessionId });
+      await runQaWorkflow({ issueKey, state, ...ctxBase });
+    } catch (err) {
+      log.warn('recovery.session-failed', { issueKey, step, sessionId, err: String(err) });
+      try {
+        await escalateToHumanReview(
+          ctxBase.jira,
+          issueKey,
+          'Crash recovery failed: ' + String(err),
+          state,
+        );
+      } catch (escalateErr) {
+        log.error('recovery.escalation-failed', { issueKey, err: String(escalateErr) });
+      }
+    }
+  }
 }
 
 export async function escalateToHumanReview(

@@ -140,6 +140,9 @@ importers:
 
   crews/delivery-qa:
     dependencies:
+      '@anthropic-ai/claude-agent-sdk':
+        specifier: ^0.3.193
+        version: 0.3.193(@anthropic-ai/sdk@0.93.0(zod@4.4.3))(@modelcontextprotocol/sdk@1.29.0(zod@4.4.3))(zod@4.4.3)
       '@daddia/crew':
         specifier: file:../../packages/crew
         version: link:../../packages/crew
