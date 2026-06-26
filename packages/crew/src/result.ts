@@ -167,15 +167,20 @@ export function flattenReviewComments(comments: unknown): string[] {
 /** Iterate the session stream until the SDK result message arrives. */
 export async function collectSessionOutcome(
   session: AgentSession,
-): Promise<{ resultMsg: SDKResultMessage | undefined }> {
+): Promise<{ resultMsg: SDKResultMessage | undefined; compactionCount: number }> {
   let resultMsg: SDKResultMessage | undefined;
+  let compactionCount = 0;
   for await (const msg of session.stream()) {
+    if (msg.type === 'system' && msg.subtype === 'compact_boundary') {
+      compactionCount += 1;
+      continue;
+    }
     if (msg.type === 'result') {
       resultMsg = msg;
       break;
     }
   }
-  return { resultMsg };
+  return { resultMsg, compactionCount };
 }
 
 export interface FinalizeAgentRunOptions {

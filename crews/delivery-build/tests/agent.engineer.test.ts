@@ -528,6 +528,28 @@ describe('engineer.run()', () => {
     expect(allowedTools).not.toContain('mcp__gitlab__push_file');
   });
 
+  it('passes compactionThreshold to resolveSession when configured in context', async () => {
+    const session = makeSession([makeResultMessage()]);
+    mockResolveSession.mockResolvedValue({
+      session,
+      sessionId: 'sess-test-123',
+      isResumed: false,
+    });
+
+    await engineer.run({
+      ...baseInput,
+      context: {
+        task: 'implement-story',
+        projectDir: '/workspace/acme',
+        model: 'claude-test-model',
+        compactionThreshold: 180_000,
+      },
+    });
+
+    const callOptions = mockResolveSession.mock.calls[0]?.[0];
+    expect(callOptions?.compactionThreshold).toBe(180_000);
+  });
+
   it('Gherkin: maxTurns exhaustion surfaces bounded-operation failure', async () => {
     const session = makeSession([
       makeResultMessage({

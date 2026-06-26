@@ -92,6 +92,11 @@ describe('loadConfig – behaviour defaults', () => {
     expect(config.behaviour.engineerMaxTurns).toBe(50);
   });
 
+  it('defaults engineerCompactionThreshold to 160000 when ENGINEER_COMPACTION_THRESHOLD is absent', () => {
+    const config = loadConfig(REQUIRED_ENV);
+    expect(config.behaviour.engineerCompactionThreshold).toBe(160_000);
+  });
+
   it('defaults engineerCostCapUsd to 5 when ENGINEER_COST_CAP_USD is absent', () => {
     const config = loadConfig(REQUIRED_ENV);
     expect(config.behaviour.engineerCostCapUsd).toBe(5);

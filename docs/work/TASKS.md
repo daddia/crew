@@ -183,8 +183,8 @@ context compaction; run-stream for operators; security model doc.
       Then only the relevant skill body is loaded for that task
     ```
 
-- [ ] **[RH02-08] Context compaction hook in resolveSession**
-  - **Status:** Not started | **Priority:** P1 | **Estimate:** 5
+- [x] **[RH02-08] Context compaction hook in resolveSession**
+  - **Status:** Done | **Priority:** P1 | **Estimate:** 5
   - **Epic:** RH02 | **Labels:** phase:next, area:runtime, type:feature
   - **Depends on:** -
   - **Deliverable:** Configurable compaction threshold before context window overflow on long implementation runs; preserves tool-state invariants where the SDK supports it.
@@ -198,8 +198,8 @@ context compaction; run-stream for operators; security model doc.
       Then older turns are summarized and the session continues
     ```
 
-- [ ] **[RH02-09] Operator run-stream API**
-  - **Status:** Not started | **Priority:** P2 | **Estimate:** 8
+- [x] **[RH02-09] Operator run-stream API**
+  - **Status:** Done | **Priority:** P2 | **Estimate:** 8
   - **Epic:** RH02 | **Labels:** phase:next, area:delivery-build, type:feature
   - **Depends on:** -
   - **Deliverable:** `GET /runs/:issueKey/stream` (or equivalent) emits structured progress events for an in-flight story; subagent session IDs correlated in audit.

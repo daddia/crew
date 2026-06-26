@@ -88,6 +88,10 @@ async function run(input: AgentInput): Promise<AgentResult> {
     typeof input.context['branchName'] === 'string' ? input.context['branchName'] : undefined;
   const maxTurns =
     typeof input.context['maxTurns'] === 'number' ? input.context['maxTurns'] : undefined;
+  const compactionThreshold =
+    typeof input.context['compactionThreshold'] === 'number'
+      ? input.context['compactionThreshold']
+      : undefined;
   const maxBudgetUsd =
     typeof input.context['engineerCostCapUsd'] === 'number'
       ? input.context['engineerCostCapUsd']
@@ -169,6 +173,7 @@ async function run(input: AgentInput): Promise<AgentResult> {
         workspaceCwd: workspaceMode ? projectDir : undefined,
         maxTurns,
         maxBudgetUsd,
+        compactionThreshold,
       },
       previousSessionId,
     );

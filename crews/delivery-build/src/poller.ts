@@ -30,6 +30,7 @@ export interface PollerDeps {
     ciPollIntervalMs: number;
     ciWaitTimeoutMs: number;
     engineerMaxTurns: number;
+    engineerCompactionThreshold: number;
     engineerCostCapUsd: number;
     modelRouting: {
       lowCost: string;
@@ -81,6 +82,7 @@ export async function pollTick(deps: PollerDeps, state: StateStore): Promise<voi
       ciPollIntervalMs: deps.behaviour.ciPollIntervalMs,
       ciWaitTimeoutMs: deps.behaviour.ciWaitTimeoutMs,
       engineerMaxTurns: deps.behaviour.engineerMaxTurns,
+      engineerCompactionThreshold: deps.behaviour.engineerCompactionThreshold,
       engineerCostCapUsd: deps.behaviour.engineerCostCapUsd,
       modelRouting: deps.behaviour.modelRouting,
     },

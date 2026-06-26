@@ -3,7 +3,18 @@ export type { PersonaName, AgentInput, AgentResult, Agent, AgentDefinition } fro
 export type { AgentCrew } from './unit.js';
 
 export { resolveSession } from './session.js';
-export type { SessionOptions, ActiveSession, AgentSession } from './session.js';
+export type {
+  SessionOptions,
+  ActiveSession,
+  AgentSession,
+  CompactionEvent,
+  CompactionHandler,
+} from './session.js';
+export {
+  COMPACTION_THRESHOLD_MIN,
+  COMPACTION_THRESHOLD_MAX,
+  DEFAULT_COMPACTION_THRESHOLD,
+} from './session.js';
 export type { SDKMessage, SDKResultMessage } from '@anthropic-ai/claude-agent-sdk';
 
 export { readPromptFile, readSkillsDir, readSubagentsDir, personaPluginDir, personaSkillsDir, personaAgentsDir } from './loaders.js';

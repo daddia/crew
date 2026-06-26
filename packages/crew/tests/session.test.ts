@@ -20,6 +20,7 @@ import { query } from '@anthropic-ai/claude-agent-sdk';
 import { access } from 'node:fs/promises';
 import { resolveSession } from '../src/session.js';
 import type { SessionOptions } from '../src/session.js';
+import { collectSessionOutcome } from '../src/result.js';
 import { SUBMIT_RESULT_TOOL_NAME } from '../src/result.js';
 import { CODE_REVIEW_PLUGIN_PATH } from '../src/plugins.js';
 
@@ -448,6 +449,106 @@ describe('resolveSession', () => {
       const options = mockQuery.mock.calls[0]?.[0].options as Record<string, unknown>;
       expect(options['allowedTools']).toContain(SUBMIT_RESULT_TOOL_NAME);
       expect(options['mcpServers']).toMatchObject(capture.mcpServers);
+    });
+  });
+
+  describe('context compaction (RH02-08)', () => {
+    it('passes autoCompact settings when compactionThreshold is set', async () => {
+      await startSession(makeOptions({ compactionThreshold: 160_000 }));
+
+      const input = mockQuery.mock.calls[0]?.[0];
+      expect(input?.options.settings).toEqual({
+        autoCompactEnabled: true,
+        autoCompactWindow: 160_000,
+      });
+    });
+
+    it('does not set compaction settings when compactionThreshold is omitted', async () => {
+      await startSession(makeOptions());
+
+      const options = mockQuery.mock.calls[0]?.[0].options as Record<string, unknown>;
+      expect(options).not.toHaveProperty('settings');
+    });
+
+    it('rejects compactionThreshold outside the SDK range', async () => {
+      await expect(
+        resolveSession(makeOptions({ compactionThreshold: 50_000 })),
+      ).rejects.toThrow(RangeError);
+    });
+
+    it('Gherkin: a long session compacts instead of failing', async () => {
+      const compactBoundary: SDKMessage = {
+        type: 'system',
+        subtype: 'compact_boundary',
+        compact_metadata: {
+          trigger: 'auto',
+          pre_tokens: 170_000,
+          post_tokens: 40_000,
+        },
+      } as SDKMessage;
+      const successResult: SDKMessage = {
+        type: 'result',
+        subtype: 'success',
+        duration_ms: 100,
+        duration_api_ms: 80,
+        is_error: false,
+        num_turns: 45,
+        result: 'done',
+        stop_reason: 'end_turn',
+        total_cost_usd: 0.5,
+        usage: {
+          input_tokens: 10,
+          output_tokens: 20,
+          cache_creation_input_tokens: 0,
+          cache_read_input_tokens: 0,
+        },
+        modelUsage: {},
+        permission_denials: [],
+        uuid: 'uuid-1' as never,
+        session_id: 'sess-1',
+      } as SDKMessage;
+
+      mockQuery.mockReturnValue(makeQuery([compactBoundary, successResult]) as ReturnType<typeof query>);
+
+      const active = await resolveSession(
+        makeOptions({ compactionThreshold: 160_000, maxTurns: 50 }),
+      );
+      await active.session.send('implement a large feature');
+      const { resultMsg, compactionCount } = await collectSessionOutcome(active.session);
+
+      expect(compactionCount).toBe(1);
+      expect(resultMsg?.subtype).toBe('success');
+      expect(resultMsg?.num_turns).toBe(45);
+    });
+
+    it('invokes onCompaction after the SDK summarizes older turns', async () => {
+      const onCompaction = vi.fn();
+      await startSession(makeOptions({ compactionThreshold: 160_000, onCompaction }));
+
+      const options = mockQuery.mock.calls[0]?.[0].options as {
+        hooks: {
+          PostCompact: Array<{
+            hooks: Array<
+              (input: {
+                hook_event_name: string;
+                trigger: 'auto' | 'manual';
+                compact_summary: string;
+              }) => Promise<unknown>
+            >;
+          }>;
+        };
+      };
+      const hook = options.hooks.PostCompact[0]?.hooks[0];
+      await hook?.({
+        hook_event_name: 'PostCompact',
+        trigger: 'auto',
+        compact_summary: 'Earlier tool calls explored the codebase.',
+      });
+
+      expect(onCompaction).toHaveBeenCalledWith({
+        trigger: 'auto',
+        summary: 'Earlier tool calls explored the codebase.',
+      });
     });
   });
 

@@ -50,6 +50,7 @@ function makePollerDeps(overrides: Partial<PollerDeps> = {}): PollerDeps {
     ciPollIntervalMs: 30_000,
     ciWaitTimeoutMs: 1_800_000,
     engineerMaxTurns: 50,
+    engineerCompactionThreshold: 160_000,
     engineerCostCapUsd: 5,
     modelRouting: {
       lowCost: 'claude-sonnet-test',

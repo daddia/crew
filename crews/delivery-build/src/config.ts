@@ -37,6 +37,12 @@ export const ConfigSchema = z.object({
     diffFileCap: z.coerce.number().int().positive().default(50),
     diffSizeCapBytes: z.coerce.number().int().positive().default(500_000),
     engineerMaxTurns: z.coerce.number().int().positive().default(50),
+    engineerCompactionThreshold: z.coerce
+      .number()
+      .int()
+      .min(100_000)
+      .max(1_000_000)
+      .default(160_000),
     engineerCostCapUsd: z.coerce.number().positive().default(5),
     modelRouting: z
       .object({
@@ -87,6 +93,7 @@ const ENV_MAPPING: EnvMapping = {
   'behaviour.diffFileCap': 'DIFF_FILE_CAP',
   'behaviour.diffSizeCapBytes': 'DIFF_SIZE_CAP_BYTES',
   'behaviour.engineerMaxTurns': 'ENGINEER_MAX_TURNS',
+  'behaviour.engineerCompactionThreshold': 'ENGINEER_COMPACTION_THRESHOLD',
   'behaviour.engineerCostCapUsd': 'ENGINEER_COST_CAP_USD',
   'behaviour.modelRouting.lowCost': 'MODEL_ROUTING_LOW_COST',
   'behaviour.modelRouting.implementation': 'MODEL_ROUTING_IMPLEMENTATION',

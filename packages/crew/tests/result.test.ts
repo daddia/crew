@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { z } from 'zod';
 import {
   SUBMIT_RESULT_TOOL_NAME,
@@ -9,6 +9,7 @@ import {
   finalizeAgentRun,
   buildEngineerAgentResult,
   buildPeerReviewAgentResult,
+  collectSessionOutcome,
 } from '../src/result.js';
 import type { SDKResultMessage } from '@anthropic-ai/claude-agent-sdk';
 
@@ -133,6 +134,30 @@ describe('submit_result capture (RH01-11)', () => {
       boundedReason: 'max_turns',
     });
     expect(agentResult.costUsd).toBe(1.5);
+  });
+
+  it('Gherkin: collectSessionOutcome continues past compact_boundary events', async () => {
+    const compactBoundary = {
+      type: 'system',
+      subtype: 'compact_boundary',
+      compact_metadata: { trigger: 'auto', pre_tokens: 170_000, post_tokens: 40_000 },
+    };
+    const resultMessage = makeSuccessResultMessage('done');
+
+    const session = {
+      sessionId: 'sess-1',
+      send: vi.fn(),
+      stream: async function* () {
+        yield compactBoundary;
+        yield resultMessage;
+      },
+      [Symbol.asyncDispose]: vi.fn(),
+    };
+
+    const { resultMsg, compactionCount } = await collectSessionOutcome(session);
+
+    expect(compactionCount).toBe(1);
+    expect(resultMsg?.subtype).toBe('success');
   });
 });
 

@@ -82,6 +82,7 @@ export async function boot(env: NodeJS.ProcessEnv = process.env): Promise<void> 
       ciPollIntervalMs: config.behaviour.ciPollIntervalMs,
       ciWaitTimeoutMs: config.behaviour.ciWaitTimeoutMs,
       engineerMaxTurns: config.behaviour.engineerMaxTurns,
+      engineerCompactionThreshold: config.behaviour.engineerCompactionThreshold,
       engineerCostCapUsd: config.behaviour.engineerCostCapUsd,
       modelRouting: config.behaviour.modelRouting,
     },

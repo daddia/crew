@@ -24,6 +24,7 @@ export interface WorkflowContext {
     ciPollIntervalMs: number;
     ciWaitTimeoutMs: number;
     engineerMaxTurns: number;
+    engineerCompactionThreshold: number;
     engineerCostCapUsd: number;
     modelRouting: ModelRouting;
   };
@@ -170,6 +171,7 @@ function personaContext(
   const task = extra['task'];
   return {
     maxTurns: ctx.behaviour.engineerMaxTurns,
+    compactionThreshold: ctx.behaviour.engineerCompactionThreshold,
     ...extra,
     model:
       typeof task === 'string'

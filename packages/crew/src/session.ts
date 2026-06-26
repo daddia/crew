@@ -6,6 +6,7 @@ import {
   type Options,
   type Query,
   type SDKMessage,
+  type Settings,
 } from '@anthropic-ai/claude-agent-sdk';
 import type { AgentDefinition, AgentInput } from './agent.js';
 import type { SubmitResultCapture } from './result.js';
@@ -20,6 +21,19 @@ import {
 import type { SdkSubagentDefinition } from './subagents.js';
 import { resolvePluginBundles } from './plugins.js';
 import { readSkillCatalog, resolveSkillsForTask, type SkillCatalogEntry } from './skills.js';
+
+/** SDK-accepted token threshold range for auto-compaction (autoCompactWindow). */
+export const COMPACTION_THRESHOLD_MIN = 100_000;
+export const COMPACTION_THRESHOLD_MAX = 1_000_000;
+/** ~80% of a 200K context window — matches legacy SDK auto-compact trigger. */
+export const DEFAULT_COMPACTION_THRESHOLD = 160_000;
+
+export interface CompactionEvent {
+  trigger: 'manual' | 'auto';
+  summary: string;
+}
+
+export type CompactionHandler = (event: CompactionEvent) => void;
 
 export interface SessionOptions {
   definition: AgentDefinition;
@@ -60,6 +74,14 @@ export interface SessionOptions {
   maxTurns?: number;
   /** SDK per-run USD budget — session terminates when exceeded. */
   maxBudgetUsd?: number;
+  /**
+   * Token threshold at which the SDK auto-compacts older turns before context
+   * window overflow. Maps to `autoCompactWindow` in SDK settings (100_000–
+   * 1_000_000). When set, `autoCompactEnabled` is turned on for the session.
+   */
+  compactionThreshold?: number;
+  /** Called after the SDK summarizes older turns during auto-compaction. */
+  onCompaction?: CompactionHandler;
   /** Inline subagent definitions for the Task tool. */
   sdkAgents?: Record<string, SdkSubagentDefinition>;
   /** Namespaced skill names to enable (defaults from plugin bundles). */
@@ -140,6 +162,18 @@ async function filterExistingPaths(
   return results.filter((p): p is string => p !== null);
 }
 
+function buildCompactionSettings(threshold: number): Settings {
+  if (threshold < COMPACTION_THRESHOLD_MIN || threshold > COMPACTION_THRESHOLD_MAX) {
+    throw new RangeError(
+      `compactionThreshold must be between ${COMPACTION_THRESHOLD_MIN} and ${COMPACTION_THRESHOLD_MAX}, got ${threshold}`,
+    );
+  }
+  return {
+    autoCompactEnabled: true,
+    autoCompactWindow: threshold,
+  };
+}
+
 /**
  * Resolve whether to start a new Claude session or resume an existing one.
  * Returns a session handle; call {@link AgentSession.send} then iterate
@@ -165,6 +199,8 @@ export async function resolveSession(
     workspaceCwd,
     maxTurns,
     maxBudgetUsd,
+    compactionThreshold,
+    onCompaction,
     sdkAgents,
     skills,
     onSubagentAudit,
@@ -211,6 +247,23 @@ export async function resolveSession(
     hookEntries.SubagentStart = [{ hooks: [subagentHook] }];
     hookEntries.SubagentStop = [{ hooks: [subagentHook] }];
   }
+  if (onCompaction) {
+    hookEntries.PostCompact = [
+      {
+        hooks: [
+          async (input) => {
+            if (input.hook_event_name === 'PostCompact') {
+              onCompaction({
+                trigger: input.trigger,
+                summary: input.compact_summary,
+              });
+            }
+            return {};
+          },
+        ],
+      },
+    ];
+  }
 
   const baseOptions: Options = {
     model,
@@ -222,6 +275,9 @@ export async function resolveSession(
     ...(sdkAgents && Object.keys(sdkAgents).length > 0 ? { agents: sdkAgents } : {}),
     ...(maxTurns !== undefined ? { maxTurns } : {}),
     ...(maxBudgetUsd !== undefined ? { maxBudgetUsd } : {}),
+    ...(compactionThreshold !== undefined
+      ? { settings: buildCompactionSettings(compactionThreshold) }
+      : {}),
     ...(resultCapture ? { mcpServers: resultCapture.mcpServers } : {}),
     ...(Object.keys(hookEntries).length > 0 ? { hooks: hookEntries } : {}),
   };
