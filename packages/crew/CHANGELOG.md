@@ -1,5 +1,61 @@
 # @daddia/crew
 
+## 0.4.9
+
+### Patch Changes
+
+- Add `qa-engineer` to the `PersonaName` union for the delivery-qa crew persona.
+
+## 0.4.8
+
+### Patch Changes
+
+- `createEvalFetchHandler` responds to `GET /eval/` with a fixture health listing.
+
+## 0.4.7
+
+### Patch Changes
+
+- Add context compaction threshold support in `resolveSession`.
+- Point the `crew` CLI bin at `crew.js` and bundle docs in the build script.
+
+## 0.4.6
+
+### Patch Changes
+
+- Progressive skill loading by task in `resolveSession`.
+
+## 0.4.5
+
+### Minor Changes
+
+- Ship CrewBench eval framework (`@daddia/crew/evals`) and the `crew eval` CLI.
+
+## 0.4.4
+
+### Minor Changes
+
+- Ship `crew init` scaffold CLI.
+- Bundle runtime docs (`AGENTS.md`, architecture references) in the npm package.
+
+## 0.4.3
+
+### Patch Changes
+
+- Adopt SDK plugins and share the code-review skill layout.
+
+## 0.4.2
+
+### Patch Changes
+
+- Engineer workspace preparation with Bash, test-runner integration, and bounds.
+
+## 0.4.1
+
+### Patch Changes
+
+- Replace free-text JSON parsing with a typed `submit_result` tool contract.
+
 ## 0.4.0
 
 ### Minor Changes

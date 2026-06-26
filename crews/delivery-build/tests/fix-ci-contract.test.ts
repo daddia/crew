@@ -22,6 +22,7 @@ const WORKFLOW_ENGINEER_TASKS = [
   'implement-story',
   'address-feedback',
   'fix-ci',
+  'fix-qa-defects',
 ] as const;
 
 /** Context keys workflow passes for fix-ci (see workflow.ts CI monitoring loop). */

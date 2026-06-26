@@ -47,6 +47,7 @@ export function createFixtureIntegrationClients(fixture: StoryFixture): Recordin
       const branch = fixture.engineer.implement.artefacts['branchName'];
       return typeof branch === 'string' ? branch : `feature/${fixture.issueKey}-fixture`;
     },
+    findOpenMrForIssue: async () => fixture.gitlab.mrUrl,
   };
 
   return { jira, gitlab };

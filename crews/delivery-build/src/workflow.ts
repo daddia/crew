@@ -51,6 +51,8 @@ export interface RunStoryOptions {
   agents?: WorkflowAgents;
   /** Stop after this step completes (used by the offline fixture story driver). */
   stopAfter?: Step;
+  /** QA remediation re-entry — fix defects and re-hand off to QA. */
+  remediation?: boolean;
 }
 
 const PIPELINE_SETTLING: ReadonlySet<PipelineStatus> = new Set(['created', 'pending', 'running']);
@@ -158,9 +160,13 @@ export async function runStory(ctx: WorkflowContext, options?: RunStoryOptions):
   const input: AgentInput = { issueKey, context: {} };
   const agents: WorkflowAgents = options?.agents ?? { engineer, seniorEngineer };
 
-  log.info('workflow.start', { issueKey });
+  log.info('workflow.start', { issueKey, remediation: options?.remediation ?? false });
 
   try {
+    if (options?.remediation) {
+      await runQaRemediationInner(ctx, input, agents);
+      return;
+    }
     await runStoryInner(ctx, input, agents, options?.stopAfter);
   } catch (err) {
     log.error('workflow.unhandled-error', { issueKey, err: String(err) });
@@ -434,7 +440,128 @@ async function runStoryInner(
 
   state.finishStep(issueKey, 'open-mr', { verdict: mrUrl });
 
-  // ── Step 7: CI monitoring loop ────────────────────────────────────────────
+  await monitorCiAndHandoffToQa(ctx, input, eng, mrUrl, branchName, behaviour);
+}
+
+const QA_DEFECT_COMMENT_PREFIX = '*QA defects found';
+// Must stay aligned with the defect comment header written by delivery-qa
+// when handing off to remediation (same string prefix, different crews).
+
+function extractQaDefectComments(comments: Awaited<ReturnType<JiraClient['getComments']>>): string[] {
+  return comments
+    .filter((c) => c.body.includes(QA_DEFECT_COMMENT_PREFIX))
+    .map((c) => c.body);
+}
+
+/**
+ * QA remediation re-entry: fix documented defects and re-hand off to QA.
+ * Triggered when a ticket returns from delivery-qa with label `qa-remediation`.
+ */
+async function runQaRemediationInner(
+  ctx: WorkflowContext,
+  input: AgentInput,
+  agents: WorkflowAgents,
+): Promise<void> {
+  const { issueKey, state, jira, gitlab, behaviour } = ctx;
+  const { engineer: eng } = agents;
+
+  await seedEngineerMemory(ctx.projectDir);
+
+  state.upsertStory(issueKey, 'qa-remediation');
+  publishRunStep(issueKey, 'qa-remediation');
+  state.startStep(issueKey, 'qa-remediation');
+
+  let mrUrl: string | null = null;
+  try {
+    mrUrl = await gitlab.findOpenMrForIssue(issueKey);
+  } catch (err) {
+    log.warn('workflow.qa-remediation.mr-failed', { issueKey, err: String(err) });
+  }
+
+  if (!mrUrl) {
+    state.finishStep(issueKey, 'qa-remediation', { verdict: 'failed' });
+    await escalateToHumanReview(jira, issueKey, 'No open merge request found for remediation', [], state);
+    return;
+  }
+
+  let branchName: string;
+  try {
+    branchName = await gitlab.getMrSourceBranch(mrUrl);
+  } catch (err) {
+    log.warn('workflow.qa-remediation.branch-failed', { issueKey, mrUrl, err: String(err) });
+    state.finishStep(issueKey, 'qa-remediation', { verdict: 'failed' });
+    await escalateToHumanReview(jira, issueKey, 'Failed to resolve MR source branch', [], state, mrUrl);
+    return;
+  }
+
+  let defectComments: string[] = [];
+  try {
+    const comments = await jira.getComments(issueKey);
+    defectComments = extractQaDefectComments(comments);
+  } catch (err) {
+    log.warn('workflow.qa-remediation.comments-failed', { issueKey, err: String(err) });
+  }
+
+  if (defectComments.length === 0) {
+    state.finishStep(issueKey, 'qa-remediation', { verdict: 'failed' });
+    await escalateToHumanReview(
+      jira,
+      issueKey,
+      'No QA defect comments found on issue',
+      [],
+      state,
+      mrUrl,
+    );
+    return;
+  }
+
+  state.finishStep(issueKey, 'qa-remediation', { verdict: 'ok' });
+
+  state.upsertStory(issueKey, 'fix-qa-defects');
+  publishRunStep(issueKey, 'fix-qa-defects');
+
+  const fixResult = await eng.run({
+    ...input,
+    context: engineerContext(ctx, {
+      task: 'fix-qa-defects',
+      mrUrl,
+      branchName,
+      defectComments,
+    }),
+  });
+
+  const fixSessionId = fixResult.artefacts['sessionId'] as string | undefined;
+  state.startStep(issueKey, 'fix-qa-defects', fixSessionId);
+  state.finishStep(issueKey, 'fix-qa-defects', {
+    costUsd: fixResult.costUsd,
+    verdict: fixResult.success ? 'ok' : 'failed',
+  });
+
+  if (!fixResult.success) {
+    await escalateToHumanReview(
+      jira,
+      issueKey,
+      fixResult.summary || 'Engineer failed to fix QA defects',
+      defectComments,
+      state,
+      mrUrl,
+    );
+    return;
+  }
+
+  await monitorCiAndHandoffToQa(ctx, input, eng, mrUrl, branchName, behaviour);
+}
+
+async function monitorCiAndHandoffToQa(
+  ctx: WorkflowContext,
+  input: AgentInput,
+  eng: Agent,
+  mrUrl: string,
+  branchName: string,
+  behaviour: WorkflowContext['behaviour'],
+): Promise<void> {
+  const { issueKey, state, jira, gitlab } = ctx;
+
   let ciPassed = false;
   const ciGuard = boundedIterGuard(behaviour.ciRetryCap);
 
@@ -469,7 +596,6 @@ async function runStoryInner(
       break;
     }
 
-    // Pipeline failed — ask the engineer to fix CI.
     state.upsertStory(issueKey, 'ci-check');
     publishRunStep(issueKey, 'ci-check');
     const ciFixResult = await eng.run({
@@ -491,7 +617,17 @@ async function runStoryInner(
     return;
   }
 
-  // ── Done: transition to In QA ─────────────────────────────────────────────
+  await handoffToQa(ctx, mrUrl, state, jira);
+}
+
+async function handoffToQa(
+  ctx: WorkflowContext,
+  mrUrl: string,
+  state: StateStore,
+  jira: JiraClient,
+): Promise<void> {
+  const { issueKey } = ctx;
+
   state.upsertStory(issueKey, 'in-qa');
   publishRunStep(issueKey, 'in-qa');
   state.startStep(issueKey, 'in-qa');

@@ -42,41 +42,72 @@ export async function jiraHandler(
     return c.json({ ok: true, duplicate: true });
   }
 
-  // 4. Filter to "Ready for Dev" transitions only.
+  // 4. Filter to dispatchable transitions.
   const transition = body.transition;
-  if (transition?.transitionName !== 'Ready for Dev') {
-    return c.json({ ok: true, ignored: true });
-  }
-
+  const transitionName = transition?.transitionName;
   const issueKey = body.issue?.key;
-  if (!issueKey) {
-    return c.json({ error: 'Missing issue key' }, 400);
+
+  if (transitionName === 'Ready for Dev') {
+    if (!issueKey) {
+      return c.json({ error: 'Missing issue key' }, 400);
+    }
+
+    if (has(issueKey)) {
+      log.info('jira.handler.in-flight', { issueKey });
+      return c.json({ error: 'workflow-in-flight', issueKey }, 429);
+    }
+
+    log.info('jira.handler.dispatch', { issueKey, eventId });
+
+    runStoryWithLock(
+      issueKey,
+      () => runStory({ issueKey, state, ...ctxBase }),
+      (err) => {
+        log.error('jira.handler.workflow-error', { issueKey, err: String(err) });
+      },
+      { deferred: true },
+    );
+
+    return c.json({ ok: true });
   }
 
-  if (has(issueKey)) {
-    log.info('jira.handler.in-flight', { issueKey });
-    return c.json({ error: 'workflow-in-flight', issueKey }, 429);
+  if (transitionName === 'In Remediation') {
+    const labels = body.issue?.labels ?? [];
+    if (!labels.includes('qa-remediation')) {
+      return c.json({ ok: true, ignored: true });
+    }
+
+    if (!issueKey) {
+      return c.json({ error: 'Missing issue key' }, 400);
+    }
+
+    if (has(issueKey)) {
+      log.info('jira.handler.in-flight', { issueKey });
+      return c.json({ error: 'workflow-in-flight', issueKey }, 429);
+    }
+
+    log.info('jira.handler.dispatch-remediation', { issueKey, eventId });
+
+    runStoryWithLock(
+      issueKey,
+      () => runStory({ issueKey, state, ...ctxBase }, { remediation: true }),
+      (err) => {
+        log.error('jira.handler.workflow-error', { issueKey, err: String(err) });
+      },
+      { deferred: true },
+    );
+
+    return c.json({ ok: true });
   }
 
-  log.info('jira.handler.dispatch', { issueKey, eventId });
-
-  runStoryWithLock(
-    issueKey,
-    () => runStory({ issueKey, state, ...ctxBase }),
-    (err) => {
-      log.error('jira.handler.workflow-error', { issueKey, err: String(err) });
-    },
-    { deferred: true },
-  );
-
-  return c.json({ ok: true });
+  return c.json({ ok: true, ignored: true });
 }
 
 interface JiraEvent {
   id: number;
   timestamp: number;
   transition?: { transitionName?: string };
-  issue?: { key?: string };
+  issue?: { key?: string; labels?: string[] };
 }
 
 function isJiraEvent(v: unknown): v is JiraEvent {

@@ -55,6 +55,7 @@ You are dispatched with a `task` field that selects exactly one skill:
 | `implement-story`      | `implement-story`      | Initial implementation of a Ready-for-Dev story                                       |
 | `address-feedback`     | `address-feedback`     | After a peer review or human comment requests changes                                 |
 | `fix-ci`               | `fix-ci`               | After the MR pipeline fails — push fixes so CI can pass                               |
+| `fix-qa-defects`       | `fix-qa-defects`       | After QA documents product defects — fix and re-hand off to QA                        |
 
 Each skill defines its own steps, quality bar, and output contract. Read the
 matching skill in full before acting.

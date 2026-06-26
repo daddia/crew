@@ -2,7 +2,9 @@ import { pathToFileURL } from 'node:url';
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { initTracing } from '@daddia/crew';
+import { createEvalFetchHandler } from '@daddia/crew/evals';
 import { SchemaValidationError, redact } from '@daddia/crew/config';
+import { createEvalFixtures } from './eval/fixtures.js';
 import { jiraHandler } from './handlers/jira.js';
 import { createJiraClient } from './integrations/jira.js';
 import { createGitlabClient } from './integrations/gitlab.js';
@@ -26,6 +28,12 @@ export function createApp(
   app.post('/webhooks/jira', (c) =>
     jiraHandler(c, state, config.secrets.jiraWebhookSecret, ctxBase),
   );
+
+  const evalHandler = createEvalFetchHandler({
+    fixtures: createEvalFixtures(config.behaviour.evalFixtureMode),
+  });
+  app.all('/eval/*', (c) => evalHandler(c.req.raw));
+
   return app;
 }
 

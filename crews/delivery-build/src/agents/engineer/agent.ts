@@ -28,7 +28,12 @@ import { runStreamHub } from '../../run-stream-hub.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const WORKSPACE_TASKS = new Set(['implement-story', 'address-feedback', 'fix-ci']);
+const WORKSPACE_TASKS = new Set([
+  'implement-story',
+  'address-feedback',
+  'fix-ci',
+  'fix-qa-defects',
+]);
 
 const MCP_ONLY_TOOLS = [
   'mcp__atlassian__jira_get_issue',

@@ -161,4 +161,16 @@ describe('pollTick', () => {
       expect.objectContaining({ missing: ['identity.jira.projectKey'] }),
     );
   });
+
+  it('resumes runQaWorkflow when issue returns to In QA from remediation-pending', async () => {
+    const deps = makePollerDeps();
+    vi.mocked(deps.jira.searchIssues).mockResolvedValue([{ issueKey: 'CREW-55' }]);
+    const state = makeState(() => makeStoryRow('CREW-55', 'remediation-pending'));
+
+    await pollTick(deps, state);
+
+    expect(mockRunQaWorkflow).toHaveBeenCalledWith(
+      expect.objectContaining({ issueKey: 'CREW-55' }),
+    );
+  });
 });

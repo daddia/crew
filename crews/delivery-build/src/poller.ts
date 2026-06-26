@@ -8,6 +8,7 @@ import { has, runStoryWithLock } from './in-flight.js';
 import { recordTick } from './poller-state.js';
 
 const TERMINAL_STEPS = new Set<Step>(['in-qa', 'needs-human-review']);
+const REMEDIATION_IN_PROGRESS = new Set<Step>(['qa-remediation', 'fix-qa-defects', 'ci-check']);
 
 /**
  * Dependencies for the poller — all values are injected at construction time
@@ -191,7 +192,54 @@ export async function pollTick(deps: PollerDeps, state: StateStore): Promise<voi
     }
   }
 
+  await pollRemediationTickets(deps, state, ctxBase);
+
   recordTick('ok');
+}
+
+async function pollRemediationTickets(
+  deps: PollerDeps,
+  state: StateStore,
+  ctxBase: WorkflowCtxBase,
+): Promise<void> {
+  const { projectKey, assigneeAccountId } = deps.identity.jira;
+
+  if (!projectKey || !assigneeAccountId) {
+    return;
+  }
+
+  const jql =
+    `project = "${projectKey}" AND status = "In Remediation" ` +
+    `AND labels = "qa-remediation" AND assignee = "${assigneeAccountId}"`;
+
+  let issues: Array<{ issueKey: string }>;
+  try {
+    issues = await deps.jira.searchIssues(jql);
+  } catch (err) {
+    log.warn('poller.remediation-search-error', { err: String(err) });
+    return;
+  }
+
+  for (const { issueKey } of issues) {
+    const existing = state.getStory(issueKey);
+    if (existing && REMEDIATION_IN_PROGRESS.has(existing.currentStep)) {
+      log.debug('poller.skip-in-progress', { issueKey, step: existing.currentStep });
+      continue;
+    }
+
+    if (has(issueKey)) {
+      log.debug('poller.skip-in-flight', { issueKey });
+      continue;
+    }
+
+    runStoryWithLock(
+      issueKey,
+      () => runStory({ issueKey, state, ...ctxBase }, { remediation: true }),
+      (err) => {
+        log.error('poller.run-story-error', { issueKey, err: String(err) });
+      },
+    );
+  }
 }
 
 /**

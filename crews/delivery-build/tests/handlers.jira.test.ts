@@ -38,6 +38,8 @@ const mockGitlab = {
   getPipelineStatus: vi.fn(),
   getMrDiff: vi.fn(),
   postReviewComment: vi.fn(),
+  getMrSourceBranch: vi.fn(),
+  findOpenMrForIssue: vi.fn(),
 } satisfies GitlabClient;
 
 const ctxBase: WorkflowCtxBase = {
@@ -131,6 +133,52 @@ describe('POST /webhooks/jira', () => {
       timestamp: Date.now(),
       transition: { transitionName: 'In Progress' },
       issue: { key: 'ENG-99' },
+    });
+    const app = makeApp(makeState());
+    const res = await app.request('/webhooks/jira', {
+      method: 'POST',
+      body,
+      headers: {
+        'Content-Type': 'application/json',
+        'x-hub-signature-256': signBody(body),
+      },
+    });
+    expect(res.status).toBe(200);
+    const json = (await res.json()) as Record<string, unknown>;
+    expect(json['ignored']).toBe(true);
+  });
+
+  it('dispatches remediation runStory for In Remediation with qa-remediation label', async () => {
+    const body = JSON.stringify({
+      id: 44,
+      timestamp: Date.now(),
+      transition: { transitionName: 'In Remediation' },
+      issue: { key: 'CREW-55', labels: ['qa-remediation'] },
+    });
+    const state = makeState();
+    const app = makeApp(state);
+    const res = await app.request('/webhooks/jira', {
+      method: 'POST',
+      body,
+      headers: {
+        'Content-Type': 'application/json',
+        'x-hub-signature-256': signBody(body),
+      },
+    });
+    expect(res.status).toBe(200);
+    await new Promise((r) => setImmediate(r));
+    expect(runStory).toHaveBeenCalledWith(
+      expect.objectContaining({ issueKey: 'CREW-55' }),
+      { remediation: true },
+    );
+  });
+
+  it('ignores In Remediation without qa-remediation label', async () => {
+    const body = JSON.stringify({
+      id: 45,
+      timestamp: Date.now(),
+      transition: { transitionName: 'In Remediation' },
+      issue: { key: 'CREW-55', labels: [] },
     });
     const app = makeApp(makeState());
     const res = await app.request('/webhooks/jira', {

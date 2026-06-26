@@ -36,6 +36,7 @@ const ctxBase: WorkflowCtxBase = {
 };
 
 const mockConfig = {
+  behaviour: { evalFixtureMode: 'mock' as const },
   secrets: { jiraWebhookSecret: 'jira-webhook-secret-ok' },
 } as Config;
 
@@ -67,5 +68,17 @@ describe('GET /healthz', () => {
     const res = await app.request('/healthz');
     const body = (await res.json()) as { ok: boolean };
     expect(body.ok).toBe(true);
+  });
+});
+
+describe('GET /eval/', () => {
+  it('mounts CrewBench eval handler so GET /eval/ does not 404', async () => {
+    const app = createApp(makeState(), mockConfig, ctxBase);
+    const res = await app.request('/eval/');
+    expect(res.status).toBe(200);
+
+    const body = (await res.json()) as { ok: boolean; fixtures: string[] };
+    expect(body.ok).toBe(true);
+    expect(body.fixtures).toEqual(expect.arrayContaining(['smoke', 'handoff']));
   });
 });

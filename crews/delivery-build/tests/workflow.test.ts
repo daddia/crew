@@ -55,6 +55,7 @@ function makeGitlabMock(): GitlabClient {
     postReviewComment: vi.fn().mockResolvedValue(undefined),
     getPipelineStatus: vi.fn().mockResolvedValue('success'),
     getMrSourceBranch: vi.fn().mockResolvedValue('feature/CREW-1-test'),
+    findOpenMrForIssue: vi.fn().mockResolvedValue('https://gitlab.example.com/mr/1'),
   };
 }
 
@@ -513,6 +514,69 @@ describe('runStory', () => {
       'workflow.handoff-to-qa',
       expect.objectContaining({ issueKey: 'ENG-1', mrUrl: 'https://gitlab.example.com/mr/1' }),
     );
+  });
+
+  // ── QA remediation re-entry ─────────────────────────────────────────────
+
+  it('fixes QA defects and re-hands off to In QA on remediation path', async () => {
+    const ctxBase = makeCtxBase();
+    vi.mocked(ctxBase.jira.getComments).mockResolvedValue([
+      {
+        accountId: 'qa-bot',
+        author: 'qa@example.com',
+        body: '*QA defects found — remediation required*\n\n*DEF-1* (blocker): login fails',
+        created: new Date().toISOString(),
+      },
+    ]);
+    mockEngineer.mockResolvedValue(successResult());
+
+    const state = makeState();
+    await runStory({ issueKey: 'CREW-55', state, ...ctxBase }, { remediation: true });
+
+    const fixCall = mockEngineer.mock.calls.find(
+      (call) => (call[0] as AgentInput).context['task'] === 'fix-qa-defects',
+    );
+    expect(fixCall).toBeDefined();
+    expect((fixCall![0] as AgentInput).context['defectComments']).toHaveLength(1);
+    expect(ctxBase.jira.transitionIssue).toHaveBeenCalledWith('CREW-55', 'In QA');
+    expect(mockLogInfo).toHaveBeenCalledWith(
+      'workflow.handoff-to-qa',
+      expect.objectContaining({ issueKey: 'CREW-55' }),
+    );
+  });
+
+  it('escalates when no QA defect comments are found during remediation', async () => {
+    const ctxBase = makeCtxBase();
+    vi.mocked(ctxBase.jira.getComments).mockResolvedValue([]);
+    mockEngineer.mockResolvedValue(successResult());
+
+    const state = makeState();
+    await runStory({ issueKey: 'CREW-55', state, ...ctxBase }, { remediation: true });
+
+    expect(ctxBase.jira.transitionIssue).toHaveBeenCalledWith('CREW-55', 'Needs human review');
+    expect(mockEngineer).not.toHaveBeenCalled();
+  });
+
+  it('escalates when no open MR exists during remediation', async () => {
+    const ctxBase = makeCtxBase();
+    vi.mocked(ctxBase.gitlab.findOpenMrForIssue).mockResolvedValue(null);
+
+    const state = makeState();
+    await runStory({ issueKey: 'CREW-55', state, ...ctxBase }, { remediation: true });
+
+    expect(ctxBase.jira.transitionIssue).toHaveBeenCalledWith('CREW-55', 'Needs human review');
+    expect(mockEngineer).not.toHaveBeenCalled();
+  });
+
+  it('escalates when MR branch resolution fails during remediation', async () => {
+    const ctxBase = makeCtxBase();
+    vi.mocked(ctxBase.gitlab.getMrSourceBranch).mockRejectedValue(new Error('GitLab down'));
+
+    const state = makeState();
+    await runStory({ issueKey: 'CREW-55', state, ...ctxBase }, { remediation: true });
+
+    expect(ctxBase.jira.transitionIssue).toHaveBeenCalledWith('CREW-55', 'Needs human review');
+    expect(mockEngineer).not.toHaveBeenCalled();
   });
 
   // ── sessionId wiring ──────────────────────────────────────────────────────

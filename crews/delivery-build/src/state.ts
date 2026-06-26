@@ -17,6 +17,8 @@ export type Step =
   | 'open-mr'
   | 'ci-check'
   | 'in-qa'
+  | 'qa-remediation'
+  | 'fix-qa-defects'
   | 'ready-for-review'
   | 'needs-human-review';
 

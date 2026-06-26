@@ -76,6 +76,7 @@ function makeRecordingGitlab(mrUrl = 'https://gitlab.example.com/mr/eval-fixture
     getMrDiff: async () => '',
     postReviewComment: async () => {},
     getMrSourceBranch: async () => 'feature/EVAL-FIXTURE-test',
+    findOpenMrForIssue: async () => mrUrl,
   };
 }
 
