@@ -6,7 +6,10 @@ import {
   readSkillsDir,
   readSubagentsDir,
   buildAuditHook,
-  type SDKResultMessage,
+  createEngineerSubmitResultCapture,
+  collectSessionOutcome,
+  finalizeAgentRun,
+  buildEngineerAgentResult,
   type Agent,
   type AgentDefinition,
   type AgentInput,
@@ -15,54 +18,6 @@ import {
 import { buildTaskPrompt } from '../prompt-context.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-
-/**
- * Parse the structured JSON artefact emitted by the engineer skills.
- * Accepts any of the four shapes: assess-clarification, implement-story,
- * address-feedback, or fix-ci.
- *
- * The skills instruct the model to emit a full AgentResult envelope:
- *   { success, summary, artefacts: { ... }, costUsd }
- * When that envelope is present this function returns the inner `artefacts`
- * object plus the envelope's boolean `success` flag (or undefined when the
- * field is absent or non-boolean). When no envelope is detected the
- * top-level object is returned as the artefacts and `envelopeSuccess` is
- * undefined.
- *
- * Throws a descriptive Error on parse or structural failure so the caller
- * can produce a `success: false` result with an excerpt of the raw result.
- */
-export function parseEngineerArtefacts(raw: string): {
-  artefacts: Record<string, unknown>;
-  envelopeSuccess: boolean | undefined;
-} {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch (e) {
-    throw new Error(`JSON parse failure: ${e instanceof Error ? e.message : String(e)}`, {
-      cause: e,
-    });
-  }
-
-  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-    throw new Error('Result is not a JSON object');
-  }
-
-  const obj = parsed as Record<string, unknown>;
-  if (
-    typeof obj['artefacts'] === 'object' &&
-    obj['artefacts'] !== null &&
-    !Array.isArray(obj['artefacts'])
-  ) {
-    return {
-      artefacts: obj['artefacts'] as Record<string, unknown>,
-      envelopeSuccess: typeof obj['success'] === 'boolean' ? obj['success'] : undefined,
-    };
-  }
-
-  return { artefacts: obj, envelopeSuccess: undefined };
-}
 
 const ALLOWED_TOOLS = [
   // GitLab MCP
@@ -104,6 +59,7 @@ async function buildDefinition(): Promise<AgentDefinition> {
 async function run(input: AgentInput): Promise<AgentResult> {
   const definition = await buildDefinition();
   const prompt = await readPromptFile(definition.promptPath);
+  const resultCapture = createEngineerSubmitResultCapture();
 
   const auditHook = buildAuditHook(definition.allowedTools, () => {});
 
@@ -119,6 +75,7 @@ async function run(input: AgentInput): Promise<AgentResult> {
       resumeWithinMs: RESUME_WITHIN_MS,
       model: (input.context['model'] as string | undefined) ?? DEFAULT_MODEL,
       auditHook,
+      resultCapture,
     },
     previousSessionId,
   );
@@ -132,59 +89,15 @@ async function run(input: AgentInput): Promise<AgentResult> {
 
   try {
     await session.send(taskPrompt);
+    const { resultMsg } = await collectSessionOutcome(session);
 
-    let resultMsg: SDKResultMessage | undefined;
-    for await (const msg of session.stream()) {
-      if (msg.type === 'result') {
-        resultMsg = msg;
-        break;
-      }
-    }
-
-    if (!resultMsg) {
-      return {
-        success: false,
-        summary: 'Session ended without a result message',
-        artefacts: { sessionId },
-        costUsd: 0,
-      };
-    }
-
-    if (resultMsg.subtype === 'success') {
-      let parsedArtefacts: Record<string, unknown>;
-      let envelopeSuccess: boolean | undefined;
-      try {
-        ({ artefacts: parsedArtefacts, envelopeSuccess } = parseEngineerArtefacts(
-          resultMsg.result,
-        ));
-      } catch (e) {
-        const errMsg = e instanceof Error ? e.message : String(e);
-        const excerpt = resultMsg.result.slice(0, 500);
-        return {
-          success: false,
-          summary: `${errMsg} — raw result excerpt: ${excerpt}`,
-          artefacts: { sessionId },
-          costUsd: resultMsg.total_cost_usd,
-        };
-      }
-
-      // The skill envelope lets the model self-report a blocker via
-      // success: false. Honour that so the workflow can escalate cleanly
-      // instead of falling through to a "missing branchName" failure.
-      return {
-        success: envelopeSuccess !== false,
-        summary: resultMsg.result,
-        artefacts: { sessionId, ...parsedArtefacts },
-        costUsd: resultMsg.total_cost_usd,
-      };
-    }
-
-    return {
-      success: false,
-      summary: resultMsg.errors.join('; '),
-      artefacts: { sessionId },
-      costUsd: resultMsg.total_cost_usd,
-    };
+    return finalizeAgentRun({
+      sessionId,
+      capture: resultCapture,
+      resultMsg,
+      buildResult: (submitted, costUsd) =>
+        buildEngineerAgentResult(sessionId, submitted, costUsd),
+    });
   } catch (err) {
     return {
       success: false,

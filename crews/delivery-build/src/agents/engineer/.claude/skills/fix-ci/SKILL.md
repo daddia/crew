@@ -95,7 +95,7 @@ commits were pushed to the MR branch. The workflow will re-poll the pipeline.
 
 ## Output contract
 
-Return an `AgentResult` with this artefact shape:
+Call `submit_result` with this payload shape (not JSON in your final message):
 
 ```json
 {

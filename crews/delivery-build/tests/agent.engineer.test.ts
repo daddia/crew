@@ -1,29 +1,47 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { AgentSession } from '@daddia/crew';
+import type { AgentSession, SubmittedAgentResult, SubmitResultCapture } from '@daddia/crew';
 import type { SDKResultMessage } from '@daddia/crew';
 import type { AgentInput } from '@daddia/crew';
 
-const DEFAULT_RESULT_JSON = JSON.stringify({
+const DEFAULT_SUBMITTED: SubmittedAgentResult = {
   success: true,
   summary: 'Implemented on feature/test-branch.',
   artefacts: {
     branchName: 'feature/test-branch',
     title: 'Test title',
   },
-  costUsd: 0,
+};
+
+let submittedResult: SubmittedAgentResult | undefined = DEFAULT_SUBMITTED;
+
+function makeCapture(): SubmitResultCapture {
+  return {
+    toolName: 'mcp__crew__submit_result',
+    mcpServers: {},
+    getSubmitted: () => submittedResult,
+  };
+}
+
+vi.mock('@daddia/crew', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@daddia/crew')>();
+  return {
+    ...actual,
+    resolveSession: vi.fn(),
+    readPromptFile: vi.fn().mockResolvedValue('You are an engineer persona.'),
+    readSkillsDir: vi.fn().mockResolvedValue([]),
+    readSubagentsDir: vi.fn().mockResolvedValue([]),
+    buildAuditHook: vi.fn().mockReturnValue(() => {}),
+    createEngineerSubmitResultCapture: vi.fn(() => makeCapture()),
+  };
 });
 
-// Mock @daddia/crew before the module under test is imported.
-vi.mock('@daddia/crew', () => ({
-  resolveSession: vi.fn(),
-  readPromptFile: vi.fn().mockResolvedValue('You are an engineer persona.'),
-  readSkillsDir: vi.fn().mockResolvedValue([]),
-  readSubagentsDir: vi.fn().mockResolvedValue([]),
-  buildAuditHook: vi.fn().mockReturnValue(() => {}),
-}));
-
-import { resolveSession, readPromptFile, buildAuditHook } from '@daddia/crew';
-import { engineer, parseEngineerArtefacts } from '../src/agents/engineer/agent.js';
+import {
+  resolveSession,
+  readPromptFile,
+  buildAuditHook,
+  SUBMIT_RESULT_TOOL_NAME,
+} from '@daddia/crew';
+import { engineer } from '../src/agents/engineer/agent.js';
 
 const mockResolveSession = vi.mocked(resolveSession);
 const mockReadPromptFile = vi.mocked(readPromptFile);
@@ -37,7 +55,7 @@ function makeResultMessage(overrides: Partial<SDKResultMessage> = {}): SDKResult
     duration_api_ms: 800,
     is_error: false,
     num_turns: 3,
-    result: DEFAULT_RESULT_JSON,
+    result: 'Prose commentary only — structured result comes from submit_result.',
     stop_reason: 'end_turn',
     total_cost_usd: 0.05,
     usage: {
@@ -100,6 +118,7 @@ const baseInput: AgentInput = {
 describe('engineer.run()', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    submittedResult = DEFAULT_SUBMITTED;
   });
 
   it('returns AgentResult with success true when SDK session completes', async () => {
@@ -113,7 +132,7 @@ describe('engineer.run()', () => {
     const result = await engineer.run(baseInput);
 
     expect(result.success).toBe(true);
-    expect(result.summary).toBe(DEFAULT_RESULT_JSON);
+    expect(result.summary).toBe(DEFAULT_SUBMITTED.summary);
     expect(result.costUsd).toBe(0.05);
     expect(result.artefacts).toMatchObject({ sessionId: 'sess-test-123' });
   });
@@ -160,6 +179,20 @@ describe('engineer.run()', () => {
 
     expect(mockResolveSession).toHaveBeenCalledOnce();
     expect(session.send).toHaveBeenCalledAfter(mockResolveSession as ReturnType<typeof vi.fn>);
+  });
+
+  it('passes resultCapture to resolveSession', async () => {
+    const session = makeSession([makeResultMessage()]);
+    mockResolveSession.mockResolvedValue({
+      session,
+      sessionId: 'sess-test-123',
+      isResumed: false,
+    });
+
+    await engineer.run(baseInput);
+
+    const callOptions = mockResolveSession.mock.calls[0]?.[0];
+    expect(callOptions?.resultCapture?.toolName).toBe(SUBMIT_RESULT_TOOL_NAME);
   });
 
   it('calls buildAuditHook() once before SDK execution', async () => {
@@ -263,17 +296,16 @@ describe('engineer.run()', () => {
     expect(session[Symbol.asyncDispose]).toHaveBeenCalledOnce();
   });
 
-  it('merges branchName and title into artefacts from implement-story result (envelope format)', async () => {
-    const resultJson = JSON.stringify({
+  it('merges branchName and title into artefacts from submit_result', async () => {
+    submittedResult = {
       success: true,
       summary: 'Implemented on feature/CREW-1-foo.',
       artefacts: {
         branchName: 'feature/CREW-1-foo',
         title: 'Add foo',
       },
-      costUsd: 0,
-    });
-    const session = makeSession([makeResultMessage({ result: resultJson })]);
+    };
+    const session = makeSession([makeResultMessage()]);
     mockResolveSession.mockResolvedValue({
       session,
       sessionId: 'sess-test-123',
@@ -290,17 +322,16 @@ describe('engineer.run()', () => {
     });
   });
 
-  it('merges questionsRequired as boolean true from assess-clarification result (envelope format)', async () => {
-    const resultJson = JSON.stringify({
+  it('merges questionsRequired as boolean true from assess-clarification submit_result', async () => {
+    submittedResult = {
       success: true,
       summary: 'Two questions posted.',
       artefacts: {
         questionsRequired: true,
         questions: '1. What status?\n2. Which field?',
       },
-      costUsd: 0,
-    });
-    const session = makeSession([makeResultMessage({ result: resultJson })]);
+    };
+    const session = makeSession([makeResultMessage()]);
     mockResolveSession.mockResolvedValue({
       session,
       sessionId: 'sess-test-123',
@@ -318,14 +349,13 @@ describe('engineer.run()', () => {
     expect(result.artefacts).toMatchObject({ sessionId: 'sess-test-123' });
   });
 
-  it('downgrades to success: false when the model self-reports a blocker via envelope', async () => {
-    const blockerJson = JSON.stringify({
+  it('downgrades to success: false when submit_result reports a blocker', async () => {
+    submittedResult = {
       success: false,
       summary: 'Blocked: AC-3 references a missing JWT signing key.',
       artefacts: { blocker: 'AC-3 path missing from config' },
-      costUsd: 0,
-    });
-    const session = makeSession([makeResultMessage({ result: blockerJson })]);
+    };
+    const session = makeSession([makeResultMessage()]);
     mockResolveSession.mockResolvedValue({
       session,
       sessionId: 'sess-test-123',
@@ -341,9 +371,9 @@ describe('engineer.run()', () => {
     });
   });
 
-  it('returns success: false with parse error and raw excerpt when result is not JSON', async () => {
-    const rawResult = 'Here is my analysis of the code. I found several issues.';
-    const session = makeSession([makeResultMessage({ result: rawResult })]);
+  it('returns success: false when submit_result was never called', async () => {
+    submittedResult = undefined;
+    const session = makeSession([makeResultMessage()]);
     mockResolveSession.mockResolvedValue({
       session,
       sessionId: 'sess-test-123',
@@ -353,8 +383,7 @@ describe('engineer.run()', () => {
     const result = await engineer.run(baseInput);
 
     expect(result.success).toBe(false);
-    expect(result.summary).toMatch(/parse/i);
-    expect(result.summary).toContain(rawResult.slice(0, 500));
+    expect(result.summary).toContain('submit_result');
   });
 
   it('Gherkin: author-controlled Jira description is fenced as untrusted data', async () => {
@@ -414,108 +443,5 @@ describe('engineer.run()', () => {
     expect(allowedTools).toBeDefined();
     expect(allowedTools).not.toContain('mcp__gitlab__merge_request');
     expect(allowedTools).not.toContain('mcp__gitlab__merge_merge_request');
-  });
-});
-
-describe('parseEngineerArtefacts()', () => {
-  it('unwraps the AgentResult envelope and returns inner artefacts plus envelope success', () => {
-    const raw = JSON.stringify({
-      success: true,
-      summary: 'Implemented on feature/CREW-1-foo.',
-      artefacts: {
-        branchName: 'feature/CREW-1-foo',
-        title: 'Add foo',
-      },
-      costUsd: 0,
-    });
-
-    const { artefacts, envelopeSuccess } = parseEngineerArtefacts(raw);
-
-    expect(artefacts['branchName']).toBe('feature/CREW-1-foo');
-    expect(artefacts['title']).toBe('Add foo');
-    expect(artefacts['success']).toBeUndefined();
-    expect(artefacts['summary']).toBeUndefined();
-    expect(envelopeSuccess).toBe(true);
-  });
-
-  it('surfaces envelope success: false when the model self-reports a blocker', () => {
-    const raw = JSON.stringify({
-      success: false,
-      summary: 'Blocked: AC-3 references a missing JWT signing key.',
-      artefacts: { blocker: 'AC-3 path missing from config' },
-      costUsd: 0,
-    });
-
-    const { artefacts, envelopeSuccess } = parseEngineerArtefacts(raw);
-
-    expect(artefacts['blocker']).toBe('AC-3 path missing from config');
-    expect(envelopeSuccess).toBe(false);
-  });
-
-  it('unwraps the assess-clarification envelope and returns inner artefacts', () => {
-    const raw = JSON.stringify({
-      success: true,
-      summary: 'Two questions posted.',
-      artefacts: { questionsRequired: true, questions: '1. Why?' },
-      costUsd: 0,
-    });
-
-    const { artefacts, envelopeSuccess } = parseEngineerArtefacts(raw);
-
-    expect(artefacts['questionsRequired']).toBe(true);
-    expect(artefacts['questions']).toBe('1. Why?');
-    expect(envelopeSuccess).toBe(true);
-  });
-
-  it('parses a valid implement-story JSON object (flat, no envelope)', () => {
-    const raw = JSON.stringify({
-      branchName: 'feature/CREW-1-foo',
-      title: 'Add foo',
-      description: '## Summary\n\nAdds foo.',
-      filesChanged: [{ path: 'src/foo.ts', status: 'created' }],
-      commits: ['a1b2c3d feat(foo): add foo'],
-    });
-
-    const { artefacts, envelopeSuccess } = parseEngineerArtefacts(raw);
-
-    expect(artefacts['branchName']).toBe('feature/CREW-1-foo');
-    expect(artefacts['title']).toBe('Add foo');
-    expect(envelopeSuccess).toBeUndefined();
-  });
-
-  it('parses a valid assess-clarification JSON object (flat, no envelope)', () => {
-    const raw = JSON.stringify({ questionsRequired: false });
-
-    const { artefacts, envelopeSuccess } = parseEngineerArtefacts(raw);
-
-    expect(artefacts['questionsRequired']).toBe(false);
-    expect(envelopeSuccess).toBeUndefined();
-  });
-
-  it('returns envelopeSuccess undefined when envelope omits success or uses a non-boolean', () => {
-    const raw = JSON.stringify({
-      summary: 'no success field',
-      artefacts: { branchName: 'feature/x' },
-    });
-
-    const { envelopeSuccess } = parseEngineerArtefacts(raw);
-
-    expect(envelopeSuccess).toBeUndefined();
-  });
-
-  it('throws on non-JSON input', () => {
-    expect(() => parseEngineerArtefacts('not json')).toThrow(/JSON parse/i);
-  });
-
-  it('throws when parsed value is not an object', () => {
-    expect(() => parseEngineerArtefacts('"just a string"')).toThrow(/not a JSON object/i);
-  });
-
-  it('throws when parsed value is an array', () => {
-    expect(() => parseEngineerArtefacts('[]')).toThrow(/not a JSON object/i);
-  });
-
-  it('throws when parsed value is null', () => {
-    expect(() => parseEngineerArtefacts('null')).toThrow(/not a JSON object/i);
   });
 });

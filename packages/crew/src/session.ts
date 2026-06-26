@@ -9,6 +9,7 @@ import {
   type SettingSource,
 } from '@anthropic-ai/claude-agent-sdk';
 import type { AgentDefinition, AgentInput } from './agent.js';
+import type { SubmitResultCapture } from './result.js';
 import {
   buildToolAllowlistGuard,
   toSDKHookCallback,
@@ -41,6 +42,11 @@ export interface SessionOptions {
    * Use this to record denials in the audit trail.
    */
   onToolDeny?: ToolDenialHandler;
+  /**
+   * In-process submit_result MCP server. When provided, the tool is added to
+   * allowedTools and wired into mcpServers for deterministic result capture.
+   */
+  resultCapture?: SubmitResultCapture;
 }
 
 /**
@@ -129,7 +135,7 @@ export async function resolveSession(
   options: SessionOptions,
   previousSessionId?: string,
 ): Promise<ActiveSession> {
-  const { resumeWithinMs, model, definition, auditHook, onToolDeny } = options;
+  const { resumeWithinMs, model, definition, auditHook, onToolDeny, resultCapture } = options;
 
   const [validSkillPaths, validSubagentPaths] = await Promise.all([
     filterExistingPaths(definition.skillPaths, 'skill'),
@@ -140,12 +146,17 @@ export async function resolveSession(
   const settingSources: SettingSource[] =
     validSkillPaths.length > 0 || validSubagentPaths.length > 0 ? ['project'] : [];
 
+  const allowedTools = resultCapture
+    ? [...definition.allowedTools, resultCapture.toolName]
+    : definition.allowedTools;
+
   const baseOptions: Options = {
     model,
-    allowedTools: definition.allowedTools,
-    canUseTool: buildToolAllowlistGuard(definition.allowedTools, onToolDeny),
+    allowedTools,
+    canUseTool: buildToolAllowlistGuard(allowedTools, onToolDeny),
     cwd,
     ...(settingSources.length > 0 ? { settingSources } : {}),
+    ...(resultCapture ? { mcpServers: resultCapture.mcpServers } : {}),
     ...(auditHook
       ? {
           hooks: {

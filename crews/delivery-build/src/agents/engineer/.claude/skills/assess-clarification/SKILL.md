@@ -53,6 +53,8 @@ as you have assessed the ticket.
 
 ## Output contract
 
+Call `submit_result` with one of these payload shapes (not JSON in your final message):
+
 When the ticket is clear:
 
 ```json

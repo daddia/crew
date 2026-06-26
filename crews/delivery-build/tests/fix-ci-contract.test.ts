@@ -6,8 +6,8 @@ import { readdir, readFile } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, it, expect } from 'vitest';
-import { readSkillsDir } from '@daddia/crew';
-import { parseEngineerArtefacts } from '../src/agents/engineer/agent.js';
+import { z } from 'zod';
+import { readSkillsDir, buildSubmitResultHandler } from '@daddia/crew';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const agentsDir = join(__dirname, '../src/agents');
@@ -26,17 +26,6 @@ const WORKFLOW_ENGINEER_TASKS = [
 
 /** Context keys workflow passes for fix-ci (see workflow.ts CI monitoring loop). */
 const WORKFLOW_FIX_CI_CONTEXT = new Set(['task', 'mrUrl', 'model']);
-
-const FIX_CI_OUTPUT_SAMPLE = JSON.stringify({
-  success: true,
-  summary: 'Fixed lint failure on MR !42.',
-  artefacts: {
-    commitsPushed: ['a1b2c3d fix(auth): satisfy eslint no-unused-vars'],
-    failureClass: 'lint',
-    filesChanged: ['src/auth.ts'],
-  },
-  costUsd: 0,
-});
 
 function parsePromptTaskTable(promptMarkdown: string): Map<string, string> {
   const tasks = new Map<string, string>();
@@ -92,10 +81,21 @@ describe('fix-ci contract (RH01-04)', () => {
       }
     }
 
-    const { artefacts, envelopeSuccess } = parseEngineerArtefacts(FIX_CI_OUTPUT_SAMPLE);
-    expect(envelopeSuccess).toBe(true);
-    expect(artefacts['commitsPushed']).toBeDefined();
-    expect(artefacts['failureClass']).toBe('lint');
+    const { handle, getSubmitted } = buildSubmitResultHandler(z.record(z.string(), z.unknown()));
+    const response = await handle({
+      success: true,
+      summary: 'Fixed lint failure on MR !42.',
+      artefacts: {
+        commitsPushed: ['a1b2c3d fix(auth): satisfy eslint no-unused-vars'],
+        failureClass: 'lint',
+        filesChanged: ['src/auth.ts'],
+      },
+    });
+    expect(response.isError).not.toBe(true);
+    const submitted = getSubmitted();
+    expect(submitted?.success).toBe(true);
+    expect(submitted?.artefacts['commitsPushed']).toBeDefined();
+    expect(submitted?.artefacts['failureClass']).toBe('lint');
   });
 
   it('Gherkin: no orphan task is dispatched for the engineer', async () => {

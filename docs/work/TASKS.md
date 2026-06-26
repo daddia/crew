@@ -280,8 +280,8 @@ and implementation of the scaffold crews' workflows beyond config hygiene.
 
 ### Strategic — Agent SDK leverage
 
-- [ ] **[RH01-11] Replace free-text JSON parsing with a structured result tool**
-  - **Status:** Not started | **Priority:** P1 | **Estimate:** 8
+- [x] **[RH01-11] Replace free-text JSON parsing with a structured result tool**
+  - **Status:** Done | **Priority:** P1 | **Estimate:** 8
   - **Epic:** RH01 | **Labels:** phase:next, area:runtime, type:feature
   - **Depends on:** RH01-06
   - **Deliverable:** Personas return their `AgentResult` artefact via a typed in-process `submit_result` tool (or SDK structured output) captured deterministically; `parseEngineerArtefacts` and `parseReviewResult` free-text parsers are removed. Closes review §3.1.

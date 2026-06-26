@@ -161,6 +161,8 @@ notes on yet.
 
 ## Output contract
 
+Call `submit_result` with one of these payload shapes (not JSON in your final message):
+
 Approving (no blockers):
 
 ```json

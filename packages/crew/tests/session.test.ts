@@ -20,6 +20,7 @@ import { query } from '@anthropic-ai/claude-agent-sdk';
 import { access } from 'node:fs/promises';
 import { resolveSession } from '../src/session.js';
 import type { SessionOptions } from '../src/session.js';
+import { SUBMIT_RESULT_TOOL_NAME } from '../src/result.js';
 
 const mockQuery = vi.mocked(query);
 const mockAccess = vi.mocked(access);
@@ -451,6 +452,19 @@ describe('resolveSession', () => {
 
       expect(result.behavior).toBe('deny');
       expect(onDeny).toHaveBeenCalledOnce();
+    });
+
+    it('wires submit_result MCP server and allowlist when resultCapture is provided', async () => {
+      const capture = {
+        toolName: SUBMIT_RESULT_TOOL_NAME,
+        mcpServers: { crew: { type: 'sdk' as const, name: 'crew' } },
+        getSubmitted: () => undefined,
+      };
+      await startSession(makeOptions({ resultCapture: capture }));
+
+      const options = mockQuery.mock.calls[0]?.[0].options as Record<string, unknown>;
+      expect(options['allowedTools']).toContain(SUBMIT_RESULT_TOOL_NAME);
+      expect(options['mcpServers']).toMatchObject(capture.mcpServers);
     });
   });
 });

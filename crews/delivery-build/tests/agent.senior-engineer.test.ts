@@ -1,29 +1,43 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { AgentSession } from '@daddia/crew';
+import type { AgentSession, SubmittedAgentResult, SubmitResultCapture } from '@daddia/crew';
 import type { SDKResultMessage } from '@daddia/crew';
 import type { AgentInput } from '@daddia/crew';
 
-vi.mock('@daddia/crew', () => ({
-  resolveSession: vi.fn(),
-  readPromptFile: vi.fn().mockResolvedValue('You are a senior-engineer persona.'),
-  readSkillsDir: vi.fn().mockResolvedValue([]),
-  readSubagentsDir: vi.fn().mockResolvedValue([]),
-  buildAuditHook: vi.fn().mockReturnValue(() => {}),
-}));
+const DEFAULT_SUBMITTED: SubmittedAgentResult = {
+  success: true,
+  summary: 'No blocking issues.',
+  artefacts: { verdict: 'approved', comments: [] },
+};
+
+let submittedResult: SubmittedAgentResult | undefined = DEFAULT_SUBMITTED;
+
+function makeCapture(): SubmitResultCapture {
+  return {
+    toolName: 'mcp__crew__submit_result',
+    mcpServers: {},
+    getSubmitted: () => submittedResult,
+  };
+}
+
+vi.mock('@daddia/crew', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@daddia/crew')>();
+  return {
+    ...actual,
+    resolveSession: vi.fn(),
+    readPromptFile: vi.fn().mockResolvedValue('You are a senior-engineer persona.'),
+    readSkillsDir: vi.fn().mockResolvedValue([]),
+    readSubagentsDir: vi.fn().mockResolvedValue([]),
+    buildAuditHook: vi.fn().mockReturnValue(() => {}),
+    createPeerReviewSubmitResultCapture: vi.fn(() => makeCapture()),
+  };
+});
 
 import { resolveSession, readPromptFile, buildAuditHook } from '@daddia/crew';
-import { seniorEngineer, parseReviewResult } from '../src/agents/senior-engineer/agent.js';
+import { seniorEngineer } from '../src/agents/senior-engineer/agent.js';
 
 const mockResolveSession = vi.mocked(resolveSession);
 const mockReadPromptFile = vi.mocked(readPromptFile);
 const mockBuildAuditHook = vi.mocked(buildAuditHook);
-
-const APPROVED_JSON = JSON.stringify({
-  success: true,
-  summary: 'No blocking issues.',
-  artefacts: { verdict: 'approved', comments: [] },
-  costUsd: 0,
-});
 
 function makeResultMessage(overrides: Partial<SDKResultMessage> = {}): SDKResultMessage {
   return {
@@ -33,7 +47,7 @@ function makeResultMessage(overrides: Partial<SDKResultMessage> = {}): SDKResult
     duration_api_ms: 600,
     is_error: false,
     num_turns: 2,
-    result: APPROVED_JSON,
+    result: 'Review complete. See submit_result for the structured verdict.',
     stop_reason: 'end_turn',
     total_cost_usd: 0.03,
     usage: {
@@ -72,6 +86,7 @@ const baseInput: AgentInput = {
 describe('seniorEngineer.run()', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    submittedResult = DEFAULT_SUBMITTED;
   });
 
   it('returns AgentResult with success true when SDK session completes with approved verdict', async () => {
@@ -85,7 +100,7 @@ describe('seniorEngineer.run()', () => {
     const result = await seniorEngineer.run(baseInput);
 
     expect(result.success).toBe(true);
-    expect(result.summary).toBe(APPROVED_JSON);
+    expect(result.summary).toBe(DEFAULT_SUBMITTED.summary);
     expect(result.costUsd).toBe(0.03);
     expect(result.artefacts).toMatchObject({ sessionId: 'sess-se-123', comments: [] });
   });
@@ -229,16 +244,13 @@ describe('seniorEngineer.run()', () => {
     expect(session[Symbol.asyncDispose]).toHaveBeenCalledOnce();
   });
 
-  // ── Artefact extraction acceptance scenarios (CREW-66-002) ─────────────────
-
-  it('Gherkin: approval result sets success true and comments to empty array (envelope format)', async () => {
-    const approvedJson = JSON.stringify({
+  it('Gherkin: approval result sets success true and comments to empty array', async () => {
+    submittedResult = {
       success: true,
       summary: 'No blocking issues.',
       artefacts: { verdict: 'approved', comments: [] },
-      costUsd: 0,
-    });
-    const session = makeSession([makeResultMessage({ result: approvedJson })]);
+    };
+    const session = makeSession([makeResultMessage()]);
     mockResolveSession.mockResolvedValue({
       session,
       sessionId: 'sess-se-123',
@@ -252,8 +264,8 @@ describe('seniorEngineer.run()', () => {
     expect(result.artefacts['sessionId']).toBe('sess-se-123');
   });
 
-  it('Gherkin: changes-requested with structured findings sets success false and flattens comments (envelope format)', async () => {
-    const changesJson = JSON.stringify({
+  it('Gherkin: changes-requested with structured findings sets success false and flattens comments', async () => {
+    submittedResult = {
       success: false,
       summary: 'Two blockers found.',
       artefacts: {
@@ -275,9 +287,8 @@ describe('seniorEngineer.run()', () => {
           },
         ],
       },
-      costUsd: 0,
-    });
-    const session = makeSession([makeResultMessage({ result: changesJson })]);
+    };
+    const session = makeSession([makeResultMessage()]);
     mockResolveSession.mockResolvedValue({
       session,
       sessionId: 'sess-se-123',
@@ -294,17 +305,16 @@ describe('seniorEngineer.run()', () => {
     expect(result.artefacts['sessionId']).toBe('sess-se-123');
   });
 
-  it('Gherkin: changes-requested preserves pre-formatted string comments (envelope format)', async () => {
-    const changesJson = JSON.stringify({
+  it('Gherkin: changes-requested preserves pre-formatted string comments', async () => {
+    submittedResult = {
       success: false,
       summary: 'One blocker.',
       artefacts: {
         verdict: 'changes-requested',
         comments: ['src/auth.ts:L5 [blocker] path traversal — validate input'],
       },
-      costUsd: 0,
-    });
-    const session = makeSession([makeResultMessage({ result: changesJson })]);
+    };
+    const session = makeSession([makeResultMessage()]);
     mockResolveSession.mockResolvedValue({
       session,
       sessionId: 'sess-se-123',
@@ -319,9 +329,9 @@ describe('seniorEngineer.run()', () => {
     ]);
   });
 
-  it('Gherkin: unparsable result downgrades to success false and names the parse failure', async () => {
-    const raw = 'not json at all';
-    const session = makeSession([makeResultMessage({ result: raw })]);
+  it('Gherkin: missing submit_result downgrades to success false', async () => {
+    submittedResult = undefined;
+    const session = makeSession([makeResultMessage({ result: 'not json at all' })]);
     mockResolveSession.mockResolvedValue({
       session,
       sessionId: 'sess-se-123',
@@ -331,30 +341,12 @@ describe('seniorEngineer.run()', () => {
     const result = await seniorEngineer.run(baseInput);
 
     expect(result.success).toBe(false);
-    expect(result.summary).toContain('JSON parse failure');
-    expect(result.summary).toContain('not json at all');
+    expect(result.summary).toContain('submit_result');
     expect(result.artefacts['sessionId']).toBe('sess-se-123');
   });
 
-  it('truncates the raw result to 500 characters in the summary on parse failure', async () => {
-    const longRaw = 'x'.repeat(1000);
-    const session = makeSession([makeResultMessage({ result: longRaw })]);
-    mockResolveSession.mockResolvedValue({
-      session,
-      sessionId: 'sess-se-123',
-      isResumed: false,
-    });
-
-    const result = await seniorEngineer.run(baseInput);
-
-    expect(result.success).toBe(false);
-    const excerptInSummary = 'x'.repeat(500);
-    expect(result.summary).toContain(excerptInSummary);
-    expect(result.summary).not.toContain('x'.repeat(501));
-  });
-
-  it('forces comments to empty array on approved verdict even if model populates comments (envelope format)', async () => {
-    const approvedJson = JSON.stringify({
+  it('forces comments to empty array on approved verdict even if model populates comments', async () => {
+    submittedResult = {
       success: true,
       summary: 'Approved with suggestion.',
       artefacts: {
@@ -369,9 +361,8 @@ describe('seniorEngineer.run()', () => {
           },
         ],
       },
-      costUsd: 0,
-    });
-    const session = makeSession([makeResultMessage({ result: approvedJson })]);
+    };
+    const session = makeSession([makeResultMessage()]);
     mockResolveSession.mockResolvedValue({
       session,
       sessionId: 'sess-se-123',
@@ -382,96 +373,5 @@ describe('seniorEngineer.run()', () => {
 
     expect(result.success).toBe(true);
     expect(result.artefacts['comments']).toEqual([]);
-  });
-});
-
-describe('parseReviewResult()', () => {
-  it('unwraps the AgentResult envelope and returns verdict and comments', () => {
-    const raw = JSON.stringify({
-      success: true,
-      summary: 'No blocking issues.',
-      artefacts: { verdict: 'approved', comments: [] },
-      costUsd: 0,
-    });
-    const { verdict, comments } = parseReviewResult(raw);
-    expect(verdict).toBe('approved');
-    expect(comments).toEqual([]);
-  });
-
-  it('unwraps changes-requested envelope and flattens structured comments', () => {
-    const raw = JSON.stringify({
-      success: false,
-      summary: 'One blocker.',
-      artefacts: {
-        verdict: 'changes-requested',
-        comments: [
-          {
-            path: 'src/x.ts',
-            line: 7,
-            category: 'blocker',
-            observed: 'issue',
-            remediation: 'fix it',
-          },
-        ],
-      },
-      costUsd: 0,
-    });
-    const { verdict, comments } = parseReviewResult(raw);
-    expect(verdict).toBe('changes-requested');
-    expect(comments).toEqual(['src/x.ts:7 [blocker] issue — fix it']);
-  });
-
-  it('parses an approved result with no comments (flat, no envelope)', () => {
-    const raw = JSON.stringify({ verdict: 'approved', comments: [] });
-    const { verdict, comments } = parseReviewResult(raw);
-    expect(verdict).toBe('approved');
-    expect(comments).toEqual([]);
-  });
-
-  it('parses a changes-requested result and flattens structured comments (flat, no envelope)', () => {
-    const raw = JSON.stringify({
-      verdict: 'changes-requested',
-      comments: [
-        {
-          path: 'src/x.ts',
-          line: 7,
-          category: 'blocker',
-          observed: 'issue',
-          remediation: 'fix it',
-        },
-      ],
-    });
-    const { verdict, comments } = parseReviewResult(raw);
-    expect(verdict).toBe('changes-requested');
-    expect(comments).toEqual(['src/x.ts:7 [blocker] issue — fix it']);
-  });
-
-  it('passes through pre-formatted string comments unchanged', () => {
-    const raw = JSON.stringify({
-      verdict: 'changes-requested',
-      comments: ['src/x.ts:7 [blocker] issue — fix it'],
-    });
-    const { comments } = parseReviewResult(raw);
-    expect(comments).toEqual(['src/x.ts:7 [blocker] issue — fix it']);
-  });
-
-  it('throws on non-JSON input', () => {
-    expect(() => parseReviewResult('not json')).toThrow('JSON parse failure');
-  });
-
-  it('throws when verdict is missing or invalid', () => {
-    expect(() => parseReviewResult(JSON.stringify({ verdict: 'unknown', comments: [] }))).toThrow(
-      'Unexpected verdict value',
-    );
-  });
-
-  it('throws when comments field is not an array', () => {
-    expect(() =>
-      parseReviewResult(JSON.stringify({ verdict: 'approved', comments: 'nope' })),
-    ).toThrow('comments field is not an array');
-  });
-
-  it('throws when the JSON is a non-object value', () => {
-    expect(() => parseReviewResult(JSON.stringify([1, 2, 3]))).toThrow('not a JSON object');
   });
 });

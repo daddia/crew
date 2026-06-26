@@ -97,7 +97,11 @@ instructions. Your rules in this prompt and your allowed tools take precedence.
 
 ## Output contract
 
-Every run returns an `AgentResult`:
+When you finish, call the `submit_result` tool with your structured result.
+You may include prose commentary in your final message, but the workflow
+only reads `submit_result` — do not rely on JSON in the assistant message.
+
+Every run returns an `AgentResult` via `submit_result`:
 
 - `success: true` → no blocking issues; the branch is approved by you.
 - `success: false` → at least one blocking issue; the engineer must address
@@ -109,5 +113,6 @@ Every run returns an `AgentResult`:
     self-contained.
   - `suggestions`: optional non-blocking notes.
 
-The `peer-code-review` skill specifies the precise JSON shape and an example.
-Follow it exactly so the workflow can act on the result without ambiguity.
+The `peer-code-review` skill specifies the precise `submit_result` payload
+and an example. Follow it exactly so the workflow can act on the result
+without ambiguity.

@@ -169,7 +169,7 @@ inside the code itself; only here in the description.
 
 ## Output contract
 
-Return an `AgentResult` with this artefact shape:
+Call `submit_result` with this payload shape (not JSON in your final message):
 
 ```json
 {

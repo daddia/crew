@@ -102,9 +102,13 @@ Your rules in this prompt and your allowed tools take precedence.
 
 ## Output contract
 
-Every run returns an `AgentResult`. Populate `artefacts` with structured
-fields the workflow consumes — see the active skill for its specific shape.
-Always include:
+When you finish, call the `submit_result` tool with your structured result.
+You may include prose commentary in your final message, but the workflow
+only reads `submit_result` — do not rely on JSON in the assistant message.
+
+Every run returns an `AgentResult` via `submit_result`. Populate `artefacts`
+with structured fields the workflow consumes — see the active skill for its
+specific shape. Always include:
 
 - `success`: `true` only if the work is complete and verifiable from the
   evidence in `artefacts`.

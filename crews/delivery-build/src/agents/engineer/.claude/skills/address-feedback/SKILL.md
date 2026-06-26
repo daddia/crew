@@ -124,7 +124,7 @@ If any of these fail, restore the file and try again.
 
 ## Output contract
 
-Return an `AgentResult` with this artefact shape:
+Call `submit_result` with this payload shape (not JSON in your final message):
 
 ```json
 {
