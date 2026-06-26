@@ -11,13 +11,7 @@ import {
 } from '../src/plugins.js';
 
 const fixturesDir = join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'engineer');
-const implementStorySkill = join(
-  fixturesDir,
-  'plugin',
-  'skills',
-  'implement-story',
-  'SKILL.md',
-);
+const implementStorySkill = join(fixturesDir, 'plugin', 'skills', 'implement-story', 'SKILL.md');
 
 describe('plugin helpers', () => {
   it('sharedPluginRef resolves the code-review bundle', async () => {

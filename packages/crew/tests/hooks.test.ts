@@ -1,5 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
-import { buildAuditHook, buildToolAllowlistGuard, boundedIterGuard, IterationCapReached } from '../src/hooks.js';
+import {
+  buildAuditHook,
+  buildToolAllowlistGuard,
+  boundedIterGuard,
+  IterationCapReached,
+} from '../src/hooks.js';
 
 describe('buildToolAllowlistGuard', () => {
   it('denies a disallowed tool before execution and records the denial', async () => {

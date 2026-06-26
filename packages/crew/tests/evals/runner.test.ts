@@ -22,7 +22,15 @@ async function toFetchRequest(req: IncomingMessage): Promise<Request> {
 }
 
 async function startFixtureServer(
-  fixtures: Record<string, () => Promise<{ success: boolean; summary: string; artefacts: Record<string, unknown>; costUsd: number }>>,
+  fixtures: Record<
+    string,
+    () => Promise<{
+      success: boolean;
+      summary: string;
+      artefacts: Record<string, unknown>;
+      costUsd: number;
+    }>
+  >,
 ): Promise<{ baseUrl: string; close: () => Promise<void> }> {
   const { createEvalFetchHandler } = await import('../../src/evals/server.js');
   const handler = createEvalFetchHandler({ fixtures });

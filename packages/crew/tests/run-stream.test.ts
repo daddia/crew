@@ -116,6 +116,8 @@ describe('formatRunProgressSse', () => {
       ts: 1000,
       step: 'implement',
     });
-    expect(frame).toBe('data: {"type":"step","issueKey":"CREW-1","seq":1,"ts":1000,"step":"implement"}\n\n');
+    expect(frame).toBe(
+      'data: {"type":"step","issueKey":"CREW-1","seq":1,"ts":1000,"step":"implement"}\n\n',
+    );
   });
 });

@@ -77,10 +77,7 @@ export function namespacedSkillName(pluginName: string, skillName: string): stri
  * Map absolute `.../skill-name/SKILL.md` paths to namespaced SDK skill names
  * using the plugin that owns each path.
  */
-export function namespacedSkillNamesFromPaths(
-  pluginName: string,
-  skillPaths: string[],
-): string[] {
+export function namespacedSkillNamesFromPaths(pluginName: string, skillPaths: string[]): string[] {
   return skillPaths.map((p) => namespacedSkillName(pluginName, basename(dirname(p))));
 }
 

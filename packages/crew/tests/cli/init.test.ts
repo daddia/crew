@@ -110,7 +110,16 @@ describe('initCrew', () => {
     ).resolves.toContain("name: 'engineer'");
     await expect(
       readFile(
-        join(result.targetDir, 'src', 'agents', 'engineer', 'plugin', 'skills', 'run-task', 'SKILL.md'),
+        join(
+          result.targetDir,
+          'src',
+          'agents',
+          'engineer',
+          'plugin',
+          'skills',
+          'run-task',
+          'SKILL.md',
+        ),
         'utf8',
       ),
     ).resolves.toContain('Run task');
@@ -188,7 +197,8 @@ describe('crew init CLI (integration)', () => {
       encoding: 'utf8',
     });
     expect(stdout).toContain('crews/it-crew');
-    await expect(readFile(join(workspace, 'crews', 'it-crew', 'src', 'workflow.ts'), 'utf8')).resolves
-      .toBeTruthy();
+    await expect(
+      readFile(join(workspace, 'crews', 'it-crew', 'src', 'workflow.ts'), 'utf8'),
+    ).resolves.toBeTruthy();
   });
 });
