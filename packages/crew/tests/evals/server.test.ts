@@ -26,6 +26,14 @@ describe('createEvalFetchHandler', () => {
     expect(body.fixtures).toEqual(expect.arrayContaining(['smoke', 'failure']));
   });
 
+  it('lists fixtures on GET /eval/ (eval mount root)', async () => {
+    const res = await handler(new Request('http://localhost/eval/'));
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { ok: boolean; fixtures: string[] };
+    expect(body.ok).toBe(true);
+    expect(body.fixtures).toEqual(expect.arrayContaining(['smoke', 'failure']));
+  });
+
   it('runs a fixture on POST /eval/session', async () => {
     const res = await handler(
       new Request('http://localhost/eval/session', {

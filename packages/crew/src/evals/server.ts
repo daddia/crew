@@ -14,10 +14,7 @@ async function handleEvalHealth(options: EvalServerOptions): Promise<Response> {
   });
 }
 
-async function handleEvalSession(
-  req: Request,
-  options: EvalServerOptions,
-): Promise<Response> {
+async function handleEvalSession(req: Request, options: EvalServerOptions): Promise<Response> {
   let body: unknown;
   try {
     body = await req.json();
@@ -60,12 +57,14 @@ function requestUrl(req: Request): URL {
  * Web-standard fetch handler for CrewBench eval routes.
  * Mount at `/eval/*` on any crew HTTP server.
  */
-export function createEvalFetchHandler(options: EvalServerOptions): (req: Request) => Promise<Response> {
+export function createEvalFetchHandler(
+  options: EvalServerOptions,
+): (req: Request) => Promise<Response> {
   return async (req: Request): Promise<Response> => {
     const url = requestUrl(req);
     const path = url.pathname.replace(/\/+$/, '') || '/';
 
-    if (path === '/eval/health' && req.method === 'GET') {
+    if ((path === '/eval' || path === '/eval/health') && req.method === 'GET') {
       return handleEvalHealth(options);
     }
 
