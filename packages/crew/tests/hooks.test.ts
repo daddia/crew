@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { buildAuditHook, buildToolAllowlistGuard } from '../src/hooks.js';
+import { buildAuditHook, buildToolAllowlistGuard, boundedIterGuard, IterationCapReached } from '../src/hooks.js';
 
 describe('buildToolAllowlistGuard', () => {
   it('denies a disallowed tool before execution and records the denial', async () => {
@@ -73,5 +73,24 @@ describe('buildAuditHook', () => {
       }),
     ).not.toThrow();
     expect(log).toHaveBeenCalledOnce();
+  });
+});
+
+describe('boundedIterGuard', () => {
+  it('allows iterations below the cap', () => {
+    const guard = boundedIterGuard(3);
+    expect(() => guard(0)).not.toThrow();
+    expect(() => guard(2)).not.toThrow();
+  });
+
+  it('throws IterationCapReached when iteration reaches the cap', () => {
+    const guard = boundedIterGuard(3);
+    expect(() => guard(3)).toThrow(IterationCapReached);
+    try {
+      guard(3);
+    } catch (err) {
+      expect(err).toBeInstanceOf(IterationCapReached);
+      expect((err as IterationCapReached).cap).toBe(3);
+    }
   });
 });

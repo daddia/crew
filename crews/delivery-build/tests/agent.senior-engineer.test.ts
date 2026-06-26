@@ -245,6 +245,47 @@ describe('seniorEngineer.run()', () => {
     expect(session[Symbol.asyncDispose]).toHaveBeenCalledOnce();
   });
 
+  it('passes maxTurns to resolveSession when configured in context', async () => {
+    const session = makeSession([makeResultMessage()]);
+    mockResolveSession.mockResolvedValue({
+      session,
+      sessionId: 'sess-se-123',
+      isResumed: false,
+    });
+
+    await seniorEngineer.run({
+      ...baseInput,
+      context: { ...baseInput.context, maxTurns: 30 },
+    });
+
+    const callOptions = mockResolveSession.mock.calls[0]?.[0];
+    expect(callOptions?.maxTurns).toBe(30);
+  });
+
+  it('Gherkin: maxTurns exhaustion surfaces bounded-operation failure', async () => {
+    const session = makeSession([
+      makeResultMessage({
+        subtype: 'error_max_turns',
+        is_error: true,
+        errors: ['Max turns reached'],
+      } as Partial<SDKResultMessage>),
+    ]);
+    mockResolveSession.mockResolvedValue({
+      session,
+      sessionId: 'sess-se-123',
+      isResumed: false,
+    });
+
+    const result = await seniorEngineer.run({
+      ...baseInput,
+      context: { ...baseInput.context, maxTurns: 5 },
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.summary).toContain('maxTurns');
+    expect(result.artefacts).toMatchObject({ boundedReason: 'max_turns' });
+  });
+
   it('disposes the session even when SDK throws', async () => {
     const session = makeSession();
     (session.send as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Unexpected failure'));

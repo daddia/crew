@@ -1,5 +1,5 @@
 import { getSessionInfo } from '@anthropic-ai/claude-agent-sdk';
-import { type AgentInput } from '@daddia/crew';
+import { boundedIterGuard, IterationCapReached, type AgentInput, type AgentResult } from '@daddia/crew';
 import { engineer } from './agents/engineer/agent.js';
 import { seniorEngineer } from './agents/senior-engineer/agent.js';
 import type { GitlabClient, PipelineStatus } from './integrations/gitlab.js';
@@ -146,21 +146,34 @@ export async function runStory(ctx: WorkflowContext): Promise<void> {
   }
 }
 
-function engineerContext(
+function personaContext(
   ctx: WorkflowContext,
   extra: Record<string, unknown>,
 ): Record<string, unknown> {
   const task = extra['task'];
   return {
-    projectDir: ctx.projectDir,
     maxTurns: ctx.behaviour.engineerMaxTurns,
-    engineerCostCapUsd: ctx.behaviour.engineerCostCapUsd,
     ...extra,
     model:
       typeof task === 'string'
         ? resolveModelForTask(ctx.behaviour.modelRouting, task)
         : ctx.behaviour.modelRouting.implementation,
   };
+}
+
+function engineerContext(
+  ctx: WorkflowContext,
+  extra: Record<string, unknown>,
+): Record<string, unknown> {
+  return personaContext(ctx, {
+    projectDir: ctx.projectDir,
+    engineerCostCapUsd: ctx.behaviour.engineerCostCapUsd,
+    ...extra,
+  });
+}
+
+function isBoundedOperationFailure(result: AgentResult): boolean {
+  return typeof result.artefacts['boundedReason'] === 'string';
 }
 
 async function runStoryInner(ctx: WorkflowContext, input: AgentInput): Promise<void> {
@@ -297,6 +310,7 @@ async function runStoryInner(ctx: WorkflowContext, input: AgentInput): Promise<v
   // ── Step 5: Peer review + address-feedback loop (MR not yet opened) ───────
   let reviewPassed = false;
   let unresolvedItems: string[] = [];
+  const feedbackGuard = boundedIterGuard(behaviour.refactorLoopCap);
 
   for (let iteration = 0; iteration < behaviour.refactorLoopCap + 1; iteration++) {
     state.upsertStory(issueKey, 'peer-code-review');
@@ -304,11 +318,7 @@ async function runStoryInner(ctx: WorkflowContext, input: AgentInput): Promise<v
 
     const reviewResult = await seniorEngineer.run({
       ...input,
-      context: {
-        task: 'peer-code-review',
-        branchName,
-        model: resolveModelForTask(behaviour.modelRouting, 'peer-code-review'),
-      },
+      context: personaContext(ctx, { task: 'peer-code-review', branchName }),
     });
 
     state.finishStep(issueKey, 'peer-code-review', {
@@ -321,10 +331,20 @@ async function runStoryInner(ctx: WorkflowContext, input: AgentInput): Promise<v
       break;
     }
 
+    if (isBoundedOperationFailure(reviewResult)) {
+      await escalateToHumanReview(jira, issueKey, reviewResult.summary, [], state);
+      return;
+    }
+
     unresolvedItems = (reviewResult.artefacts['comments'] as string[]) ?? [];
 
-    if (iteration >= behaviour.refactorLoopCap) {
-      break;
+    try {
+      feedbackGuard(iteration);
+    } catch (err) {
+      if (err instanceof IterationCapReached) {
+        break;
+      }
+      throw err;
     }
 
     state.upsertStory(issueKey, 'address-feedback');
@@ -374,8 +394,18 @@ async function runStoryInner(ctx: WorkflowContext, input: AgentInput): Promise<v
 
   // ── Step 7: CI monitoring loop ────────────────────────────────────────────
   let ciPassed = false;
+  const ciGuard = boundedIterGuard(behaviour.ciRetryCap);
 
-  for (let attempt = 0; attempt < behaviour.ciRetryCap; attempt++) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      ciGuard(attempt);
+    } catch (err) {
+      if (err instanceof IterationCapReached) {
+        break;
+      }
+      throw err;
+    }
+
     const waitResult = await waitForPipelineSettled(gitlab, mrUrl, behaviour);
 
     if (waitResult.timedOut) {

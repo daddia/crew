@@ -212,6 +212,29 @@ describe('runStory', () => {
     expect(ctxBase.jira.transitionIssue).toHaveBeenCalledWith('ENG-1', 'Needs human review');
   });
 
+  it('escalates with bounded-operation reason when peer review hits maxTurns', async () => {
+    const ctxBase = makeCtxBase();
+    mockEngineer.mockResolvedValue(successResult());
+    mockSeniorEngineer.mockResolvedValue({
+      success: false,
+      summary: 'Bounded operation: session terminated at maxTurns without completing',
+      artefacts: { boundedReason: 'max_turns' },
+      costUsd: 1.2,
+    });
+
+    const state = makeState();
+    await runStory({ issueKey: 'ENG-1', state, ...ctxBase });
+
+    expect(mockSeniorEngineer).toHaveBeenCalledTimes(1);
+    expect(mockEngineer).toHaveBeenCalledTimes(2);
+    expect(ctxBase.gitlab.createMr).not.toHaveBeenCalled();
+    expect(ctxBase.jira.commentOnIssue).toHaveBeenCalledWith(
+      'ENG-1',
+      expect.stringContaining('maxTurns'),
+    );
+    expect(ctxBase.jira.transitionIssue).toHaveBeenCalledWith('ENG-1', 'Needs human review');
+  });
+
   it('opens MR and hands off when peer review passes on second iteration', async () => {
     const ctxBase = makeCtxBase();
     let reviewCall = 0;
@@ -245,6 +268,7 @@ describe('runStory', () => {
           task: 'peer-code-review',
           branchName: 'feature/ENG-1-test',
           model: 'claude-sonnet-test',
+          maxTurns: 50,
         }),
       }),
     );

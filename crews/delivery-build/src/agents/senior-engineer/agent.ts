@@ -69,6 +69,8 @@ async function run(input: AgentInput): Promise<AgentResult> {
   const definition = await buildDefinition();
   const prompt = await readPromptFile(definition.promptPath);
   const resultCapture = createPeerReviewSubmitResultCapture();
+  const maxTurns =
+    typeof input.context['maxTurns'] === 'number' ? input.context['maxTurns'] : undefined;
 
   const auditHook = buildAuditHook(definition.allowedTools, () => {});
 
@@ -79,6 +81,7 @@ async function run(input: AgentInput): Promise<AgentResult> {
     model,
     auditHook,
     resultCapture,
+    maxTurns,
   });
 
   const taskPrompt = buildTaskPrompt({

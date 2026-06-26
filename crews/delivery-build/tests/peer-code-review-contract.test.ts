@@ -15,7 +15,7 @@ const agentsDir = join(__dirname, '../src/agents');
 const SKILL_PATH = join(CODE_REVIEW_PLUGIN_PATH, 'skills', 'code-review', 'SKILL.md');
 
 /** Context keys the workflow passes to senior-engineer for peer-code-review. */
-const WORKFLOW_PEER_REVIEW_CONTEXT = new Set(['task', 'branchName', 'model']);
+const WORKFLOW_PEER_REVIEW_CONTEXT = new Set(['task', 'branchName', 'model', 'maxTurns']);
 
 /** Tools that require an open MR and must not appear in the pre-MR allowlist. */
 const MR_ONLY_TOOLS = [
