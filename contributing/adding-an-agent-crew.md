@@ -44,18 +44,19 @@ crews/<crew>/src/
     <producer>/
       agent.ts           # exports const <producer>: Agent
       prompt.md          # role, responsibilities, constraints — no code
-      .claude/
+      plugin/
         skills/          # SKILL.md files loaded via readSkillsDir()
         agents/          # subagent .md files loaded via readSubagentsDir()
+        .claude-plugin/  # SDK plugin manifest when required
     <reviewer>/
       agent.ts
       prompt.md
-      .claude/
+      plugin/
         skills/
     <gatekeeper>/
       agent.ts
       prompt.md
-      .claude/
+      plugin/
         skills/
   workflow.ts             # the only file that knows the full sequence
   state.ts                # Phase type lists every phase in the workflow

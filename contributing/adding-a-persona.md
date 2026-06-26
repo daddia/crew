@@ -10,9 +10,10 @@ Create a new directory under the crew's `agents/` folder:
 crews/{crew}/src/agents/<name>/
   agent.ts       # exports const <name>: Agent
   prompt.md      # system prompt — no code
-  .claude/
+  plugin/
     skills/      # SKILL.md files loaded via readSkillsDir()
     agents/      # subagent .md files loaded via readSubagentsDir()
+    .claude-plugin/  # SDK plugin manifest when required
 ```
 
 `{crew}` is the target crew folder (e.g. `delivery-build`). The `delivery-build` crew is the canonical reference layout — copy a persona under [`crews/delivery-build/src/agents/`](../crews/delivery-build/src/agents/) if you need a template.

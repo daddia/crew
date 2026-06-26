@@ -13,7 +13,7 @@ export interface SdkSubagentDefinition {
   tools: string[];
 }
 
-/** Parse a `.claude/agents/*.md` subagent file with optional YAML frontmatter. */
+/** Parse a `plugin/agents/*.md` subagent file with optional YAML frontmatter. */
 export async function parseSubagentFile(filePath: string): Promise<ParsedSubagent> {
   const raw = await readFile(filePath, 'utf8');
   const frontmatterMatch = /^---\n([\s\S]*?)\n---\n([\s\S]*)$/.exec(raw);

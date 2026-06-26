@@ -83,7 +83,7 @@ MCP server definitions live in [`mcp.json`](mcp.json). The crew starts `atlassia
 
 ## Extending the crew
 
-- **Add a skill** — create `src/agents/<persona>/.claude/skills/<skill-name>/SKILL.md`. `readSkillsDir()` picks it up at agent start; no other wiring needed.
+- **Add a skill** — create `src/agents/<persona>/plugin/skills/<skill-name>/SKILL.md`. `readSkillsDir()` picks it up at agent start; no other wiring needed.
 - **Add a persona** — follow [`contributing/adding-a-persona.md`](../../contributing/adding-a-persona.md). Wire the new agent into [`src/workflow.ts`](src/workflow.ts) and add a tool-scoping assertion in `tests/agent-tool-scoping.test.ts`.
 
 ## Operating in production

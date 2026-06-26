@@ -37,8 +37,8 @@ describe('workspace helpers', () => {
   it('skillNamesFromPaths derives directory names from SKILL.md paths', () => {
     expect(
       skillNamesFromPaths([
-        '/persona/.claude/skills/implement-story/SKILL.md',
-        '/persona/.claude/skills/fix-ci/SKILL.md',
+        '/persona/plugin/skills/implement-story/SKILL.md',
+        '/persona/plugin/skills/fix-ci/SKILL.md',
       ]),
     ).toEqual(['implement-story', 'fix-ci']);
   });

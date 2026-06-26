@@ -114,8 +114,8 @@ context compaction; run-stream for operators; security model doc.
       Then docs/ contains at least AGENTS.md and adding-a-persona.md
     ```
 
-- [ ] **[RH02-04] Canonical persona layout — remove legacy skill trees**
-  - **Status:** Not started | **Priority:** P1 | **Estimate:** 5
+- [x] **[RH02-04] Canonical persona layout — remove legacy skill trees**
+  - **Status:** Done | **Priority:** P1 | **Estimate:** 5
   - **Epic:** RH02 | **Labels:** phase:next, area:delivery-build, type:refactor
   - **Depends on:** -
   - **Deliverable:** `delivery-build` personas use `plugin/` only; duplicate `.claude/skills/` trees removed; AGENTS.md and contributing guides updated.

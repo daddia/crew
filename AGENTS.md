@@ -92,9 +92,10 @@ crews/{name}/
     agents/{persona}/
       agent.ts             # exports `const {persona}: Agent`
       prompt.md            # System prompt; no code
-      .claude/
+      plugin/
         skills/            # SKILL.md files loaded via readSkillsDir()
         agents/            # Subagent .md files loaded via readSubagentsDir()
+        .claude-plugin/    # SDK plugin manifest when required
     handlers/              # One file per inbound event source
     integrations/          # Idempotent clients for external systems
   mcp.json                 # MCP server declarations
