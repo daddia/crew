@@ -32,6 +32,7 @@ Handoffs are encoded as work-source state transitions plus `ready-for-*` events.
 2. `pnpm diagnose` from the crew folder — all checks pass.
 3. Jira transitions match the crew's flow contract.
 4. Image installs `@daddia/crew` from npm (not workspace).
+5. Security checklist complete — see [`architecture/security-model.md`](../architecture/security-model.md) and the per-crew runbook (e.g. [delivery-build.md §7](delivery-build.md#7-pre-production-security-checklist)).
 
 ## Runbooks
 

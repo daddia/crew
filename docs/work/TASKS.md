@@ -230,8 +230,8 @@ context compaction; run-stream for operators; security model doc.
 
 ### Security & research (CREW-17, CREW-20)
 
-- [ ] **[RH02-11] Publish security model and pre-production checklist**
-  - **Status:** Not started | **Priority:** P1 | **Estimate:** 5
+- [x] **[RH02-11] Publish security model and pre-production checklist**
+  - **Status:** Done | **Priority:** P1 | **Estimate:** 5
   - **Epic:** RH02 | **Labels:** phase:next, area:security, type:docs
   - **Depends on:** -
   - **Deliverable:** `docs/architecture/security-model.md` (runtime vs workspace vs MCP); checklist in delivery runbook; aligns with existing webhook verification and untrusted-input delimiters.

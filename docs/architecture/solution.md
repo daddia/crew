@@ -2,10 +2,10 @@
 type: Solution Architecture
 scope: product
 stage: full
-version: '2.1'
+version: '2.2'
 owner: daddia
 status: Current
-last_updated: 2026-05-24
+last_updated: 2026-06-26
 related:
   - docs/product/strategy.md
 ---
@@ -185,6 +185,7 @@ This is an authoring constraint (`AGENTS.md`), not a runtime measurement.
 | 7   | **Local-first runtime, managed compounding.** Every crew runs end-to-end with local-only config (free tier). The managed control plane (Pro tier, planned) will layer compounding capabilities — memory, evidence ingestion, evaluation policy, model routing — server-side. Crews call out at session start and at policy points and **degrade to local** on control-plane unreachability. The contract is one-way: local works without managed; managed enhances local without owning it. | Two code paths to keep consistent; rewarded by free-tier credibility and a clear commercial moat that does not break self-host.                      | Compounding value above the model |
 | 8   | **Legible to agents.** Module boundaries, file names, and contracts are chosen so an AI agent can locate the right code on the first search and modify it without an oral handoff. Names are explicit (no clever abbreviations); side effects are local to the file that names them; cross-module coupling goes through named exports, never via global mutation.                                                      | Slightly more verbose code and more files than a human-only codebase would warrant; rewarded by Crew being extended by Crew safely.                  | Authoring constraint (see §2.1) |
 | 9   | **Agent SDK-agnostic, model-agnostic.** The `Agent` contract names sessions, tool execution, and a post-tool-use hook surface — never a specific SDK. The foundation model is selected per task by the Pro-tier router (or pinned in config); no crew imports a vendor SDK directly. Today the codebase is wired to one SDK because shipping demanded it; a second SDK is an adapter, not a refactor. | A small abstraction tax at the runtime boundary; rewarded by insulation from any single vendor's roadmap, deprecation, or pricing shift.             | Compounding value above the model |
+| 10  | **Filesystem-first authoring.** Personas, skills, subagents, and crew policy are files at predictable paths; the path is the identifier. No parallel registry. Conventions are documented in `AGENTS.md` and enforced mechanically in CI (`guard:invariants`). Runtime docs ship inside the published package so agents extending Crew read contracts locally. | Slightly more directory structure than a single config object; rewarded by inspectability, diffability, and agent legibility — the catalogue scales by adding files, not by editing a central registry. | Reproducible deployability, Authoring constraint |
 
 ## 4. Building block view
 
@@ -228,8 +229,11 @@ This is an authoring constraint (`AGENTS.md`), not a runtime measurement.
      @daddia/crew/config       loadEnv, loadYaml, Secret brand, redact
      @daddia/crew/state        StateStore interface, createSqliteStateStore
      @daddia/crew/workflow     WorkflowEngine, WorkflowPlan, FailurePolicy
+     @daddia/crew/evals        [Next] defineEval, crew eval CLI, expect matchers
+     @daddia/crew/tools        [Next] typed crew-local tools + approval metadata
      @daddia/crew/control      [Pro, planned] control-plane client + local fallback
      @daddia/crew/events       [Future] typed cross-crew event contracts
+     docs/ (bundled)           [Next] AGENTS.md excerpts + contributor guides in npm package
 
   ── Foundation (pluggable) ────────────────────────────────────────────────
      Agent SDK                 session create / resume, tool execution,
@@ -259,9 +263,10 @@ crews/{name}/
     state.ts          SQLite state store — initialises createSqliteStateStore(DB_PATH)
     poller.ts         Work-source polling (primary trigger)
     observability.ts  Structured logger + OTLP bootstrap (planned)
-    agents/{persona}/ agent.ts, prompt.md, .claude/{skills,agents}/
+    agents/{persona}/ agent.ts, prompt.md, plugin/{skills,agents}/
     handlers/         One file per inbound event source (verified, idempotent)
     integrations/     Thin idempotent clients for external systems
+    evals/            [Next] fixture-owned CrewBench evals (*.eval.ts)
   mcp.json            MCP server declarations
   Dockerfile          Two-stage build; runtime installs @daddia/crew from npm
   package.json        @daddia/crew-{name}; depends on @daddia/crew
@@ -275,8 +280,9 @@ crews/{name}/
     cli.ts            Entry point; reads context from argv / CI env vars
     config.ts         Typed schema; only file that reads process.env
     workflow.ts       Sequence; runs to completion and exits
-    agents/{persona}/ agent.ts, prompt.md, .claude/{skills,agents}/
+    agents/{persona}/ agent.ts, prompt.md, plugin/{skills,agents}/
     integrations/     Thin idempotent clients for external systems
+    evals/            [Next] fixture-owned CrewBench evals (*.eval.ts)
   mcp.json            MCP server declarations
   package.json        @daddia/crew-{name}; publishable; no Dockerfile
 ```
@@ -290,6 +296,67 @@ The dependency rule (`dependency-cruiser`): `crews/* → packages/*` only;
 `packages/*` never imports from `crews/*`; no circular deps in `packages/*`.
 This boundary is what makes lifting any crew into its own repo a mechanical
 operation.
+
+### 4.3 Filesystem authoring model
+
+Crew authors do not assemble a large configuration object. They add files under
+known paths; the runtime discovers and compiles them. This is the authoring
+interface for both humans and AI agents extending the platform.
+
+**Canonical persona tree** (server- and CLI-shaped):
+
+```text
+agents/{persona}/
+  agent.ts              exports const {persona}: Agent
+  prompt.md             always-on system prompt (instructions)
+  plugin/
+    skills/             SKILL.md procedures (load on demand — Next)
+    agents/             subagent .md definitions
+    .claude-plugin/     SDK plugin manifest when required
+```
+
+Path-derived identity: `plugin/skills/implement-story/SKILL.md` is the
+`implement-story` skill. Shared skills graduate to `@daddia/crew/plugins/`
+and are referenced by name — never copied across crews.
+
+**Crew-level slots** (add only when needed):
+
+| Path | Purpose |
+|------|---------|
+| `workflow.ts` | Only file that knows the delivery sequence |
+| `handlers/` | Inbound event sources (today); generalises to channels (Later) |
+| `integrations/` | Idempotent clients for systems of record |
+| `schedules/` | Cron-authored batch triggers (Later) |
+| `evals/` | CrewBench eval files + `evals.config.ts` (Next) |
+| `mcp.json` | MCP server declarations |
+
+**Scaffolding.** `crew init` (Next) creates this tree from a template, pins
+`@daddia/crew`, and includes a smoke eval stub. Manual `cp -r` is deprecated
+once init ships.
+
+**Convention enforcement.** `guard:invariants` (Next) complements ESLint and
+dependency-cruiser: crash-recovery ordering before `agent.run()`, no
+`process.env` outside `config.ts`, no crew→crew imports, no duplicate skill
+trees. Prose in `AGENTS.md` teaches; the guard enforces.
+
+**Bundled documentation.** The published `@daddia/crew` package includes a
+`docs/` subtree so coding agents read runtime contracts from
+`node_modules/@daddia/crew/docs` without network access.
+
+### 4.4 Durability layers
+
+Two durability scopes coexist by design:
+
+| Layer | Scope | Mechanism today | Planned enhancement |
+|-------|-------|-----------------|---------------------|
+| **Workflow** | Story / step across personas | Per-crew SQLite (`stories`, `steps`); startup recovery scan | Unchanged — domain-specific |
+| **Session** | Single persona run | SDK session resume (`resumeWithinMs`); `maxTurns` / cost cap | Context compaction (Next) |
+| **Turn** | In-run tool checkpoints | Not yet — mid-implementation crash may replay tool work | Step checkpointing research (Future) |
+| **Pipeline** | Cross-crew handoffs | Jira state + `ready-for-*` events; poll fallback | Orchestrator suspend/resume (Future) |
+
+Story-level recovery is necessary for unattended crews. Turn-level checkpointing
+inside long `implement-story` runs is a Future-phase research item (CREW-20) —
+evaluated before the cross-crew orchestrator depends on it.
 
 ## 5. Runtime view
 
@@ -430,7 +497,11 @@ direct database coupling.
 | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Audit trail**                             | `buildAuditHook()` attached to every persona run; every tool call logged with cost and verdict. The audit trail is the product. Storage per topology — see §6.1.                                                                      |
 | **Bounded operation**                       | `boundedIterGuard()` wraps every refactor / CI-fix / remediation loop; throws `IterationCapReached` on cap.                                                                                                                           |
-| **Tool safety**                             | Two-layer allowlist: SDK `allowedTools` + `buildAuditHook` belt-and-suspenders.                                                                                                                                                       |
+| **Tool safety**                             | Two-layer allowlist: SDK `allowedTools` + `buildToolAllowlistGuard` at pre-execution; `buildAuditHook` for post-execution audit. Per-tool approval metadata for destructive operations (Next). Typed crew-local tools via `@daddia/crew/tools` (Next). |
+| **Context control**                         | Always-on `prompt.md`; skills loaded progressively by description (Next); context compaction before window overflow on long runs (Next). Untrusted author text fenced before inclusion in prompts. |
+| **Eval quality (CrewBench)**                | Fixture-owned `evals/*.eval.ts` per crew; `crew eval` drives real sessions; gate vs soft assertions; CI `--strict` (Next). Same surface production uses — a passing eval means the crew booted and met contract. |
+| **Security model**                          | Trust boundaries documented in [`security-model.md`](security-model.md): runtime (secrets, MCP) vs workspace (cloned repo) vs model-visible prompt data. Webhook signature verification; fail-closed defaults. Pre-production checklist in [`delivery-build` runbook](../runbook/delivery-build.md) §7. |
+| **Operator visibility**                     | Structured logs and OTel today; run-stream or equivalent live progress for overnight batches (Next); subagent runs correlated to parent story in audit. |
 | **Idempotency**                             | Server crews: external writes key on `issueKey` or `(provider, event_id)`; `webhook_events` dedup. CLI crews: the system of record is the dedup store — check before write, keyed on the natural identity of the run (e.g. MR + SHA). |
 | **Configuration**                           | One typed `Config` per crew; `process.env` only inside `config.ts` (lint-enforced); secrets branded and redacted from logs.                                                                                                           |
 | **Webhook security** _(server-shaped only)_ | `verifySignature()` + `checkReplayWindow()` + dedup store, all from `@daddia/crew/webhooks`, before body parse. CLI crews have no inbound surface.                                                                                    |
@@ -506,6 +577,8 @@ is itself a graduation candidate (see §11).
 | ADR-010 | Authoring constraint: code, contracts, and conventions optimised for AI-agent reasoning (legibility-to-agents) alongside human readability                    | _(Not yet written)_ |
 | ADR-011 | Evidence envelope is uniform across topologies and tiers; storage and consumer vary, schema does not                                                          | _(Not yet written)_ |
 | ADR-012 | Agent SDK is pluggable behind the `Agent` contract; foundation model is selected by Pro-tier routing; no crew imports a vendor SDK directly                   | _(Not yet written)_ |
+| ADR-013 | Filesystem-first authoring: path-derived identity, no parallel registry; conventions enforced mechanically in CI                                                | _(Not yet written)_ |
+| ADR-014 | CrewBench evals exercise the production session surface; prompt/harness changes require eval gate before unattended deploy                                      | _(Not yet written)_ |
 
 ## 10. Risks, technical debt, and open questions
 
@@ -566,6 +639,13 @@ is itself a graduation candidate (see §11).
    per-licence, or per-vertical? Affects evidence-layer schema and
    retrieval semantics. Owner: daddia. Blocks: cross-vertical learning
    experiments (Later phase).
+7. **What durability engine backs turn-level checkpointing?** Candidates:
+   workflow-style step stores, SDK-native resume extensions, or a thin
+   Crew-owned checkpoint log. Owner: daddia. Blocks: CREW-20 research
+   and Future orchestrator design.
+8. **When does execution isolation graduate from host workspace to sandbox?**
+   Trigger: first catalogue crew operating on untrusted forks or user code.
+   Owner: daddia. Blocks: CREW-19.
 
 ## 11. Graduation candidates
 
@@ -593,3 +673,9 @@ Nothing graduates speculatively. Each row lifts only when the trigger fires.
 | Control-plane fallback     | Inlined within `@daddia/crew/control` (per-feature switch)                   | Documented degradation matrix in `docs/runbook/`    | Second Pro-tier feature ships and the matrix of "what works without managed?" stops fitting in a single inline comment.                            |
 | Evidence schema            | Inlined in `@daddia/crew` step records (server) and CLI audit envelope (§6.1) | `@daddia/crew/evidence` (typed envelope + emitter)  | Second consumer of the evidence stream lands (e.g. a dashboard or external benchmark ingester).                                                    |
 | Multi-model evaluation     | Persona-level self-eval inside each crew                                     | `@daddia/crew/evaluation` (rubrics + divergence)    | Pro-tier multi-model evaluation needs to apply to a second persona or crew.                                                                        |
+| CrewBench eval framework   | Vitest unit tests only                                                       | `@daddia/crew/evals` + `crew eval` CLI               | CREW-15 ships; second crew needs regression gate before unattended prompt changes.                                                                 |
+| `crew init` scaffold       | Manual `cp -r crews/delivery-build`                                          | `@daddia/crew` CLI or `create-crew` package          | Third crew scaffolds; copy-paste drift observed.                                                                                                     |
+| Invariant guard            | ESLint + dependency-cruiser only                                             | `guard:invariants` in root CI                        | CREW-14; second convention violation merges without mechanical catch.                                                                              |
+| Channel adapter            | Per-handler Hono routes in `handlers/`                                        | `@daddia/crew/channels` (defineChannel)              | Second ingress surface (Slack or generic HTTP) duplicates handler boilerplate.                                                                     |
+| Schedule authoring         | `poller.ts` only                                                             | `schedules/` convention + host cron compile          | First scheduled-batch crew (Later).                                                                                                                |
+| Execution isolation        | Host workspace + workspace-lock                                                | `@daddia/crew/sandbox` adapter                       | Catalogue crew needs untrusted code execution (Later).                                                                                             |

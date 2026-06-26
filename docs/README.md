@@ -17,6 +17,7 @@ The hierarchy of reference, in order: **Product strategy → Solution architectu
 | Area | Path | Supports |
 |------|------|----------|
 | Guiding principles | [`architecture/principles.md`](architecture/principles.md) | Design and operational constraints |
+| Security model | [`architecture/security-model.md`](architecture/security-model.md) | Runtime vs workspace vs MCP trust boundaries |
 | Architectural decisions | [`architecture/decisions/`](architecture/decisions/) | The record of consequential decisions |
 | Delivery approach | [`design/delivery/approach.md`](design/delivery/approach.md) | How artefact-led delivery maps to crews |
 | Crew flow contracts | [`design/crew-flows/`](design/crew-flows/) | Per-crew sequences (forward-looking specs) |
