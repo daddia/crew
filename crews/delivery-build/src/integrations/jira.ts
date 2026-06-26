@@ -67,10 +67,10 @@ export class JiraApiError extends Error {
  * All requests use the base URL and auth token supplied at construction time.
  */
 export function createJiraClient(
-  identity: { baseUrl: string; email: string },
+  identity: { baseUrl: string; email: string; acceptanceCriteriaFieldId: string },
   secrets: { atlassianApiToken: string },
 ): JiraClient {
-  const { baseUrl, email } = identity;
+  const { baseUrl, email, acceptanceCriteriaFieldId } = identity;
   const authHeader =
     'Basic ' + Buffer.from(`${email}:${secrets.atlassianApiToken}`).toString('base64');
 
@@ -147,9 +147,10 @@ export function createJiraClient(
     },
 
     async getIssue(issueKey) {
-      const res = await jiraFetch(`/issue/${issueKey}?fields=summary,description,parent`);
+      const fields = `summary,description,parent,${acceptanceCriteriaFieldId}`;
+      const res = await jiraFetch(`/issue/${issueKey}?fields=${encodeURIComponent(fields)}`);
       const data = (await res.json()) as {
-        fields: {
+        fields: Record<string, unknown> & {
           summary: string;
           description: unknown;
           parent?: { key: string };
@@ -158,9 +159,7 @@ export function createJiraClient(
       return {
         summary: data.fields.summary,
         description: extractAdfText(data.fields.description),
-        // Populated once we know the custom-field ID for acceptance criteria in
-        // the target Jira project (typically customfield_1XXXX). Null until then.
-        acceptanceCriteria: null,
+        acceptanceCriteria: extractAdfText(data.fields[acceptanceCriteriaFieldId]),
         parentKey: data.fields.parent?.key,
       };
     },

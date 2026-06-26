@@ -17,6 +17,10 @@ export const ConfigSchema = z.object({
        * is more reliable when email may vary between Jira contexts.
        */
       botAccountId: z.string().optional(),
+      /** Jira custom-field ID for acceptance criteria (e.g. customfield_10042). */
+      acceptanceCriteriaFieldId: z
+        .string()
+        .regex(/^customfield_\d+$/, 'must be a Jira custom-field ID (customfield_NNNNN)'),
     }),
     gitlab: z.object({
       apiUrl: z.string().url(),
@@ -69,6 +73,7 @@ const ENV_MAPPING: EnvMapping = {
   'identity.jira.projectKey': 'JIRA_PROJECT_KEY',
   'identity.jira.assigneeAccountId': 'JIRA_ASSIGNEE_ACCOUNT_ID',
   'identity.jira.botAccountId': 'ATLASSIAN_ACCOUNT_ID',
+  'identity.jira.acceptanceCriteriaFieldId': 'JIRA_ACCEPTANCE_CRITERIA_FIELD_ID',
   'identity.gitlab.apiUrl': 'GITLAB_API_URL',
   'identity.gitlab.projectId': 'GITLAB_PROJECT_ID',
   'behaviour.pollIntervalMs': 'POLL_INTERVAL_MS',

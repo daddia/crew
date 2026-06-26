@@ -15,6 +15,7 @@ const VALID_ENV: NodeJS.ProcessEnv = {
   ATLASSIAN_EMAIL: 'bot@example.com',
   JIRA_PROJECT_KEY: 'TEST',
   JIRA_ASSIGNEE_ACCOUNT_ID: 'acct-123',
+  JIRA_ACCEPTANCE_CRITERIA_FIELD_ID: 'customfield_10042',
   GITLAB_API_URL: 'https://gitlab.test/api/v4',
   GITLAB_PROJECT_ID: 'org/repo',
   DB_PATH: '/data/crew.db',

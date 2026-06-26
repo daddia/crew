@@ -15,6 +15,7 @@ const FIXTURE_CONFIG = loadConfig({
   ATLASSIAN_EMAIL: 'bot@test.example.com',
   JIRA_PROJECT_KEY: 'CREW',
   JIRA_ASSIGNEE_ACCOUNT_ID: 'account-123',
+  JIRA_ACCEPTANCE_CRITERIA_FIELD_ID: 'customfield_10042',
   GITLAB_API_URL: 'https://gitlab.test/api/v4',
   GITLAB_PROJECT_ID: 'org/repo',
   DB_PATH: '/data/crew.db',

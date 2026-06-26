@@ -388,8 +388,8 @@ and implementation of the scaffold crews' workflows beyond config hygiene.
 
 ### Cleanup
 
-- [ ] **[RH01-16] Scaffold and integration config hygiene**
-  - **Status:** Not started | **Priority:** P2 | **Estimate:** 3
+- [x] **[RH01-16] Scaffold and integration config hygiene**
+  - **Status:** Done | **Priority:** P2 | **Estimate:** 3
   - **Epic:** RH01 | **Labels:** phase:next, area:runtime, type:fix
   - **Depends on:** -
   - **Deliverable:** `delivery-final-review` reads env only via a `config.ts` (no direct `process.env`); the Jira `acceptanceCriteria` custom-field ID is configured so the engineer receives structured AC instead of `null`. Closes the smaller items in review §2.

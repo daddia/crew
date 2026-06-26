@@ -16,8 +16,10 @@ const BASE_URL = 'https://test.atlassian.net';
 const fetchMock = vi.fn();
 vi.stubGlobal('fetch', fetchMock);
 
+const AC_FIELD_ID = 'customfield_10042';
+
 const client = createJiraClient(
-  { baseUrl: BASE_URL, email: 'bot@example.com' },
+  { baseUrl: BASE_URL, email: 'bot@example.com', acceptanceCriteriaFieldId: AC_FIELD_ID },
   { atlassianApiToken: 'token' },
 );
 
@@ -102,6 +104,36 @@ describe('getIssue', () => {
     expect(issue.summary).toBe('Build the feature');
     expect(issue.description).toBe('Do this work.');
     expect(issue.acceptanceCriteria).toBeNull();
+    const [url] = fetchMock.mock.calls[0] as [string];
+    expect(url).toContain(encodeURIComponent(AC_FIELD_ID));
+  });
+
+  it('populates acceptanceCriteria from the configured custom field', async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          fields: {
+            summary: 'Build the feature',
+            description: null,
+            [AC_FIELD_ID]: {
+              type: 'doc',
+              version: 1,
+              content: [
+                {
+                  type: 'paragraph',
+                  content: [{ type: 'text', text: 'Given a user, when they click, then it works.' }],
+                },
+              ],
+            },
+          },
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      ),
+    );
+
+    const issue = await client.getIssue('ENG-1');
+
+    expect(issue.acceptanceCriteria).toBe('Given a user, when they click, then it works.');
   });
 
   it('returns null description when the ADF field is absent', async () => {
@@ -387,7 +419,11 @@ describe('createJiraClient — uses the supplied base URL', () => {
   it('targets the provided base URL, not any environment variable', async () => {
     fetchMock.mockReset();
     const customClient = createJiraClient(
-      { baseUrl: 'https://custom.atlassian.net', email: 'user@example.com' },
+      {
+        baseUrl: 'https://custom.atlassian.net',
+        email: 'user@example.com',
+        acceptanceCriteriaFieldId: AC_FIELD_ID,
+      },
       { atlassianApiToken: 'custom-token' },
     );
     fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ issues: [] }), { status: 200 }));

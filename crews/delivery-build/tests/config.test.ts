@@ -8,6 +8,7 @@ const REQUIRED_ENV: NodeJS.ProcessEnv = {
   ATLASSIAN_EMAIL: 'bot@acme.example.com',
   JIRA_PROJECT_KEY: 'ACME',
   JIRA_ASSIGNEE_ACCOUNT_ID: '5b10ac8d82e05b22cc7d4ef5',
+  JIRA_ACCEPTANCE_CRITERIA_FIELD_ID: 'customfield_10042',
   GITLAB_API_URL: 'https://gitlab.com/api/v4',
   GITLAB_PROJECT_ID: '12345678',
   DB_PATH: '/data/delivery-build.db',
@@ -27,6 +28,7 @@ describe('loadConfig – valid config', () => {
     expect(config.identity.jira.email).toBe('bot@acme.example.com');
     expect(config.identity.jira.projectKey).toBe('ACME');
     expect(config.identity.jira.assigneeAccountId).toBe('5b10ac8d82e05b22cc7d4ef5');
+    expect(config.identity.jira.acceptanceCriteriaFieldId).toBe('customfield_10042');
     expect(config.identity.gitlab.apiUrl).toBe('https://gitlab.com/api/v4');
     expect(config.identity.gitlab.projectId).toBe('12345678');
     expect(config.infrastructure.dbPath).toBe('/data/delivery-build.db');
