@@ -28,7 +28,10 @@ async function runGit(cwd: string, args: string[]): Promise<string> {
  * offline discovery. Prefer passing absolute `plugins` paths in session
  * options when the SDK host can read the persona bundle directly.
  */
-export async function syncPersonaClaudeAssets(personaDir: string, projectDir: string): Promise<void> {
+export async function syncPersonaClaudeAssets(
+  personaDir: string,
+  projectDir: string,
+): Promise<void> {
   const srcPlugin = join(personaDir, PERSONA_PLUGIN_DIR);
   const dstPlugin = join(projectDir, '.claude', PERSONA_PLUGIN_DIR);
 

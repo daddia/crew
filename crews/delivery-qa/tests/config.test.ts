@@ -52,12 +52,14 @@ describe('loadConfig – behaviour defaults', () => {
 
 describe('loadConfig – validation errors', () => {
   it('throws SchemaValidationError when PORT is not a positive integer', () => {
-    expect(() => loadConfig({ ...REQUIRED_ENV, PORT: 'not-a-port' })).toThrow(SchemaValidationError);
+    expect(() => loadConfig({ ...REQUIRED_ENV, PORT: 'not-a-port' })).toThrow(
+      SchemaValidationError,
+    );
   });
 
   it('throws SchemaValidationError when JIRA_WEBHOOK_SECRET is too short', () => {
-    expect(() =>
-      loadConfig({ ...REQUIRED_ENV, JIRA_WEBHOOK_SECRET: 'tooshort' }),
-    ).toThrow(SchemaValidationError);
+    expect(() => loadConfig({ ...REQUIRED_ENV, JIRA_WEBHOOK_SECRET: 'tooshort' })).toThrow(
+      SchemaValidationError,
+    );
   });
 });

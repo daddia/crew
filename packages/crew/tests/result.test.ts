@@ -63,8 +63,7 @@ describe('submit_result capture (RH01-11)', () => {
       sessionId: 'sess-1',
       capture,
       resultMsg: makeSuccessResultMessage('Here is some commentary before the result.'),
-      buildResult: (submitted, costUsd) =>
-        buildEngineerAgentResult('sess-1', submitted, costUsd),
+      buildResult: (submitted, costUsd) => buildEngineerAgentResult('sess-1', submitted, costUsd),
     });
 
     expect(agentResult.success).toBe(true);
@@ -97,8 +96,7 @@ describe('submit_result capture (RH01-11)', () => {
       sessionId: 'sess-1',
       capture,
       resultMsg: makeSuccessResultMessage('{"success":true}'),
-      buildResult: (submitted, costUsd) =>
-        buildEngineerAgentResult('sess-1', submitted, costUsd),
+      buildResult: (submitted, costUsd) => buildEngineerAgentResult('sess-1', submitted, costUsd),
     });
 
     expect(agentResult.success).toBe(false);
@@ -123,8 +121,7 @@ describe('submit_result capture (RH01-11)', () => {
       sessionId: 'sess-1',
       capture,
       resultMsg,
-      buildResult: (submitted, costUsd) =>
-        buildEngineerAgentResult('sess-1', submitted, costUsd),
+      buildResult: (submitted, costUsd) => buildEngineerAgentResult('sess-1', submitted, costUsd),
     });
 
     expect(agentResult.success).toBe(false);

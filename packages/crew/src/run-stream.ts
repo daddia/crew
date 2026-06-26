@@ -1,4 +1,10 @@
-import { buildAuditHook, type PostToolUseHandler, type SubagentAuditEvent, type SubagentAuditHandler, type ToolUseEvent } from './hooks.js';
+import {
+  buildAuditHook,
+  type PostToolUseHandler,
+  type SubagentAuditEvent,
+  type SubagentAuditHandler,
+  type ToolUseEvent,
+} from './hooks.js';
 
 /** Shared fields on every run-progress event emitted to operator subscribers. */
 export interface RunProgressEnvelope {

@@ -52,9 +52,7 @@ function engineerForMode(
  * Drive context-seed → assess-clarification → implement for a fixture story.
  * Workflow Jira/GitLab are mocked from fixtures/{issueKey}/; no live board credentials.
  */
-export async function runFixtureStory(
-  options: RunFixtureStoryOptions,
-): Promise<StoryDriverResult> {
+export async function runFixtureStory(options: RunFixtureStoryOptions): Promise<StoryDriverResult> {
   const crewRoot = options.crewRoot ?? resolveCrewRoot();
   const mode = resolveMode(options.mode, process.env);
   const fixture = await loadStoryFixture(crewRoot, options.issueKey);

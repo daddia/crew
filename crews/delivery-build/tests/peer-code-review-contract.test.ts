@@ -72,9 +72,7 @@ describe('peer-code-review contract (RH01-03)', () => {
 
     expect(skillMarkdown).not.toMatch(/`mrUrl`/);
     expect(skillMarkdown).not.toMatch(/context\.diff/);
-    expect(skillMarkdown).not.toMatch(
-      /Call `mcp__gitlab__list_merge_request_diffs`/,
-    );
+    expect(skillMarkdown).not.toMatch(/Call `mcp__gitlab__list_merge_request_diffs`/);
     expect(skillMarkdown).not.toMatch(/Post a single summary note via `mcp__gitlab__create_note`/);
     expect(skillMarkdown).toContain('`branchName`');
     expect(skillMarkdown).toContain('mcp__gitlab__get_branch_diffs');

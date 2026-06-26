@@ -50,7 +50,9 @@ function makeRecordingJira(): RecordingJira {
   };
 }
 
-function makeRecordingGitlab(mrUrl = 'https://gitlab.example.com/mr/eval-qa-handoff'): GitlabClient {
+function makeRecordingGitlab(
+  mrUrl = 'https://gitlab.example.com/mr/eval-qa-handoff',
+): GitlabClient {
   return {
     getPipelineStatus: async () => 'success',
     getMrSourceBranch: async () => 'feature/EVAL-FIXTURE-test',

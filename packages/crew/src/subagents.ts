@@ -29,8 +29,7 @@ export async function parseSubagentFile(filePath: string): Promise<ParsedSubagen
   const frontmatter = frontmatterMatch[1] ?? '';
   const body = (frontmatterMatch[2] ?? '').trim();
   const name = /^name:\s*(.+)$/m.exec(frontmatter)?.[1]?.trim() ?? basename(filePath, '.md');
-  const description =
-    /^description:\s*(.+)$/m.exec(frontmatter)?.[1]?.trim() ?? `Subagent ${name}`;
+  const description = /^description:\s*(.+)$/m.exec(frontmatter)?.[1]?.trim() ?? `Subagent ${name}`;
 
   return { name, description, prompt: body };
 }

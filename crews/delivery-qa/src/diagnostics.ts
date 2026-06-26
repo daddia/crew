@@ -217,9 +217,13 @@ async function defaultCheckTestCommand(
   }
 
   return new Promise((resolve) => {
-    const child = spawn('bash', ['-lc', `cd ${JSON.stringify(qaWorkspaceDir)} && command -v ${JSON.stringify(firstToken)}`], {
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
+    const child = spawn(
+      'bash',
+      ['-lc', `cd ${JSON.stringify(qaWorkspaceDir)} && command -v ${JSON.stringify(firstToken)}`],
+      {
+        stdio: ['ignore', 'pipe', 'pipe'],
+      },
+    );
 
     let stdout = '';
     child.stdout.on('data', (chunk: Buffer) => {

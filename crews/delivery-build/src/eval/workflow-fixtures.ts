@@ -1,7 +1,12 @@
 import { mkdtemp, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { buildToolAllowlistGuard, type Agent, type AgentInput, type AgentResult } from '@daddia/crew';
+import {
+  buildToolAllowlistGuard,
+  type Agent,
+  type AgentInput,
+  type AgentResult,
+} from '@daddia/crew';
 import type { EvalSessionResult } from '@daddia/crew/evals';
 import { runStory, type WorkflowCtxBase } from '../workflow.js';
 import { createStateStore } from '../state.js';
@@ -163,10 +168,7 @@ async function withWorkflowFixture(
   };
 
   try {
-    await runStory(
-      { issueKey: FIXTURE_ISSUE_KEY, state, ...ctxBase },
-      { agents: options.agents },
-    );
+    await runStory({ issueKey: FIXTURE_ISSUE_KEY, state, ...ctxBase }, { agents: options.agents });
     return await run({ jira, mrUrl, refactorLoopCap, mrCreated });
   } finally {
     state.close();
@@ -219,10 +221,14 @@ export async function runToolAllowlistDenialFixture(): Promise<EvalSessionResult
     denial = { tool: event.tool, reason: event.reason };
   });
 
-  const result = await guard(DENIED_MERGE_TOOL, { project_id: 'eval-fixture' }, {
-    signal: new AbortController().signal,
-    toolUseID: 'toolu_eval_fixture',
-  });
+  const result = await guard(
+    DENIED_MERGE_TOOL,
+    { project_id: 'eval-fixture' },
+    {
+      signal: new AbortController().signal,
+      toolUseID: 'toolu_eval_fixture',
+    },
+  );
 
   const denied = result.behavior === 'deny';
 

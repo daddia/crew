@@ -121,7 +121,9 @@ describe('getIssue', () => {
               content: [
                 {
                   type: 'paragraph',
-                  content: [{ type: 'text', text: 'Given a user, when they click, then it works.' }],
+                  content: [
+                    { type: 'text', text: 'Given a user, when they click, then it works.' },
+                  ],
                 },
               ],
             },

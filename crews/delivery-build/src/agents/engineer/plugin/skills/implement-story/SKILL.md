@@ -199,12 +199,8 @@ Call `submit_result` with this payload shape (not JSON in your final message):
     "title": "Add login endpoint with bcrypt password check",
     "description": "## Summary\n\n...",
     "verificationSummary": "All verification passed (typecheck, test, lint).",
-    "filesChanged": [
-      { "path": "src/routes/auth.ts", "status": "created" }
-    ],
-    "commits": [
-      "a1b2c3d feat(auth): add login route with bcrypt verification"
-    ]
+    "filesChanged": [{ "path": "src/routes/auth.ts", "status": "created" }],
+    "commits": ["a1b2c3d feat(auth): add login route with bcrypt verification"]
   },
   "costUsd": 0
 }

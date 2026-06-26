@@ -17,9 +17,9 @@ Steps to build, run, and verify the `delivery-build` container image locally. Th
 
 ## Prerequisites
 
-| Requirement | Notes |
-|-------------|-------|
-| Docker ≥ 25 | `docker version` to confirm |
+| Requirement | Notes                                                                                      |
+| ----------- | ------------------------------------------------------------------------------------------ |
+| Docker ≥ 25 | `docker version` to confirm                                                                |
 | `.env` file | Copy `crews/delivery-build/.env.example` to `crews/delivery-build/.env` and fill in values |
 
 `@daddia/crew` is a **public** npm package. No npm token is needed to install it; the Docker build resolves it via the public registry.
@@ -46,10 +46,10 @@ docker build -f crews/delivery-build/Dockerfile -t crew-delivery-build:local .
 
 The build runs in two stages:
 
-| Stage | What happens |
-|-------|--------------|
-| `base` | pnpm installs `@daddia/crew` from npm (no workspace source needed); TypeScript compiles `@daddia/crew-delivery-build` |
-| `runtime` | `pnpm deploy` bundles production deps into `/deploy`; slim `node:24-slim` image runs `node dist/index.js` |
+| Stage     | What happens                                                                                                          |
+| --------- | --------------------------------------------------------------------------------------------------------------------- |
+| `base`    | pnpm installs `@daddia/crew` from npm (no workspace source needed); TypeScript compiles `@daddia/crew-delivery-build` |
+| `runtime` | `pnpm deploy` bundles production deps into `/deploy`; slim `node:24-slim` image runs `node dist/index.js`             |
 
 Expected final output:
 
@@ -120,12 +120,12 @@ Expected output contains the version and an npm registry URL, e.g.:
 
 ## Build args reference
 
-| Variable | Where set | Purpose |
-|----------|-----------|---------|
-| _(none required)_ | — | `@daddia/crew` is public; no auth needed to install |
-| `ANTHROPIC_API_KEY` | `.env` / runtime env | Agent model calls |
-| `JIRA_WEBHOOK_SECRET` | `.env` / runtime env | Jira webhook HMAC verification |
-| `GITLAB_WEBHOOK_SECRET` | `.env` / runtime env | GitLab webhook token verification |
-| `DB_PATH` | `.env` / runtime env | SQLite file path (default `/data/delivery-build.db`) |
+| Variable                | Where set            | Purpose                                              |
+| ----------------------- | -------------------- | ---------------------------------------------------- |
+| _(none required)_       | —                    | `@daddia/crew` is public; no auth needed to install  |
+| `ANTHROPIC_API_KEY`     | `.env` / runtime env | Agent model calls                                    |
+| `JIRA_WEBHOOK_SECRET`   | `.env` / runtime env | Jira webhook HMAC verification                       |
+| `GITLAB_WEBHOOK_SECRET` | `.env` / runtime env | GitLab webhook token verification                    |
+| `DB_PATH`               | `.env` / runtime env | SQLite file path (default `/data/delivery-build.db`) |
 
 No secrets are needed at image build time. All credentials are injected at `docker run` or `docker compose up` via the env file. The full env-var reference (required vs optional and accepted values) lives in [`crews/delivery-build/README.md`](../../crews/delivery-build/README.md).

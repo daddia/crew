@@ -59,56 +59,56 @@ Phase-gated deferrals live in [`roadmap.md`](roadmap.md) §6 (Deferred beyond th
 
 ## 2. Conventions
 
-| Convention | Value |
-| ---------- | ----- |
-| Epic ID | `CREW-{nn}` (e.g. `CREW-01`) — zero-padded two digits |
+| Convention     | Value                                                                                   |
+| -------------- | --------------------------------------------------------------------------------------- |
+| Epic ID        | `CREW-{nn}` (e.g. `CREW-01`) — zero-padded two digits                                   |
 | Epic work path | `docs/work/{nn}-{slug}/` — epic number prefix + kebab-case slug (max two words in slug) |
-| Task ID | `CREW-{nn}-{nn}` in `docs/work/{nn}-{slug}/tasks.md` |
-| Status | Not started · In progress · In review · Done · Blocked |
-| Priority | P0 (must) · P1 (should) · P2 (stretch) · P3 (defer) |
-| Estimation | Fibonacci story points (1, 2, 3, 5, 8, 13) |
+| Task ID        | `CREW-{nn}-{nn}` in `docs/work/{nn}-{slug}/tasks.md`                                    |
+| Status         | Not started · In progress · In review · Done · Blocked                                  |
+| Priority       | P0 (must) · P1 (should) · P2 (stretch) · P3 (defer)                                     |
+| Estimation     | Fibonacci story points (1, 2, 3, 5, 8, 13)                                              |
 
 ## 3. Epic breakdown
 
 ### Now phase
 
-| Epic ID | Title | Phase | Priority | Deps | Points | Work path | Status |
-| ------- | ----- | ----- | -------- | ---- | ------ | --------- | ------ |
-| CREW-01 | Shared runtime (`@daddia/crew`) | Now | P0 | — | 40 | `docs/work/01-shared-runtime/` | Done |
-| CREW-02 | `delivery-build` crew | Now | P0 | CREW-01 | 21 | `docs/work/02-delivery-build/` | Done |
-| CREW-03 | Production readiness — build crew | Now | P0 | CREW-02 | 13 | `docs/work/03-build-production/` | In progress |
+| Epic ID | Title                             | Phase | Priority | Deps    | Points | Work path                        | Status      |
+| ------- | --------------------------------- | ----- | -------- | ------- | ------ | -------------------------------- | ----------- |
+| CREW-01 | Shared runtime (`@daddia/crew`)   | Now   | P0       | —       | 40     | `docs/work/01-shared-runtime/`   | Done        |
+| CREW-02 | `delivery-build` crew             | Now   | P0       | CREW-01 | 21     | `docs/work/02-delivery-build/`   | Done        |
+| CREW-03 | Production readiness — build crew | Now   | P0       | CREW-02 | 13     | `docs/work/03-build-production/` | In progress |
 
 ### Next phase
 
-| Epic ID | Title | Phase | Priority | Deps | Points | Work path | Status |
-| ------- | ----- | ----- | -------- | ---- | ------ | --------- | ------ |
-| CREW-04 | Remote audit sink (`@daddia/crew/audit`) | Next | P0 | CREW-03 | TBD | `docs/work/04-audit-sink/` | Not started |
-| CREW-05 | `delivery-qa` crew | Next | P0 | CREW-03 | TBD | `docs/work/05-delivery-qa/` | Not started |
-| CREW-06 | `delivery-review` crew | Next | P0 | CREW-05 | TBD | `docs/work/06-delivery-review/` | Not started |
-| CREW-07 | `code-reviewer` CLI crew | Next | P1 | CREW-04 | TBD | `docs/work/07-code-reviewer/` | Not started |
-| CREW-08 | Observability — OTel tracing | Next | P1 | CREW-03 | TBD | `docs/work/08-observability/` | In progress |
-| CREW-09 | Commercial foundations — licence gating | Next | P1 | CREW-06 | TBD | `docs/work/09-commercial/` | Not started |
-| CREW-14 | Authoring ergonomics — `crew init`, invariants | Next | P0 | CREW-03 | 13 | `docs/work/14-authoring/` | Done (RH02) |
-| CREW-15 | CrewBench — `crew eval` and delivery fixtures | Next | P0 | CREW-03, CREW-14 | 21 | `docs/work/15-crewbench/` | Done (RH02) |
-| CREW-16 | Harness hardening — skills, compaction, run-stream | Next | P1 | CREW-14 | 13 | `docs/work/16-harness/` | Done (RH02) |
-| CREW-17 | Security model and pre-production checklist | Next | P1 | CREW-03 | 5 | `docs/work/17-security-model/` | Done (RH02) |
+| Epic ID | Title                                              | Phase | Priority | Deps             | Points | Work path                       | Status      |
+| ------- | -------------------------------------------------- | ----- | -------- | ---------------- | ------ | ------------------------------- | ----------- |
+| CREW-04 | Remote audit sink (`@daddia/crew/audit`)           | Next  | P0       | CREW-03          | TBD    | `docs/work/04-audit-sink/`      | Not started |
+| CREW-05 | `delivery-qa` crew                                 | Next  | P0       | CREW-03          | TBD    | `docs/work/05-delivery-qa/`     | Not started |
+| CREW-06 | `delivery-review` crew                             | Next  | P0       | CREW-05          | TBD    | `docs/work/06-delivery-review/` | Not started |
+| CREW-07 | `code-reviewer` CLI crew                           | Next  | P1       | CREW-04          | TBD    | `docs/work/07-code-reviewer/`   | Not started |
+| CREW-08 | Observability — OTel tracing                       | Next  | P1       | CREW-03          | TBD    | `docs/work/08-observability/`   | In progress |
+| CREW-09 | Commercial foundations — licence gating            | Next  | P1       | CREW-06          | TBD    | `docs/work/09-commercial/`      | Not started |
+| CREW-14 | Authoring ergonomics — `crew init`, invariants     | Next  | P0       | CREW-03          | 13     | `docs/work/14-authoring/`       | Done (RH02) |
+| CREW-15 | CrewBench — `crew eval` and delivery fixtures      | Next  | P0       | CREW-03, CREW-14 | 21     | `docs/work/15-crewbench/`       | Done (RH02) |
+| CREW-16 | Harness hardening — skills, compaction, run-stream | Next  | P1       | CREW-14          | 13     | `docs/work/16-harness/`         | Done (RH02) |
+| CREW-17 | Security model and pre-production checklist        | Next  | P1       | CREW-03          | 5      | `docs/work/17-security-model/`  | Done (RH02) |
 
 ### Later phase
 
-| Epic ID | Title | Phase | Priority | Deps | Points | Work path | Status |
-| ------- | ----- | ----- | -------- | ---- | ------ | --------- | ------ |
-| CREW-10 | Discovery crews (PM, Architect) | Later | P1 | CREW-06 | TBD | `docs/work/10-discovery-crews/` | Not started |
-| CREW-11 | Documentation / release-notes crew | Later | P1 | CREW-06 | TBD | `docs/work/11-docs-crew/` | Not started |
-| CREW-12 | Pro-tier compounding surface | Later | P1 | CREW-09 | TBD | `docs/work/12-compounding-surface/` | Not started |
-| CREW-18 | Ingress conventions — channels and schedules | Later | P2 | CREW-06 | TBD | `docs/work/18-ingress/` | Not started |
-| CREW-19 | Optional execution isolation (sandbox) | Later | P2 | CREW-12 | TBD | `docs/work/19-sandbox/` | Not started |
+| Epic ID | Title                                        | Phase | Priority | Deps    | Points | Work path                           | Status      |
+| ------- | -------------------------------------------- | ----- | -------- | ------- | ------ | ----------------------------------- | ----------- |
+| CREW-10 | Discovery crews (PM, Architect)              | Later | P1       | CREW-06 | TBD    | `docs/work/10-discovery-crews/`     | Not started |
+| CREW-11 | Documentation / release-notes crew           | Later | P1       | CREW-06 | TBD    | `docs/work/11-docs-crew/`           | Not started |
+| CREW-12 | Pro-tier compounding surface                 | Later | P1       | CREW-09 | TBD    | `docs/work/12-compounding-surface/` | Not started |
+| CREW-18 | Ingress conventions — channels and schedules | Later | P2       | CREW-06 | TBD    | `docs/work/18-ingress/`             | Not started |
+| CREW-19 | Optional execution isolation (sandbox)       | Later | P2       | CREW-12 | TBD    | `docs/work/19-sandbox/`             | Not started |
 
 ### Future phase
 
-| Epic ID | Title | Phase | Priority | Deps | Points | Work path | Status |
-| ------- | ----- | ----- | -------- | ---- | ------ | --------- | ------ |
-| CREW-13 | Cross-crew orchestrator | Future | P1 | CREW-12, CREW-20 | TBD | `docs/work/13-orchestrator/` | Not started |
-| CREW-20 | Turn-level durability | Future | P1 | CREW-16 | TBD | `docs/work/20-turn-durability/` | Not started |
+| Epic ID | Title                   | Phase  | Priority | Deps             | Points | Work path                       | Status      |
+| ------- | ----------------------- | ------ | -------- | ---------------- | ------ | ------------------------------- | ----------- |
+| CREW-13 | Cross-crew orchestrator | Future | P1       | CREW-12, CREW-20 | TBD    | `docs/work/13-orchestrator/`    | Not started |
+| CREW-20 | Turn-level durability   | Future | P1       | CREW-16          | TBD    | `docs/work/20-turn-durability/` | Not started |
 
 ## 4. Epic detail (Now phase)
 
@@ -219,15 +219,15 @@ CrewBench gates on every runtime change.
 
 ## 6. Risks
 
-| ID | Risk | Likelihood | Impact | Mitigation |
-| -- | ---- | ---------- | ------ | ---------- |
-| R1 | e2e smoke against a real board surfaces integration bugs that delay CREW-03 | Medium | High | Keep the smoke board simple (one project, four transitions); run diagnose before each smoke attempt |
-| R2 | CREW-04 (audit sink) design takes longer than expected, blocking the CLI crew | Medium | Medium | Unblock CREW-07 design in parallel; ship CREW-06 first so CREW-04 is not on the critical path to the delivery vertical |
-| R3 | `delivery-qa` crew needs a managed QA environment unavailable at Next start | Medium | High | Scope CREW-05 to a mocked/sandbox environment first; real integration in a follow-on story |
-| R4 | Commercial foundations (CREW-09) take longer than runtime work, compressing the market window | Low | High | Scope licence gating as a thin wrapper; defer pricing UI; ship the mechanism not the full product |
-| R5 | The second crew (CREW-05) surfaces shared-runtime gaps requiring a `@daddia/crew` bump and re-pin across crews | Medium | Medium | Accept as expected graduation work; CREW-02 is the reference; the bump cost is mechanical |
-| R6 | "Slowly add v1 features" silently becomes "rebuild v1" — re-platforming instead of shipping | Medium | High | Features return only when a shipped workflow needs them; substrate is borrowed not rebuilt; agentic orchestration stays deferred (solution.md §10.1 R14) |
-| R7 | Authoring ergonomics drift as the catalogue grows, reintroducing copy-paste | Medium | Medium | CREW-14 shipped before the third crew; `guard:invariants` prevents env and boundary regressions |
+| ID  | Risk                                                                                                           | Likelihood | Impact | Mitigation                                                                                                                                               |
+| --- | -------------------------------------------------------------------------------------------------------------- | ---------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| R1  | e2e smoke against a real board surfaces integration bugs that delay CREW-03                                    | Medium     | High   | Keep the smoke board simple (one project, four transitions); run diagnose before each smoke attempt                                                      |
+| R2  | CREW-04 (audit sink) design takes longer than expected, blocking the CLI crew                                  | Medium     | Medium | Unblock CREW-07 design in parallel; ship CREW-06 first so CREW-04 is not on the critical path to the delivery vertical                                   |
+| R3  | `delivery-qa` crew needs a managed QA environment unavailable at Next start                                    | Medium     | High   | Scope CREW-05 to a mocked/sandbox environment first; real integration in a follow-on story                                                               |
+| R4  | Commercial foundations (CREW-09) take longer than runtime work, compressing the market window                  | Low        | High   | Scope licence gating as a thin wrapper; defer pricing UI; ship the mechanism not the full product                                                        |
+| R5  | The second crew (CREW-05) surfaces shared-runtime gaps requiring a `@daddia/crew` bump and re-pin across crews | Medium     | Medium | Accept as expected graduation work; CREW-02 is the reference; the bump cost is mechanical                                                                |
+| R6  | "Slowly add v1 features" silently becomes "rebuild v1" — re-platforming instead of shipping                    | Medium     | High   | Features return only when a shipped workflow needs them; substrate is borrowed not rebuilt; agentic orchestration stays deferred (solution.md §10.1 R14) |
+| R7  | Authoring ergonomics drift as the catalogue grows, reintroducing copy-paste                                    | Medium     | Medium | CREW-14 shipped before the third crew; `guard:invariants` prevents env and boundary regressions                                                          |
 
 Technical and architecture risks are authoritative in
 [`../architecture/solution.md`](../architecture/solution.md) §10.1 and are not

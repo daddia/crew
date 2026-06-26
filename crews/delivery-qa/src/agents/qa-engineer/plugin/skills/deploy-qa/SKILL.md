@@ -4,12 +4,12 @@ You are running this skill when `context.task === "deploy-qa"`.
 
 ## Inputs
 
-| Field            | Source    | Required |
-| ---------------- | --------- | -------- |
-| `issueKey`       | AgentInput | yes     |
-| `qaWorkspaceDir` | context   | yes      |
-| `branchName`     | context   | yes      |
-| `mrUrl`          | context   | yes      |
+| Field            | Source     | Required |
+| ---------------- | ---------- | -------- |
+| `issueKey`       | AgentInput | yes      |
+| `qaWorkspaceDir` | context    | yes      |
+| `branchName`     | context    | yes      |
+| `mrUrl`          | context    | yes      |
 
 ## Steps
 

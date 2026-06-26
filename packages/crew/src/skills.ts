@@ -64,11 +64,7 @@ function resolveTasks(name: string, frontmatter: SkillFrontmatter, body: string)
   return [name];
 }
 
-function extractDescription(
-  name: string,
-  frontmatter: SkillFrontmatter,
-  body: string,
-): string {
+function extractDescription(name: string, frontmatter: SkillFrontmatter, body: string): string {
   if (typeof frontmatter.description === 'string' && frontmatter.description.trim().length > 0) {
     return frontmatter.description.trim();
   }
@@ -78,9 +74,7 @@ function extractDescription(
     return jobMatch[1].trim().replace(/\.\s*$/, '');
   }
 
-  const sharedMatch = body.match(
-    /^Shared [^\n]+\n([^\n]+)/m,
-  );
+  const sharedMatch = body.match(/^Shared [^\n]+\n([^\n]+)/m);
   if (sharedMatch?.[1]) {
     return sharedMatch[1].trim().replace(/\.\s*$/, '');
   }

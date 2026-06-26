@@ -14,13 +14,13 @@ The final review and merge crew runs after `delivery-qa` has emitted a `ready-fo
 
 ## Status
 
-| Component | Status |
-|-----------|--------|
-| `src/workflow.ts` | Stubbed — throws `not yet implemented` |
-| `src/state.ts` | Scaffolded with the planned `Step` union |
-| `src/index.ts` | Scaffolded (`/healthz` only; no handlers wired) |
-| Personas | Not yet added |
-| Webhook handler | Not yet added |
+| Component         | Status                                          |
+| ----------------- | ----------------------------------------------- |
+| `src/workflow.ts` | Stubbed — throws `not yet implemented`          |
+| `src/state.ts`    | Scaffolded with the planned `Step` union        |
+| `src/index.ts`    | Scaffolded (`/healthz` only; no handlers wired) |
+| Personas          | Not yet added                                   |
+| Webhook handler   | Not yet added                                   |
 
 ## Running locally
 

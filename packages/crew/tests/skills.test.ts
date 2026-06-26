@@ -20,18 +20,12 @@ describe('progressive skill loading', () => {
     await rm(tempDir, { recursive: true, force: true });
   });
 
-  async function writeSkill(
-    name: string,
-    body: string,
-    description?: string,
-  ): Promise<string> {
+  async function writeSkill(name: string, body: string, description?: string): Promise<string> {
     const dir = join(tempDir, 'plugin', 'skills', name);
     await mkdir(dir, { recursive: true });
     const path = join(dir, 'SKILL.md');
     const frontmatter =
-      description !== undefined
-        ? `---\nname: ${name}\ndescription: ${description}\n---\n\n`
-        : '';
+      description !== undefined ? `---\nname: ${name}\ndescription: ${description}\n---\n\n` : '';
     await writeFile(path, `${frontmatter}${body}`);
     return path;
   }

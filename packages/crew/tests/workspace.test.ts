@@ -55,7 +55,10 @@ describe('workspace helpers', () => {
     await syncPersonaClaudeAssets(personaDir, projectDir);
 
     const skill = await import('node:fs/promises').then((fs) =>
-      fs.readFile(join(projectDir, '.claude', 'plugin', 'skills', 'implement-story', 'SKILL.md'), 'utf8'),
+      fs.readFile(
+        join(projectDir, '.claude', 'plugin', 'skills', 'implement-story', 'SKILL.md'),
+        'utf8',
+      ),
     );
     expect(skill).toBe('# skill');
     const agent = await import('node:fs/promises').then((fs) =>

@@ -50,10 +50,7 @@ function execInDir(cwd: string, command: string, args: string[]): Promise<ExecRe
 /**
  * Fetch and checkout the MR source branch in the isolated QA workspace.
  */
-export async function checkoutMrRef(
-  branchName: string,
-  qaWorkspaceDir: string,
-): Promise<void> {
+export async function checkoutMrRef(branchName: string, qaWorkspaceDir: string): Promise<void> {
   const fetch = await execInDir(qaWorkspaceDir, 'git', ['fetch', 'origin', branchName]);
   if (fetch.exitCode !== 0) {
     throw new QaWorkspaceError(
@@ -72,10 +69,7 @@ export async function checkoutMrRef(
 /**
  * Run an optional deploy hook script relative to the QA workspace root.
  */
-export async function runDeployScript(
-  qaWorkspaceDir: string,
-  scriptPath?: string,
-): Promise<void> {
+export async function runDeployScript(qaWorkspaceDir: string, scriptPath?: string): Promise<void> {
   if (!scriptPath) {
     return;
   }

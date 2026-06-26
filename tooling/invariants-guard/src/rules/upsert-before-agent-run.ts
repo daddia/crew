@@ -68,9 +68,7 @@ function checkWorkflowSource(sourceFile: ts.SourceFile): Violation[] {
         const bodyStart = func.body!.getStart(sourceFile);
         const priorRuns = runs.filter((r) => r.getStart(sourceFile) < runStart);
         const searchStart =
-          priorRuns.length > 0
-            ? priorRuns[priorRuns.length - 1]!.getEnd()
-            : bodyStart;
+          priorRuns.length > 0 ? priorRuns[priorRuns.length - 1]!.getEnd() : bodyStart;
         const segment = text.slice(searchStart, runStart);
         if (!/\.upsertStory\s*\(/.test(segment)) {
           const { line } = sourceFile.getLineAndCharacterOfPosition(run.getStart(sourceFile));

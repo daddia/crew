@@ -21,13 +21,13 @@ The server starts on `PORT` (default `3000`). Point a Jira webhook (issue transi
 
 ## Repo at a glance
 
-| Path | Purpose |
-|------|---------|
-| [`crews/`](crews/) | Deployable agent crews. One container or one published CLI per crew. |
-| [`packages/`](packages/) | Shared libraries — published to npm. |
-| [`tooling/`](tooling/) | Shared ESLint, Prettier, TypeScript, and Vitest configs. |
-| [`docs/`](docs/) | Product strategy, roadmap, solution architecture, delivery approach, flow contracts, runbooks, ADRs. |
-| [`contributing/`](contributing/) | Step-by-step guides for adding personas and crews. |
+| Path                             | Purpose                                                                                              |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| [`crews/`](crews/)               | Deployable agent crews. One container or one published CLI per crew.                                 |
+| [`packages/`](packages/)         | Shared libraries — published to npm.                                                                 |
+| [`tooling/`](tooling/)           | Shared ESLint, Prettier, TypeScript, and Vitest configs.                                             |
+| [`docs/`](docs/)                 | Product strategy, roadmap, solution architecture, delivery approach, flow contracts, runbooks, ADRs. |
+| [`contributing/`](contributing/) | Step-by-step guides for adding personas and crews.                                                   |
 
 Boundaries: crews depend on packages; packages never depend on crews; no crew imports another crew. Enforced by `pnpm lint`.
 

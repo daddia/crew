@@ -100,9 +100,7 @@ export function buildAuditHook(
   maybeLog?: (event: ToolUseEvent) => void,
 ): PostToolUseHandler {
   const log =
-    typeof logOrAllowedTools === 'function'
-      ? logOrAllowedTools
-      : (maybeLog ?? (() => {}));
+    typeof logOrAllowedTools === 'function' ? logOrAllowedTools : (maybeLog ?? (() => {}));
   return (event) => {
     log(event);
   };

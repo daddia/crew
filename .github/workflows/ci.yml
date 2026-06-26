@@ -71,6 +71,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build @daddia/crew
+        run: pnpm --filter @daddia/crew build
+
       - name: Run check
         run: ${{ matrix.run }}
 
@@ -314,7 +317,7 @@ jobs:
 
       - name: Cache pnpm store
         if: steps.changes.outputs.run == 'true'
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ${{ steps.pnpm-store.outputs.path }}
           key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
@@ -323,7 +326,7 @@ jobs:
 
       - name: Cache turbo
         if: steps.changes.outputs.run == 'true'
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .turbo
           key: ${{ runner.os }}-turbo-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-${{ github.sha }}

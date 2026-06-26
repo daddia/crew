@@ -220,8 +220,7 @@ export async function resolveSession(
     sharedPlugins: definition.sharedPlugins,
   });
 
-  const skillCatalog =
-    validSkillPaths.length > 0 ? await readSkillCatalog(validSkillPaths) : [];
+  const skillCatalog = validSkillPaths.length > 0 ? await readSkillCatalog(validSkillPaths) : [];
 
   const task =
     typeof options.input.context['task'] === 'string' ? options.input.context['task'] : undefined;

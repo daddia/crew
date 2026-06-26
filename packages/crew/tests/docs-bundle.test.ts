@@ -22,7 +22,9 @@ describe('bundled runtime docs', () => {
   });
 
   it('copies AGENTS.md and contributor guides into docs/', async () => {
-    await expect(readFile(join(docsDir, 'AGENTS.md'), 'utf8')).resolves.toContain('Code conventions');
+    await expect(readFile(join(docsDir, 'AGENTS.md'), 'utf8')).resolves.toContain(
+      'Code conventions',
+    );
     await expect(readFile(join(docsDir, 'adding-a-persona.md'), 'utf8')).resolves.toContain(
       'Adding a Persona',
     );

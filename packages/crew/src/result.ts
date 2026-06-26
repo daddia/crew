@@ -51,7 +51,10 @@ function buildSubmitShape(artefactsField: z.ZodType<Record<string, unknown>>): Z
   };
 }
 
-function validationErrorResult(err: ZodError): { content: { type: 'text'; text: string }[]; isError: true } {
+function validationErrorResult(err: ZodError): {
+  content: { type: 'text'; text: string }[];
+  isError: true;
+} {
   return {
     content: [
       {

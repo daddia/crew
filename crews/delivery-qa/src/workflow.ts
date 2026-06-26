@@ -5,11 +5,7 @@ import { qaEngineer } from './agents/qa-engineer/agent.js';
 import type { GitlabClient } from './integrations/gitlab.js';
 import type { JiraClient, JiraIssue } from './integrations/jira.js';
 import { log, tracer } from './observability.js';
-import {
-  defaultQaWorkspace,
-  QaWorkspaceError,
-  type QaWorkspacePort,
-} from './qa-workspace.js';
+import { defaultQaWorkspace, QaWorkspaceError, type QaWorkspacePort } from './qa-workspace.js';
 import type { StateStore, Step } from './state.js';
 
 /** Default model for qa-engineer runs until dedicated routing lands. */
@@ -72,15 +68,18 @@ async function withWorkflowStepSpan<T>(
   issueKey: string,
   fn: () => Promise<T>,
 ): Promise<T> {
-  return tracer.startActiveSpan('workflow.step', async (span: { setAttribute(key: string, value: string): void; end(): void }) => {
-    span.setAttribute('workflow.step', stepName);
-    span.setAttribute('issueKey', issueKey);
-    try {
-      return await fn();
-    } finally {
-      span.end();
-    }
-  });
+  return tracer.startActiveSpan(
+    'workflow.step',
+    async (span: { setAttribute(key: string, value: string): void; end(): void }) => {
+      span.setAttribute('workflow.step', stepName);
+      span.setAttribute('issueKey', issueKey);
+      try {
+        return await fn();
+      } finally {
+        span.end();
+      }
+    },
+  );
 }
 
 function emitWorkflowComplete(
@@ -211,9 +210,7 @@ export async function runQaWorkflow(
   }
 }
 
-async function seedQaContext(
-  ctx: WorkflowContext,
-): Promise<QaSeedContext | null> {
+async function seedQaContext(ctx: WorkflowContext): Promise<QaSeedContext | null> {
   const { issueKey, state, jira, gitlab } = ctx;
 
   return withWorkflowStepSpan('context-seed', issueKey, async () => {
@@ -236,12 +233,7 @@ async function seedQaContext(
 
     if (!mrUrl) {
       state.finishStep(issueKey, 'context-seed', { verdict: 'failed' });
-      await escalateToHumanReview(
-        jira,
-        issueKey,
-        'No open merge request found for issue',
-        state,
-      );
+      await escalateToHumanReview(jira, issueKey, 'No open merge request found for issue', state);
       return null;
     }
 
@@ -251,7 +243,13 @@ async function seedQaContext(
     } catch (err) {
       log.warn('workflow.context-seed.branch-failed', { issueKey, mrUrl, err: String(err) });
       state.finishStep(issueKey, 'context-seed', { verdict: 'failed' });
-      await escalateToHumanReview(jira, issueKey, 'Failed to resolve MR source branch', state, mrUrl);
+      await escalateToHumanReview(
+        jira,
+        issueKey,
+        'Failed to resolve MR source branch',
+        state,
+        mrUrl,
+      );
       return null;
     }
 
@@ -441,13 +439,7 @@ async function handleProductDefects(
         `*Defect loop cap reached — escalating to human review.*\n\n` +
         formatDefectComment(defects);
       await jira.commentOnIssue(issueKey, body);
-      await escalateToHumanReview(
-        jira,
-        issueKey,
-        'Defect loop cap reached',
-        state,
-        qaSeed.mrUrl,
-      );
+      await escalateToHumanReview(jira, issueKey, 'Defect loop cap reached', state, qaSeed.mrUrl);
       return;
     }
     throw err;
@@ -506,7 +498,9 @@ async function handleProductDefects(
  * Escalate stories stuck in remediation-pending past REMEDIATION_TIMEOUT_HOURS.
  * Intended for the poller tick (CREW-05-05); exported for unit tests.
  */
-export async function watchRemediationTimeouts(ctx: WorkflowCtxBase & { state: StateStore }): Promise<void> {
+export async function watchRemediationTimeouts(
+  ctx: WorkflowCtxBase & { state: StateStore },
+): Promise<void> {
   const { state, jira, behaviour } = ctx;
   const timeoutMs = behaviour.remediationTimeoutHours * 60 * 60 * 1000;
   const now = Date.now();
@@ -676,9 +670,7 @@ export async function escalateToHumanReview(
   mrUrl?: string,
 ): Promise<void> {
   log.warn('workflow.escalate', { issueKey, reason });
-  const body =
-    `*Escalated to human review.*\n\n` +
-    `Reason: ${reason}\n`;
+  const body = `*Escalated to human review.*\n\n` + `Reason: ${reason}\n`;
 
   await jira.commentOnIssue(issueKey, body);
   await jira.transitionIssue(issueKey, 'Needs human review');

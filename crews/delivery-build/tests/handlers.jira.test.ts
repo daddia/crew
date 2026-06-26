@@ -9,8 +9,9 @@ vi.mock('../src/workflow.js', () => ({
 vi.mock('../src/observability.js', () => ({
   log: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
   tracer: {
-    startActiveSpan: vi.fn((_name: string, fn: (span: { setAttribute: () => void; end: () => void }) => unknown) =>
-      fn({ setAttribute: vi.fn(), end: vi.fn() }),
+    startActiveSpan: vi.fn(
+      (_name: string, fn: (span: { setAttribute: () => void; end: () => void }) => unknown) =>
+        fn({ setAttribute: vi.fn(), end: vi.fn() }),
     ),
   },
 }));
@@ -43,7 +44,16 @@ const mockGitlab = {
 } satisfies GitlabClient;
 
 const ctxBase: WorkflowCtxBase = {
-  behaviour: { refactorLoopCap: 2, ciRetryCap: 3, ciPollIntervalMs: 0, ciWaitTimeoutMs: 1_800_000, engineerMaxTurns: 50, engineerCompactionThreshold: 160_000, engineerCostCapUsd: 5, modelRouting: { lowCost: 'claude-sonnet-test', implementation: 'claude-opus-test' } },
+  behaviour: {
+    refactorLoopCap: 2,
+    ciRetryCap: 3,
+    ciPollIntervalMs: 0,
+    ciWaitTimeoutMs: 1_800_000,
+    engineerMaxTurns: 50,
+    engineerCompactionThreshold: 160_000,
+    engineerCostCapUsd: 5,
+    modelRouting: { lowCost: 'claude-sonnet-test', implementation: 'claude-opus-test' },
+  },
   jira: mockJira,
   gitlab: mockGitlab,
   projectDir: '/project',
@@ -167,10 +177,9 @@ describe('POST /webhooks/jira', () => {
     });
     expect(res.status).toBe(200);
     await new Promise((r) => setImmediate(r));
-    expect(runStory).toHaveBeenCalledWith(
-      expect.objectContaining({ issueKey: 'CREW-55' }),
-      { remediation: true },
-    );
+    expect(runStory).toHaveBeenCalledWith(expect.objectContaining({ issueKey: 'CREW-55' }), {
+      remediation: true,
+    });
   });
 
   it('ignores In Remediation without qa-remediation label', async () => {

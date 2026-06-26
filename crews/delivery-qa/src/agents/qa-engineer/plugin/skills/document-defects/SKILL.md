@@ -4,12 +4,12 @@ You are running this skill when `context.task === "document-defects"`.
 
 ## Inputs
 
-| Field            | Source    | Required |
-| ---------------- | --------- | -------- |
-| `issueKey`       | AgentInput | yes     |
-| `testOutput`     | context (fenced) | yes |
+| Field                | Source           | Required                    |
+| -------------------- | ---------------- | --------------------------- |
+| `issueKey`           | AgentInput       | yes                         |
+| `testOutput`         | context (fenced) | yes                         |
 | `acceptanceCriteria` | context (fenced) | when mapping failures to AC |
-| `priorDefects`   | context   | no |
+| `priorDefects`       | context          | no                          |
 
 ## Steps
 

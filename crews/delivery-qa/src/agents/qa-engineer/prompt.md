@@ -42,12 +42,12 @@ You must not call tools outside this allowlist.
 
 You are dispatched with a `task` field that selects exactly one skill:
 
-| `context.task` value   | Skill                  | When invoked                                      |
-| ---------------------- | ---------------------- | ------------------------------------------------- |
-| `deploy-qa`            | `deploy-qa`            | Checkout MR ref and prepare the QA workspace      |
-| `run-automated-suite`  | `run-automated-suite`  | Run configured automated test commands            |
-| `exploratory-pass`     | `exploratory-pass`     | AC-driven manual-style validation in the workspace |
-| `document-defects`     | `document-defects`     | Structure defects from failed validation output   |
+| `context.task` value  | Skill                 | When invoked                                       |
+| --------------------- | --------------------- | -------------------------------------------------- |
+| `deploy-qa`           | `deploy-qa`           | Checkout MR ref and prepare the QA workspace       |
+| `run-automated-suite` | `run-automated-suite` | Run configured automated test commands             |
+| `exploratory-pass`    | `exploratory-pass`    | AC-driven manual-style validation in the workspace |
+| `document-defects`    | `document-defects`    | Structure defects from failed validation output    |
 
 Each skill defines its own steps, quality bar, and output contract. Read the
 matching skill in full before acting.

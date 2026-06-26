@@ -21,23 +21,23 @@ Strategy → Architecture → Discovery → Delivery → Refine
     ^______________________________________________|
 ```
 
-| Track | Question | Repo artefacts |
-|-------|----------|----------------|
-| Strategy | What and why? | [`product/strategy.md`](../product/strategy.md), [`product/roadmap.md`](../product/roadmap.md) |
+| Track        | Question                | Repo artefacts                                                                                                                       |
+| ------------ | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Strategy     | What and why?           | [`product/strategy.md`](../product/strategy.md), [`product/roadmap.md`](../product/roadmap.md)                                       |
 | Architecture | Is the structure sound? | [`architecture/solution.md`](../../architecture/solution.md), [`architecture/principles.md`](../../architecture/principles.md), ADRs |
-| Discovery | Ready to build? | Work-package requirements and `design.md` (when used) |
-| Delivery | Done to standard? | Code, MR, review — crews in [`crews/`](../../crews/) |
-| Refine | What did we learn? | Metrics, retros, doc updates |
+| Discovery    | Ready to build?         | Work-package requirements and `design.md` (when used)                                                                                |
+| Delivery     | Done to standard?       | Code, MR, review — crews in [`crews/`](../../crews/)                                                                                 |
+| Refine       | What did we learn?      | Metrics, retros, doc updates                                                                                                         |
 
 Artefacts connect tracks — not message passing between agents. **Definition of Ready** gates Discovery → Delivery. **Definition of Done** gates Delivery → Refine. Discovery stays at least one sprint ahead of Delivery.
 
 ## Delivery vertical (today and planned)
 
-| Crew (planned name) | Flow contract | Status |
-|---------------------|---------------|--------|
-| `delivery-build` | [`design/crew-flows/delivery-build.md`](../design/crew-flows/delivery-build.md) | Implemented |
-| `delivery-qa` | [`design/crew-flows/delivery-qa.md`](../design/crew-flows/delivery-qa.md) | Planned (Next phase) |
-| `delivery-review` | [`design/crew-flows/delivery-review.md`](../design/crew-flows/delivery-review.md) | Scaffolded as `crews/delivery-final-review/` |
+| Crew (planned name) | Flow contract                                                                     | Status                                       |
+| ------------------- | --------------------------------------------------------------------------------- | -------------------------------------------- |
+| `delivery-build`    | [`design/crew-flows/delivery-build.md`](../design/crew-flows/delivery-build.md)   | Implemented                                  |
+| `delivery-qa`       | [`design/crew-flows/delivery-qa.md`](../design/crew-flows/delivery-qa.md)         | Planned (Next phase)                         |
+| `delivery-review`   | [`design/crew-flows/delivery-review.md`](../design/crew-flows/delivery-review.md) | Scaffolded as `crews/delivery-final-review/` |
 
 A standalone `code-reviewer` crew (CLI-shaped, post-MR) is sketched in [`architecture/solution.md`](../../architecture/solution.md) §4.1 and scaffolded as `crews/delivery-code-review/`; the full implementation lands when the remote audit sink (`@daddia/crew/audit`) is in place.
 

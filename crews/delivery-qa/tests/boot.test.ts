@@ -94,7 +94,10 @@ describe('boot – happy path', () => {
 
   it('starts the HTTP server on the configured port', async () => {
     await boot({ ...VALID_ENV, PORT: '4001' });
-    expect(serve).toHaveBeenCalledWith(expect.objectContaining({ port: 4001 }), expect.any(Function));
+    expect(serve).toHaveBeenCalledWith(
+      expect.objectContaining({ port: 4001 }),
+      expect.any(Function),
+    );
   });
 
   it('runs startup recovery before the poller starts', async () => {

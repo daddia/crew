@@ -56,6 +56,9 @@ describe('boot – happy path', () => {
 
   it('starts the HTTP server on the configured port', async () => {
     await boot({ PORT: '4001' });
-    expect(serve).toHaveBeenCalledWith(expect.objectContaining({ port: 4001 }), expect.any(Function));
+    expect(serve).toHaveBeenCalledWith(
+      expect.objectContaining({ port: 4001 }),
+      expect.any(Function),
+    );
   });
 });

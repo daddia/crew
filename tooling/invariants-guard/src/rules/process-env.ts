@@ -2,8 +2,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import type { Violation } from '../types.js';
 
-const KEY_ACCESS =
-  /process\.env\.[A-Za-z_$][\w$]*|process\.env\[\s*['"][^'"]+['"]\s*\]/g;
+const KEY_ACCESS = /process\.env\.[A-Za-z_$][\w$]*|process\.env\[\s*['"][^'"]+['"]\s*\]/g;
 
 async function collectSourceFiles(dir: string, acc: string[]): Promise<void> {
   let entries;

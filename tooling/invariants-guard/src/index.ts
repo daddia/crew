@@ -6,11 +6,11 @@ import type { Violation } from './types.js';
 
 export type { Violation } from './types.js';
 export { formatViolation } from './types.js';
+export { checkProcessEnv, checkProcessEnvInFile } from './rules/process-env.js';
 export {
-  checkProcessEnv,
-  checkProcessEnvInFile,
-} from './rules/process-env.js';
-export { checkUpsertBeforeAgentRun, checkUpsertBeforeAgentRunContent } from './rules/upsert-before-agent-run.js';
+  checkUpsertBeforeAgentRun,
+  checkUpsertBeforeAgentRunContent,
+} from './rules/upsert-before-agent-run.js';
 export { checkCrossCrewImports } from './rules/cross-crew-imports.js';
 export { checkDuplicateSkillTrees } from './rules/duplicate-skill-trees.js';
 

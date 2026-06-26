@@ -471,9 +471,9 @@ describe('resolveSession', () => {
     });
 
     it('rejects compactionThreshold outside the SDK range', async () => {
-      await expect(
-        resolveSession(makeOptions({ compactionThreshold: 50_000 })),
-      ).rejects.toThrow(RangeError);
+      await expect(resolveSession(makeOptions({ compactionThreshold: 50_000 }))).rejects.toThrow(
+        RangeError,
+      );
     });
 
     it('Gherkin: a long session compacts instead of failing', async () => {
@@ -508,7 +508,9 @@ describe('resolveSession', () => {
         session_id: 'sess-1',
       } as SDKMessage;
 
-      mockQuery.mockReturnValue(makeQuery([compactBoundary, successResult]) as ReturnType<typeof query>);
+      mockQuery.mockReturnValue(
+        makeQuery([compactBoundary, successResult]) as ReturnType<typeof query>,
+      );
 
       const active = await resolveSession(
         makeOptions({ compactionThreshold: 160_000, maxTurns: 50 }),
@@ -610,7 +612,15 @@ describe('resolveSession', () => {
 
       const options = mockQuery.mock.calls[0]?.[0].options as {
         hooks: {
-          SubagentStart: Array<{ hooks: Array<(input: { hook_event_name: string; agent_type: string; agent_id: string }) => Promise<unknown>> }>;
+          SubagentStart: Array<{
+            hooks: Array<
+              (input: {
+                hook_event_name: string;
+                agent_type: string;
+                agent_id: string;
+              }) => Promise<unknown>
+            >;
+          }>;
         };
       };
       const hook = options.hooks.SubagentStart[0]?.hooks[0];

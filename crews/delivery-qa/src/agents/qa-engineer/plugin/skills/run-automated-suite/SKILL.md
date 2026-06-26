@@ -4,12 +4,12 @@ You are running this skill when `context.task === "run-automated-suite"`.
 
 ## Inputs
 
-| Field            | Source    | Required |
-| ---------------- | --------- | -------- |
-| `issueKey`       | AgentInput | yes     |
-| `qaWorkspaceDir` | context   | yes      |
-| `acceptanceCriteria` | context (fenced) | yes |
-| `testOutput`     | context   | no — set by workflow when re-running after prior failure |
+| Field                | Source           | Required                                                 |
+| -------------------- | ---------------- | -------------------------------------------------------- |
+| `issueKey`           | AgentInput       | yes                                                      |
+| `qaWorkspaceDir`     | context          | yes                                                      |
+| `acceptanceCriteria` | context (fenced) | yes                                                      |
+| `testOutput`         | context          | no — set by workflow when re-running after prior failure |
 
 ## Steps
 

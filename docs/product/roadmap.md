@@ -21,12 +21,12 @@ the bets in [`strategy.md`](strategy.md) §2 and the architecture in
 [`solution.md`](../architecture/solution.md); it expresses phases as **outcomes
 and capabilities**, not epics. Epic and story decomposition lives downstream in
 the backlog and in Jira; this document is what that decomposition is sequenced
-*against*.
+_against_.
 
 Phasing matters because the substrate is earned, not assumed. The first crew is
 expensive precisely so every later crew is cheap. Calendar dates are not
 committed: a phase opens only when the previous phase exits cleanly against its
-named criteria. Phases are sequential; parallelism lives *within* a phase.
+named criteria. Phases are sequential; parallelism lives _within_ a phase.
 
 ## 2. Sequencing logic
 
@@ -43,7 +43,7 @@ named criteria. Phases are sequential; parallelism lives *within* a phase.
 3. **Borrow substrate, don't rebuild it.** Durable execution, sandboxing,
    channels, and durable human-in-the-loop are substrate, not differentiation
    ([`solution.md`](../architecture/solution.md) §11, principle 12). They are
-   adopted from maintained dependencies *only when a shipped workflow needs them*
+   adopted from maintained dependencies _only when a shipped workflow needs them_
    — never speculatively, never rebuilt by hand.
 4. **Quality and authoring infrastructure gate catalogue growth.** Eval-on-the-
    production-surface and one-command scaffolding land alongside the second crew,
@@ -111,7 +111,7 @@ cheaper than the first and keeps every runtime change eval-gated.
 - Harness hardening — progressive skill loading, context compaction on long
   runs, and an operator run-stream for overnight batches.
 - Security model — runtime/workspace/MCP trust boundaries and a pre-production
-  checklist *(shipped)*.
+  checklist _(shipped)_.
 - Commercial foundations — licence gating and the first surface of the managed
   control plane sketched.
 
@@ -217,26 +217,26 @@ making model-generated orchestration the default for any crew.
 
 ## 4. Milestones
 
-| Milestone | Phase | Customer-visible? | Notes |
-| --------- | ----- | ----------------- | ----- |
-| Build crew runs unattended on real stories | Now | No (internal proof) | Now exit criteria met; gates Next opening |
-| Full delivery vertical (build → QA → review) operational | Next | Yes | Handoffs auto-trigger; overnight run completes |
-| Eval framework gating every runtime change | Next | No | Eval gate in CI before unattended deploy |
-| First CLI-shaped crew (code-reviewer) ships | Next | Yes | Requires the remote audit sink |
-| Pro tier purchasable | Later | Yes | Pricing, licence enforcement, proof pack resolved |
-| First optimiser (model selector) live | Later | Yes (Pro) | Measurable cost-quality win on the eval baseline |
-| Durable cross-crew pipeline resumes after restart | Future | Yes | Coordination above the crew |
+| Milestone                                                | Phase  | Customer-visible?   | Notes                                             |
+| -------------------------------------------------------- | ------ | ------------------- | ------------------------------------------------- |
+| Build crew runs unattended on real stories               | Now    | No (internal proof) | Now exit criteria met; gates Next opening         |
+| Full delivery vertical (build → QA → review) operational | Next   | Yes                 | Handoffs auto-trigger; overnight run completes    |
+| Eval framework gating every runtime change               | Next   | No                  | Eval gate in CI before unattended deploy          |
+| First CLI-shaped crew (code-reviewer) ships              | Next   | Yes                 | Requires the remote audit sink                    |
+| Pro tier purchasable                                     | Later  | Yes                 | Pricing, licence enforcement, proof pack resolved |
+| First optimiser (model selector) live                    | Later  | Yes (Pro)           | Measurable cost-quality win on the eval baseline  |
+| Durable cross-crew pipeline resumes after restart        | Future | Yes                 | Coordination above the crew                       |
 
 ## 5. External dependencies
 
-| Dependency | Owner squad | Gates | Status |
-| ---------- | ----------- | ----- | ------ |
-| npm registry (publish `@daddia/crew`) | daddia | Every crew's pinned dependency | Available |
-| Container deployment topology | daddia | Server-shaped crew deploys | Validated |
-| Work source + VCS (live board for smoke) | daddia | Now e2e exit criterion | Available |
-| Foundation model provider(s) | daddia (vendor: model labs) | Every persona run; routing in Later | Available |
+| Dependency                               | Owner squad                            | Gates                                        | Status                                     |
+| ---------------------------------------- | -------------------------------------- | -------------------------------------------- | ------------------------------------------ |
+| npm registry (publish `@daddia/crew`)    | daddia                                 | Every crew's pinned dependency               | Available                                  |
+| Container deployment topology            | daddia                                 | Server-shaped crew deploys                   | Validated                                  |
+| Work source + VCS (live board for smoke) | daddia                                 | Now e2e exit criterion                       | Available                                  |
+| Foundation model provider(s)             | daddia (vendor: model labs)            | Every persona run; routing in Later          | Available                                  |
 | Durable-execution engine (when borrowed) | daddia (vendor: maintained dependency) | Future turn-level durability + orchestration | Deferred until a shipped workflow needs it |
-| Telemetry warehouse + durable stream | daddia | Next exit criterion #4; eval read surface | In progress |
+| Telemetry warehouse + durable stream     | daddia                                 | Next exit criterion #4; eval read surface    | In progress                                |
 
 ## 6. Deferred beyond this cycle
 

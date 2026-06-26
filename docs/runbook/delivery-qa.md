@@ -79,18 +79,18 @@ check fails. Do not deploy while any check is failing.
 
 ### 1.3 Diagnosing failures
 
-| Check                      | Failure detail                        | Likely fix                                                         |
-| -------------------------- | ------------------------------------- | ------------------------------------------------------------------ |
-| Jira API reachability      | `HTTP 401`                            | Verify `ATLASSIAN_API_TOKEN` and `ATLASSIAN_EMAIL`                 |
-| Jira API reachability      | `HTTP 403` or DNS error               | Confirm `ATLASSIAN_BASE_URL` is correct and reachable              |
-| Jira project key           | `HTTP 404`                            | Confirm `JIRA_PROJECT_KEY` matches the board key                   |
-| Jira transitions           | `missing transitions: ...`            | Add the missing transitions in the Jira board workflow editor      |
-| GitLab API reachability    | `HTTP 401`                            | Confirm `GITLAB_PERSONAL_ACCESS_TOKEN` has `api` scope             |
-| GitLab API reachability    | `HTTP 404`                            | Confirm `GITLAB_PROJECT_ID` is the numeric ID, not the path        |
-| QA workspace               | `... is not accessible`               | Create `QA_WORKSPACE_DIR`; ensure the process user can read/write  |
+| Check                      | Failure detail                        | Likely fix                                                                        |
+| -------------------------- | ------------------------------------- | --------------------------------------------------------------------------------- |
+| Jira API reachability      | `HTTP 401`                            | Verify `ATLASSIAN_API_TOKEN` and `ATLASSIAN_EMAIL`                                |
+| Jira API reachability      | `HTTP 403` or DNS error               | Confirm `ATLASSIAN_BASE_URL` is correct and reachable                             |
+| Jira project key           | `HTTP 404`                            | Confirm `JIRA_PROJECT_KEY` matches the board key                                  |
+| Jira transitions           | `missing transitions: ...`            | Add the missing transitions in the Jira board workflow editor                     |
+| GitLab API reachability    | `HTTP 401`                            | Confirm `GITLAB_PERSONAL_ACCESS_TOKEN` has `api` scope                            |
+| GitLab API reachability    | `HTTP 404`                            | Confirm `GITLAB_PROJECT_ID` is the numeric ID, not the path                       |
+| QA workspace               | `... is not accessible`               | Create `QA_WORKSPACE_DIR`; ensure the process user can read/write                 |
 | Automated test command     | `executable not found`                | Install the test runner in the container image or adjust `AUTOMATED_TEST_COMMAND` |
-| MCP servers boot           | `timed out waiting for MCP handshake` | Ensure `npx` is on PATH; check `ATLASSIAN_*` and `GITLAB_*` values |
-| DB_PATH directory writable | `... is not writable`                 | Confirm the parent directory exists and is writable                |
+| MCP servers boot           | `timed out waiting for MCP handshake` | Ensure `npx` is on PATH; check `ATLASSIAN_*` and `GITLAB_*` values                |
+| DB_PATH directory writable | `... is not writable`                 | Confirm the parent directory exists and is writable                               |
 
 The four required Jira transitions are: `In QA`, `In Review`, `In Remediation`,
 `Needs human review`. If any are missing, add them in the Jira board project
@@ -105,10 +105,10 @@ so the Docker build context must be the **repository root**.
 
 ### 2.1 Railway service configuration
 
-| Dashboard field  | Value                                   |
-| ---------------- | --------------------------------------- |
-| Root Directory   | _(leave blank — defaults to repo root)_ |
-| Dockerfile Path  | `crews/delivery-qa/Dockerfile`          |
+| Dashboard field | Value                                   |
+| --------------- | --------------------------------------- |
+| Root Directory  | _(leave blank — defaults to repo root)_ |
+| Dockerfile Path | `crews/delivery-qa/Dockerfile`          |
 
 Set `PORT=3001` (default in the image) and mount a persistent volume for SQLite
 state — see [§2.3 Persistent volume](#23-persistent-volume).
@@ -119,41 +119,41 @@ Canonical schema: [`crews/delivery-qa/src/config.ts`](../../crews/delivery-qa/sr
 
 #### Required
 
-| Variable | Description |
-| -------- | ----------- |
-| `ANTHROPIC_API_KEY` | Anthropic API key for `qa-engineer` agent runs |
-| `ATLASSIAN_EMAIL` | Atlassian account email for Jira API auth |
-| `ATLASSIAN_API_TOKEN` | Atlassian API token |
-| `ATLASSIAN_BASE_URL` | Jira base URL (e.g. `https://yourorg.atlassian.net`) |
-| `JIRA_PROJECT_KEY` | Jira project key (e.g. `CREW`) |
-| `JIRA_ASSIGNEE_ACCOUNT_ID` | Jira account ID of the **QA bot** — poller JQL filters on this assignee |
-| `JIRA_ACCEPTANCE_CRITERIA_FIELD_ID` | Custom field ID for acceptance criteria (e.g. `customfield_10042`) |
-| `GITLAB_PERSONAL_ACCESS_TOKEN` | GitLab PAT with `api` scope |
-| `GITLAB_API_URL` | GitLab API base (e.g. `https://gitlab.com/api/v4`) |
-| `GITLAB_PROJECT_ID` | Numeric GitLab project ID |
-| `JIRA_WEBHOOK_SECRET` | Shared secret for Jira webhook HMAC verification (≥ 16 characters) |
-| `DB_PATH` | SQLite file path (e.g. `/data/delivery-qa.db` in production) |
-| `PROJECT_DIR` | Absolute path to the target repository root on the container filesystem |
-| `QA_WORKSPACE_DIR` | Isolated checkout directory for QA runs — MR branch is checked out here before deploy and test steps |
+| Variable                            | Description                                                                                          |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `ANTHROPIC_API_KEY`                 | Anthropic API key for `qa-engineer` agent runs                                                       |
+| `ATLASSIAN_EMAIL`                   | Atlassian account email for Jira API auth                                                            |
+| `ATLASSIAN_API_TOKEN`               | Atlassian API token                                                                                  |
+| `ATLASSIAN_BASE_URL`                | Jira base URL (e.g. `https://yourorg.atlassian.net`)                                                 |
+| `JIRA_PROJECT_KEY`                  | Jira project key (e.g. `CREW`)                                                                       |
+| `JIRA_ASSIGNEE_ACCOUNT_ID`          | Jira account ID of the **QA bot** — poller JQL filters on this assignee                              |
+| `JIRA_ACCEPTANCE_CRITERIA_FIELD_ID` | Custom field ID for acceptance criteria (e.g. `customfield_10042`)                                   |
+| `GITLAB_PERSONAL_ACCESS_TOKEN`      | GitLab PAT with `api` scope                                                                          |
+| `GITLAB_API_URL`                    | GitLab API base (e.g. `https://gitlab.com/api/v4`)                                                   |
+| `GITLAB_PROJECT_ID`                 | Numeric GitLab project ID                                                                            |
+| `JIRA_WEBHOOK_SECRET`               | Shared secret for Jira webhook HMAC verification (≥ 16 characters)                                   |
+| `DB_PATH`                           | SQLite file path (e.g. `/data/delivery-qa.db` in production)                                         |
+| `PROJECT_DIR`                       | Absolute path to the target repository root on the container filesystem                              |
+| `QA_WORKSPACE_DIR`                  | Isolated checkout directory for QA runs — MR branch is checked out here before deploy and test steps |
 
 #### Behaviour and cost controls
 
-| Variable | Default | Description |
-| -------- | ------- | ----------- |
-| `QA_DEFECT_LOOP_CAP` | `2` | Maximum remediation cycles before escalation to **Needs human review**. A cap of `N` allows up to `N` round-trips through `In Remediation → In QA` before the next defect batch escalates. |
-| `REMEDIATION_TIMEOUT_HOURS` | `48` | Hours to wait in `remediation-pending` for `delivery-build` to fix defects and re-transition to **In QA**. Exceeded → automatic escalation. |
-| `POLL_INTERVAL_MS` | `300000` | Milliseconds between Jira polling ticks |
-| `AUTOMATED_TEST_COMMAND` | `pnpm test` | Shell command run in `QA_WORKSPACE_DIR` during the automated-suite step |
-| `E2E_TEST_COMMAND` | _(unset)_ | Optional second test command (e.g. `pnpm test:e2e`) run after the automated command |
-| `QA_DEPLOY_SCRIPT` | _(unset)_ | Optional path relative to `PROJECT_DIR` executed after MR checkout (sandbox deploy hook) |
-| `EXTERNAL_INTEGRATION_MODE` | `mock` | `mock` logs skip and continues; `skip` omits the step; `live` is deferred — do not set `live` in production until configured |
-| `QA_ENGINEER_MAX_TURNS` | `40` | Max agent turns per `qa-engineer` step |
-| `QA_ENGINEER_COST_CAP_USD` | `4` | Per-step cost cap for `qa-engineer` runs |
-| `LOG_LEVEL` | `info` | Log verbosity (`debug`, `info`, `warn`, `error`) |
-| `PORT` | `3001` | HTTP listen port |
-| `CREW_ID` | `delivery-qa` | Crew identifier in structured logs |
-| `ATLASSIAN_ACCOUNT_ID` | _(unset)_ | Bot account ID for webhook author filtering when needed |
-| `HONEYCOMB_API_KEY` | _(unset)_ | Optional OTel export key |
+| Variable                    | Default       | Description                                                                                                                                                                                |
+| --------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `QA_DEFECT_LOOP_CAP`        | `2`           | Maximum remediation cycles before escalation to **Needs human review**. A cap of `N` allows up to `N` round-trips through `In Remediation → In QA` before the next defect batch escalates. |
+| `REMEDIATION_TIMEOUT_HOURS` | `48`          | Hours to wait in `remediation-pending` for `delivery-build` to fix defects and re-transition to **In QA**. Exceeded → automatic escalation.                                                |
+| `POLL_INTERVAL_MS`          | `300000`      | Milliseconds between Jira polling ticks                                                                                                                                                    |
+| `AUTOMATED_TEST_COMMAND`    | `pnpm test`   | Shell command run in `QA_WORKSPACE_DIR` during the automated-suite step                                                                                                                    |
+| `E2E_TEST_COMMAND`          | _(unset)_     | Optional second test command (e.g. `pnpm test:e2e`) run after the automated command                                                                                                        |
+| `QA_DEPLOY_SCRIPT`          | _(unset)_     | Optional path relative to `PROJECT_DIR` executed after MR checkout (sandbox deploy hook)                                                                                                   |
+| `EXTERNAL_INTEGRATION_MODE` | `mock`        | `mock` logs skip and continues; `skip` omits the step; `live` is deferred — do not set `live` in production until configured                                                               |
+| `QA_ENGINEER_MAX_TURNS`     | `40`          | Max agent turns per `qa-engineer` step                                                                                                                                                     |
+| `QA_ENGINEER_COST_CAP_USD`  | `4`           | Per-step cost cap for `qa-engineer` runs                                                                                                                                                   |
+| `LOG_LEVEL`                 | `info`        | Log verbosity (`debug`, `info`, `warn`, `error`)                                                                                                                                           |
+| `PORT`                      | `3001`        | HTTP listen port                                                                                                                                                                           |
+| `CREW_ID`                   | `delivery-qa` | Crew identifier in structured logs                                                                                                                                                         |
+| `ATLASSIAN_ACCOUNT_ID`      | _(unset)_     | Bot account ID for webhook author filtering when needed                                                                                                                                    |
+| `HONEYCOMB_API_KEY`         | _(unset)_     | Optional OTel export key                                                                                                                                                                   |
 
 ### 2.3 Persistent volume
 
@@ -177,9 +177,9 @@ crash-recovery scan becomes a no-op and story deduplication is lost.
 
 After the service is live, register the Railway public URL with Jira:
 
-| Provider | URL                                        | Trigger                               |
-| -------- | ------------------------------------------ | ------------------------------------- |
-| Jira     | `https://<railway-domain>/webhooks/jira`   | Issue transitioned to **In QA**       |
+| Provider | URL                                      | Trigger                         |
+| -------- | ---------------------------------------- | ------------------------------- |
+| Jira     | `https://<railway-domain>/webhooks/jira` | Issue transitioned to **In QA** |
 
 The poller is the fallback trigger when webhooks are delayed or missed.
 
@@ -227,43 +227,43 @@ credentials and that `JIRA_ASSIGNEE_ACCOUNT_ID` is the QA bot account.
 
 ### 4.1 Log events to alert on
 
-| Event | Level | Meaning | Recommended action |
-| ----- | ----- | ------- | ------------------ |
-| `workflow.escalate` | warn | Story escalated to human review | Check `reason`; review the Jira escalation comment |
-| `workflow.remediation-timeout` | warn | `REMEDIATION_TIMEOUT_HOURS` exceeded while waiting for build crew | Review ticket; coordinate with engineer or manually fix and re-transition to **In QA** |
-| `poller.search-error` | warn | Jira API unreachable during a poll tick | Verify `ATLASSIAN_*` credentials and Jira status |
-| `recovery.session-failed` | warn | Boot-time crash recovery could not reconnect an SDK session | Story escalated automatically; review the Jira ticket |
-| `workflow.qa.complete` with `success: false` | info | Story reached a terminal step without landing in **In Review** | Check `terminalStep`; `needs-human-review` or `remediation-pending` |
-| `config.invalid` | error | Config schema validation failed at boot | Service will exit; fix the bad env var and redeploy |
-| `poller.misconfigured` | warn | `JIRA_PROJECT_KEY` or `JIRA_ASSIGNEE_ACCOUNT_ID` is blank | Fix Railway env; no stories will be picked up |
+| Event                                        | Level | Meaning                                                           | Recommended action                                                                     |
+| -------------------------------------------- | ----- | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `workflow.escalate`                          | warn  | Story escalated to human review                                   | Check `reason`; review the Jira escalation comment                                     |
+| `workflow.remediation-timeout`               | warn  | `REMEDIATION_TIMEOUT_HOURS` exceeded while waiting for build crew | Review ticket; coordinate with engineer or manually fix and re-transition to **In QA** |
+| `poller.search-error`                        | warn  | Jira API unreachable during a poll tick                           | Verify `ATLASSIAN_*` credentials and Jira status                                       |
+| `recovery.session-failed`                    | warn  | Boot-time crash recovery could not reconnect an SDK session       | Story escalated automatically; review the Jira ticket                                  |
+| `workflow.qa.complete` with `success: false` | info  | Story reached a terminal step without landing in **In Review**    | Check `terminalStep`; `needs-human-review` or `remediation-pending`                    |
+| `config.invalid`                             | error | Config schema validation failed at boot                           | Service will exit; fix the bad env var and redeploy                                    |
+| `poller.misconfigured`                       | warn  | `JIRA_PROJECT_KEY` or `JIRA_ASSIGNEE_ACCOUNT_ID` is blank         | Fix Railway env; no stories will be picked up                                          |
 
 ### 4.2 Normal steady-state events
 
-| Event | Level | Meaning |
-| ----- | ----- | ------- |
-| `server.start` | info | HTTP server is listening |
-| `config.loaded` | info | Config validated and loaded at boot (secrets redacted) |
-| `workflow.qa.start` | info | Story entered the QA workflow |
-| `workflow.handoff-to-review` | info | Story passed QA; transitioned to **In Review** — downstream signal for `delivery-review` |
-| `workflow.remediation-required` | info | Defects documented; story in **In Remediation** awaiting `delivery-build` |
-| `workflow.qa.remediation-resume` | info | Story returned from remediation; re-running validation |
-| `workflow.qa.complete` with `success: true` | info | Story completed; `totalCostUsd` and `durationMs` available |
+| Event                                       | Level | Meaning                                                                                  |
+| ------------------------------------------- | ----- | ---------------------------------------------------------------------------------------- |
+| `server.start`                              | info  | HTTP server is listening                                                                 |
+| `config.loaded`                             | info  | Config validated and loaded at boot (secrets redacted)                                   |
+| `workflow.qa.start`                         | info  | Story entered the QA workflow                                                            |
+| `workflow.handoff-to-review`                | info  | Story passed QA; transitioned to **In Review** — downstream signal for `delivery-review` |
+| `workflow.remediation-required`             | info  | Defects documented; story in **In Remediation** awaiting `delivery-build`                |
+| `workflow.qa.remediation-resume`            | info  | Story returned from remediation; re-running validation                                   |
+| `workflow.qa.complete` with `success: true` | info  | Story completed; `totalCostUsd` and `durationMs` available                               |
 
 ### 4.3 `workflow.qa.complete` payload
 
 Emitted at terminal exit points (`in-review`, `needs-human-review`,
 `remediation-pending`). Key fields:
 
-| Field | Type | Notes |
-| ----- | ---- | ----- |
-| `issueKey` | string | Jira issue key |
-| `terminalStep` | string | `in-review`, `needs-human-review`, or `remediation-pending` |
-| `success` | boolean | `true` only when `terminalStep` is `in-review` |
-| `totalCostUsd` | number | Aggregate cost across all agent steps |
-| `stepCount` | number | Total steps including non-agent steps |
-| `agentSteps` | array | Per-agent-step: `{ step, sessionId, costUsd }` |
-| `durationMs` | number | Wall time from first step to terminal step |
-| `mrUrl` | string | Present when an MR was resolved |
+| Field          | Type    | Notes                                                       |
+| -------------- | ------- | ----------------------------------------------------------- |
+| `issueKey`     | string  | Jira issue key                                              |
+| `terminalStep` | string  | `in-review`, `needs-human-review`, or `remediation-pending` |
+| `success`      | boolean | `true` only when `terminalStep` is `in-review`              |
+| `totalCostUsd` | number  | Aggregate cost across all agent steps                       |
+| `stepCount`    | number  | Total steps including non-agent steps                       |
+| `agentSteps`   | array   | Per-agent-step: `{ step, sessionId, costUsd }`              |
+| `durationMs`   | number  | Wall time from first step to terminal step                  |
+| `mrUrl`        | string  | Present when an MR was resolved                             |
 
 ---
 
@@ -442,14 +442,14 @@ poller/webhook: In QA resumed
 
 **What operators should verify during an active remediation:**
 
-| Check | Where |
-| ----- | ----- |
-| Defect list posted | Jira comment on the ticket (structured markdown) |
-| Build crew picked up remediation | `delivery-build` logs; ticket in **In Remediation** with `qa-remediation` label |
-| QA waiting | `delivery-qa` logs `workflow.qa.complete` with `terminalStep: remediation-pending` |
-| Timeout clock | `REMEDIATION_TIMEOUT_HOURS` from `remediation-pending` `started_at` in SQLite |
-| Successful return | Ticket back in **In QA**; `workflow.qa.remediation-resume` in QA logs |
-| Downstream handoff | Ticket in **In Review**; `workflow.handoff-to-review` with `issueKey` and `mrUrl` |
+| Check                            | Where                                                                              |
+| -------------------------------- | ---------------------------------------------------------------------------------- |
+| Defect list posted               | Jira comment on the ticket (structured markdown)                                   |
+| Build crew picked up remediation | `delivery-build` logs; ticket in **In Remediation** with `qa-remediation` label    |
+| QA waiting                       | `delivery-qa` logs `workflow.qa.complete` with `terminalStep: remediation-pending` |
+| Timeout clock                    | `REMEDIATION_TIMEOUT_HOURS` from `remediation-pending` `started_at` in SQLite      |
+| Successful return                | Ticket back in **In QA**; `workflow.qa.remediation-resume` in QA logs              |
+| Downstream handoff               | Ticket in **In Review**; `workflow.handoff-to-review` with `issueKey` and `mrUrl`  |
 
 **Do not** manually edit Jira status across the remediation boundary unless
 coordinating a stuck loop — prefer letting the crews drive transitions. If you
@@ -462,13 +462,13 @@ must intervene, ensure the MR is CI-green before moving a ticket to **In QA**.
 The following defaults were accepted for EPIC-05 implementation. Revisit via
 backlog if production operation diverges.
 
-| # | Question | Accepted default |
-| - | -------- | ---------------- |
-| 1 | Jira status for remediation | Distinct status **In Remediation** (not reusing **In Progress**). Label `qa-remediation` is always applied. |
-| 2 | MR discovery | Resolve open MR via GitLab search (`findOpenMrForIssue`) — same convention as `delivery-build` post-`open-mr`. |
-| 3 | QA bot Jira assignee | **Separate service account** from the build engineer (`JIRA_ASSIGNEE_ACCOUNT_ID` on each crew). Status-based pollers prevent cross-pickup. |
-| 4 | E2E command scope | `AUTOMATED_TEST_COMMAND` defaults to `pnpm test`; optional `E2E_TEST_COMMAND` for a second pass. Projects with split suites set both explicitly. |
-| 5 | Handoff event typing | Crew-local structured log contracts (`workflow.handoff-to-review`, `workflow.remediation-required`) — no shared `HandoffEvent` type in `@daddia/crew` (per solution.md §5.1). Downstream crews consume Jira state, not log subscription. |
+| #   | Question                    | Accepted default                                                                                                                                                                                                                         |
+| --- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Jira status for remediation | Distinct status **In Remediation** (not reusing **In Progress**). Label `qa-remediation` is always applied.                                                                                                                              |
+| 2   | MR discovery                | Resolve open MR via GitLab search (`findOpenMrForIssue`) — same convention as `delivery-build` post-`open-mr`.                                                                                                                           |
+| 3   | QA bot Jira assignee        | **Separate service account** from the build engineer (`JIRA_ASSIGNEE_ACCOUNT_ID` on each crew). Status-based pollers prevent cross-pickup.                                                                                               |
+| 4   | E2E command scope           | `AUTOMATED_TEST_COMMAND` defaults to `pnpm test`; optional `E2E_TEST_COMMAND` for a second pass. Projects with split suites set both explicitly.                                                                                         |
+| 5   | Handoff event typing        | Crew-local structured log contracts (`workflow.handoff-to-review`, `workflow.remediation-required`) — no shared `HandoffEvent` type in `@daddia/crew` (per solution.md §5.1). Downstream crews consume Jira state, not log subscription. |
 
 ---
 
@@ -477,20 +477,20 @@ backlog if production operation diverges.
 Run before every new deployment or credential rotation. Trust-boundary detail:
 [`docs/architecture/security-model.md`](../architecture/security-model.md).
 
-| # | Check | How to verify |
-| - | ----- | ------------- |
-| 1 | Jira webhook URL points at `/webhooks/jira` with HMAC secret | Jira admin → Webhooks; secret matches `JIRA_WEBHOOK_SECRET` |
-| 2 | Webhook secret meets minimum length | Railway env: `JIRA_WEBHOOK_SECRET` ≥ 16 characters |
-| 3 | Unsigned or replayed Jira events rejected | Bad signature → `403`; stale timestamp → `400` |
-| 4 | Duplicate webhook deliveries idempotent | Re-post same Jira `id` → `{ duplicate: true }` |
-| 5 | API tokens in platform env only | No tokens in Dockerfile, git, or `mcp.json` literals |
-| 6 | Boot log redacts secrets | `config.loaded` omits token values |
-| 7 | MCP servers boot with injected credentials | `pnpm diagnose` → "MCP servers boot" passes |
-| 8 | SQLite state persists across redeploys | Volume at `/data`; `DB_PATH=/data/delivery-qa.db` |
-| 9 | `qa-engineer` allowlist excludes merge / protected-branch tools | Review `agents/qa-engineer/agent.ts` `allowedTools` |
-| 10 | Author-controlled Jira/MR/test output delimiter-fenced | `pnpm test` in `crews/delivery-qa` — prompt-context tests pass |
-| 11 | Workflow context from integration APIs, not webhook bodies | Handlers pass `issueKey` only into `runQaWorkflow` |
-| 12 | Loop caps set for production load | `QA_DEFECT_LOOP_CAP` and `REMEDIATION_TIMEOUT_HOURS` reviewed in Railway env |
-| 13 | CI invariant guard green | `pnpm guard:invariants` exits 0 on `main` |
+| #   | Check                                                           | How to verify                                                                |
+| --- | --------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| 1   | Jira webhook URL points at `/webhooks/jira` with HMAC secret    | Jira admin → Webhooks; secret matches `JIRA_WEBHOOK_SECRET`                  |
+| 2   | Webhook secret meets minimum length                             | Railway env: `JIRA_WEBHOOK_SECRET` ≥ 16 characters                           |
+| 3   | Unsigned or replayed Jira events rejected                       | Bad signature → `403`; stale timestamp → `400`                               |
+| 4   | Duplicate webhook deliveries idempotent                         | Re-post same Jira `id` → `{ duplicate: true }`                               |
+| 5   | API tokens in platform env only                                 | No tokens in Dockerfile, git, or `mcp.json` literals                         |
+| 6   | Boot log redacts secrets                                        | `config.loaded` omits token values                                           |
+| 7   | MCP servers boot with injected credentials                      | `pnpm diagnose` → "MCP servers boot" passes                                  |
+| 8   | SQLite state persists across redeploys                          | Volume at `/data`; `DB_PATH=/data/delivery-qa.db`                            |
+| 9   | `qa-engineer` allowlist excludes merge / protected-branch tools | Review `agents/qa-engineer/agent.ts` `allowedTools`                          |
+| 10  | Author-controlled Jira/MR/test output delimiter-fenced          | `pnpm test` in `crews/delivery-qa` — prompt-context tests pass               |
+| 11  | Workflow context from integration APIs, not webhook bodies      | Handlers pass `issueKey` only into `runQaWorkflow`                           |
+| 12  | Loop caps set for production load                               | `QA_DEFECT_LOOP_CAP` and `REMEDIATION_TIMEOUT_HOURS` reviewed in Railway env |
+| 13  | CI invariant guard green                                        | `pnpm guard:invariants` exits 0 on `main`                                    |
 
 Do not deploy while any item fails verification.
