@@ -138,6 +138,43 @@ importers:
         specifier: ^4.1.9
         version: 4.1.9(@opentelemetry/api@1.9.1)(@types/node@26.0.1)(@vitest/coverage-istanbul@4.1.9)(@vitest/ui@4.1.9)(jsdom@29.1.1)(vite@6.4.2(@types/node@26.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0))
 
+  crews/delivery-qa:
+    dependencies:
+      '@daddia/crew':
+        specifier: file:../../packages/crew
+        version: link:../../packages/crew
+      '@hono/node-server':
+        specifier: ^2.0.6
+        version: 2.0.6(hono@4.12.27)
+      hono:
+        specifier: ^4.12.27
+        version: 4.12.27
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@repo/eslint-config':
+        specifier: workspace:*
+        version: link:../../tooling/eslint-config
+      '@repo/typescript-config':
+        specifier: workspace:*
+        version: link:../../tooling/typescript-config
+      '@repo/vitest-config':
+        specifier: workspace:*
+        version: link:../../tooling/vitest-config
+      '@types/node':
+        specifier: ^26.0.1
+        version: 26.0.1
+      eslint:
+        specifier: ^10.5.0
+        version: 10.5.0(jiti@2.6.1)
+      typescript:
+        specifier: ^6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: ^4.1.9
+        version: 4.1.9(@opentelemetry/api@1.9.1)(@types/node@26.0.1)(@vitest/coverage-istanbul@4.1.9)(@vitest/ui@4.1.9)(jsdom@29.1.1)(vite@6.4.2(@types/node@26.0.1)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0))
+
   packages/crew:
     dependencies:
       '@anthropic-ai/claude-agent-sdk':

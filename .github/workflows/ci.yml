@@ -162,6 +162,42 @@ jobs:
       - name: Build
         run: pnpm build
 
+  delivery-qa-docker:
+    name: delivery-qa — Docker image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: build
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+
+      - name: Enable pnpm via Corepack
+        run: corepack enable
+
+      - name: Resolve pnpm store path
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build delivery-qa Docker image
+        run: docker build -f crews/delivery-qa/Dockerfile -t crew-delivery-qa:ci .
+
   crew-eval:
     name: CrewBench — delivery-build evals
     runs-on: ubuntu-latest
