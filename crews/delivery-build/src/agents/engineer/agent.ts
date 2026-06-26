@@ -17,8 +17,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 /**
  * Parse the structured JSON artefact emitted by the engineer skills.
- * Accepts any of the three shapes: assess-clarification, implement-story,
- * or address-feedback.
+ * Accepts any of the four shapes: assess-clarification, implement-story,
+ * address-feedback, or fix-ci.
  *
  * The skills instruct the model to emit a full AgentResult envelope:
  *   { success, summary, artefacts: { ... }, costUsd }

@@ -128,8 +128,8 @@ and implementation of the scaffold crews' workflows beyond config hygiene.
       And it never calls a tool that has no valid target at that point
     ```
 
-- [ ] **[RH01-04] Resolve the `fix-ci` task: add a skill or remove the path**
-  - **Status:** Not started | **Priority:** P0 | **Estimate:** 3
+- [x] **[RH01-04] Resolve the `fix-ci` task: add a skill or remove the path**
+  - **Status:** Done | **Priority:** P0 | **Estimate:** 3
   - **Epic:** RH01 | **Labels:** phase:now, area:delivery-build, type:fix
   - **Depends on:** -
   - **Deliverable:** The CI-fix branch either dispatches a documented `fix-ci` skill (with prompt-table entry and output contract) or is replaced by escalation. No dispatch occurs for a task the persona has no skill for. Closes review §2.4.

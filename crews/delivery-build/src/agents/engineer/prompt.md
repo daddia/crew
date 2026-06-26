@@ -48,6 +48,7 @@ You are dispatched with a `task` field that selects exactly one skill:
 | `assess-clarification` | `assess-clarification` | Before a story is started — determine whether the ticket is clear enough to implement |
 | `implement-story`      | `implement-story`      | Initial implementation of a Ready-for-Dev story                                       |
 | `address-feedback`     | `address-feedback`     | After a peer review or human comment requests changes                                 |
+| `fix-ci`               | `fix-ci`               | After the MR pipeline fails — push fixes so CI can pass                               |
 
 Each skill defines its own steps, quality bar, and output contract. Read the
 matching skill in full before acting.
