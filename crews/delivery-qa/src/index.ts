@@ -1,19 +1,31 @@
-import { initTracing } from '@daddia/crew';
-import { SchemaValidationError } from '@daddia/crew/config';
 import { pathToFileURL } from 'node:url';
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
-import { loadConfig, CONFIG_SCHEMA_VERSION } from './config.js';
+import { initTracing } from '@daddia/crew';
+import { SchemaValidationError, redact } from '@daddia/crew/config';
+import { jiraHandler } from './handlers/jira.js';
+import { createJiraClient } from './integrations/jira.js';
+import { createGitlabClient } from './integrations/gitlab.js';
+import { loadConfig, CONFIG_SCHEMA_VERSION, type Config } from './config.js';
 import { log } from './observability.js';
+import { startPoller } from './poller.js';
 import { createStateStore } from './state.js';
+import { recoverInterruptedSteps, type WorkflowCtxBase } from './workflow.js';
 
 /**
  * HTTP application with routes wired for this crew. Exported for unit tests
  * that exercise handlers without binding a port.
  */
-export function createApp(): Hono {
+export function createApp(
+  state: ReturnType<typeof createStateStore>,
+  config: Config,
+  ctxBase: WorkflowCtxBase,
+): Hono {
   const app = new Hono();
   app.get('/healthz', (c) => c.json({ ok: true }));
+  app.post('/webhooks/jira', (c) =>
+    jiraHandler(c, state, config.secrets.jiraWebhookSecret, ctxBase),
+  );
   return app;
 }
 
@@ -22,7 +34,8 @@ export function createApp(): Hono {
  * env without spawning a real process.
  */
 export async function boot(env: NodeJS.ProcessEnv = process.env): Promise<void> {
-  let config;
+  let config: Config;
+
   try {
     config = loadConfig(env);
   } catch (err) {
@@ -46,19 +59,62 @@ export async function boot(env: NodeJS.ProcessEnv = process.env): Promise<void> 
   log.info('config.loaded', {
     crewId: config.identity.crewId,
     schemaVersion: CONFIG_SCHEMA_VERSION,
+    ...redact(config),
   });
 
-  const { port, dbPath } = config.infrastructure;
-
-  const state = createStateStore(dbPath);
-  const app = createApp();
-
-  const server = serve({ fetch: app.fetch, port }, () => {
-    log.info('server.start', { port, db: dbPath });
+  const jira = createJiraClient(config.identity.jira, {
+    atlassianApiToken: config.secrets.atlassianApiToken,
   });
+  const gitlab = createGitlabClient(
+    config.identity.gitlab,
+    { gitlabAccessToken: config.secrets.gitlabAccessToken },
+  );
+
+  const ctxBase: WorkflowCtxBase = {
+    behaviour: {
+      qaDefectLoopCap: config.behaviour.qaDefectLoopCap,
+      remediationTimeoutHours: config.behaviour.remediationTimeoutHours,
+      externalIntegrationMode: config.behaviour.externalIntegrationMode,
+      automatedTestCommand: config.behaviour.automatedTestCommand,
+      e2eTestCommand: config.behaviour.e2eTestCommand,
+      qaDeployScript: config.behaviour.qaDeployScript,
+      qaEngineerMaxTurns: config.behaviour.qaEngineerMaxTurns,
+      qaEngineerCostCapUsd: config.behaviour.qaEngineerCostCapUsd,
+    },
+    jira,
+    gitlab,
+    qaWorkspaceDir: config.infrastructure.qaWorkspaceDir,
+  };
+
+  const state = createStateStore(config.infrastructure.dbPath);
+
+  await recoverInterruptedSteps(state, ctxBase);
+
+  const app = createApp(state, config, ctxBase);
+
+  const server = serve(
+    { fetch: app.fetch, port: config.infrastructure.port },
+    () => {
+      log.info('server.start', {
+        port: config.infrastructure.port,
+        db: config.infrastructure.dbPath,
+      });
+    },
+  );
+
+  const pollerDeps = {
+    identity: config.identity,
+    behaviour: config.behaviour,
+    jira,
+    gitlab,
+    qaWorkspaceDir: config.infrastructure.qaWorkspaceDir,
+  };
+
+  const pollInterval = startPoller(pollerDeps, state);
 
   function shutdown(): void {
     log.info('server.shutdown');
+    clearInterval(pollInterval);
     server.close(() => {
       state.close();
       process.exit(0);

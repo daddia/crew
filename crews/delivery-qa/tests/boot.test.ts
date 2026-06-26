@@ -14,7 +14,25 @@ vi.mock('@hono/node-server', () => ({
 vi.mock('../src/state.js', () => ({
   createStateStore: vi.fn().mockReturnValue({
     close: vi.fn(),
+    getInterruptedSteps: vi.fn().mockReturnValue([]),
   }),
+}));
+
+vi.mock('../src/integrations/jira.js', () => ({
+  createJiraClient: vi.fn().mockReturnValue({}),
+}));
+
+vi.mock('../src/integrations/gitlab.js', () => ({
+  createGitlabClient: vi.fn().mockReturnValue({}),
+}));
+
+vi.mock('../src/workflow.js', () => ({
+  recoverInterruptedSteps: vi.fn().mockResolvedValue(undefined),
+  runQaWorkflow: vi.fn(),
+}));
+
+vi.mock('../src/poller.js', () => ({
+  startPoller: vi.fn().mockReturnValue(1),
 }));
 
 vi.mock('@daddia/crew', () => ({
@@ -28,6 +46,8 @@ vi.mock('../src/observability.js', () => ({
 import { boot } from '../src/index.js';
 import { initTracing } from '@daddia/crew';
 import { serve } from '@hono/node-server';
+import { recoverInterruptedSteps } from '../src/workflow.js';
+import { startPoller } from '../src/poller.js';
 
 const VALID_ENV: NodeJS.ProcessEnv = {
   CREW_ID: 'delivery-qa-acme',
@@ -75,5 +95,12 @@ describe('boot – happy path', () => {
   it('starts the HTTP server on the configured port', async () => {
     await boot({ ...VALID_ENV, PORT: '4001' });
     expect(serve).toHaveBeenCalledWith(expect.objectContaining({ port: 4001 }), expect.any(Function));
+  });
+
+  it('runs startup recovery before the poller starts', async () => {
+    await boot(VALID_ENV);
+    const recoveryOrder = vi.mocked(recoverInterruptedSteps).mock.invocationCallOrder[0];
+    const pollerOrder = vi.mocked(startPoller).mock.invocationCallOrder[0];
+    expect(recoveryOrder).toBeLessThan(pollerOrder!);
   });
 });

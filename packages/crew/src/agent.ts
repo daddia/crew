@@ -1,5 +1,10 @@
 /** Personas across all agent crews. */
-export type PersonaName = 'tech-lead' | 'engineer' | 'senior-engineer' | 'code-quality';
+export type PersonaName =
+  | 'tech-lead'
+  | 'engineer'
+  | 'senior-engineer'
+  | 'code-quality'
+  | 'qa-engineer';
 
 /** Input passed to every agent run. */
 export interface AgentInput {
