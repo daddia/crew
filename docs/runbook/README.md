@@ -1,7 +1,7 @@
 ---
 type: Runbooks
 status: Current
-last_updated: 2026-05-21
+last_updated: 2026-06-27
 related:
   - docs/product/strategy.md
   - docs/product/roadmap.md
@@ -35,11 +35,10 @@ Handoffs are encoded as work-source state transitions plus `ready-for-*` events.
 
 ## Runbooks
 
-| Topic                         | Document                               |
-| ----------------------------- | -------------------------------------- |
-| `delivery-build` operations   | [delivery-build.md](delivery-build.md) |
-| `delivery-qa` operations      | [delivery-qa.md](delivery-qa.md)       |
-| Local container build + smoke | [container.md](container.md)           |
-| Publishing `@daddia/crew`     | [publish.md](publish.md)               |
-
-Additional runbooks (`delivery-review`) land alongside that crew — see [`../product/roadmap.md`](../product/roadmap.md).
+| Topic                         | Document                                     |
+| ----------------------------- | -------------------------------------------- |
+| `delivery-build` operations   | [delivery-build.md](delivery-build.md)       |
+| `delivery-qa` operations      | [delivery-qa.md](delivery-qa.md)             |
+| `delivery-review` operations  | [delivery-review.md](delivery-review.md)     |
+| Local container build + smoke | [container.md](container.md)                 |
+| Publishing `@daddia/crew`     | [publish.md](publish.md)                     |
