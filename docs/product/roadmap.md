@@ -220,15 +220,15 @@ making model-generated orchestration the default for any crew.
 
 ## 4. Milestones
 
-| Milestone                                                | Phase  | Customer-visible?   | Notes                                             |
-| -------------------------------------------------------- | ------ | ------------------- | ------------------------------------------------- |
-| Build crew runs unattended on real stories               | Now    | No (internal proof) | Now exit criteria met; gates Next opening         |
-| Full delivery vertical (build → QA → review) operational | Next   | Yes                 | Handoffs auto-trigger; overnight run completes    |
+| Milestone                                                | Phase  | Customer-visible?   | Notes                                                       |
+| -------------------------------------------------------- | ------ | ------------------- | ----------------------------------------------------------- |
+| Build crew runs unattended on real stories               | Now    | No (internal proof) | Now exit criteria met; gates Next opening                   |
+| Full delivery vertical (build → QA → review) operational | Next   | Yes                 | Handoffs auto-trigger; overnight run completes              |
 | Eval framework gating every runtime change               | Next   | No                  | Eval gate in eval/release pipeline before unattended deploy |
-| First CLI-shaped crew (code-reviewer) ships              | Next   | Yes                 | Requires the remote audit sink                    |
-| Pro tier purchasable                                     | Later  | Yes                 | Pricing, licence enforcement, proof pack resolved |
-| First optimiser (model selector) live                    | Later  | Yes (Pro)           | Measurable cost-quality win on the eval baseline  |
-| Durable cross-crew pipeline resumes after restart        | Future | Yes                 | Coordination above the crew                       |
+| First CLI-shaped crew (code-reviewer) ships              | Next   | Yes                 | Requires the remote audit sink                              |
+| Pro tier purchasable                                     | Later  | Yes                 | Pricing, licence enforcement, proof pack resolved           |
+| First optimiser (model selector) live                    | Later  | Yes (Pro)           | Measurable cost-quality win on the eval baseline            |
+| Durable cross-crew pipeline resumes after restart        | Future | Yes                 | Coordination above the crew                                 |
 
 ## 5. External dependencies
 

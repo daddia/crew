@@ -2,11 +2,7 @@ import type { JiraClient } from './integrations/jira.js';
 import { probePmApproval } from './integrations/jira.js';
 import type { GitlabClient } from './integrations/gitlab.js';
 import { log } from './observability.js';
-import {
-  escalateToHumanReview,
-  runReviewWorkflow,
-  type WorkflowCtxBase,
-} from './workflow.js';
+import { escalateToHumanReview, runReviewWorkflow, type WorkflowCtxBase } from './workflow.js';
 import type { Step, StateStore } from './state.js';
 import { has, runReviewWorkflowWithLock } from './in-flight.js';
 import { recordTick } from './poller-state.js';
@@ -117,11 +113,7 @@ async function pollStakeholderPendingStories(
       log.info('poller.stakeholder-resolved', { issueKey });
       runReviewWorkflowWithLock(
         issueKey,
-        () =>
-          runReviewWorkflow(
-            { ...ctxBase, issueKey, state },
-            { resumeFromMerge: true },
-          ),
+        () => runReviewWorkflow({ ...ctxBase, issueKey, state }, { resumeFromMerge: true }),
         (err) => {
           log.error('poller.run-review-error', { issueKey, err: String(err) });
         },

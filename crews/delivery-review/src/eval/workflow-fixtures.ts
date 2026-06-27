@@ -121,10 +121,7 @@ async function withHandoffDoneFixture(
   const agents = { techLead: makeStubTechLead() };
 
   try {
-    await runReviewWorkflow(
-      { issueKey: FIXTURE_ISSUE_KEY, state, ...ctxBase },
-      { agents },
-    );
+    await runReviewWorkflow({ issueKey: FIXTURE_ISSUE_KEY, state, ...ctxBase }, { agents });
 
     await runReviewWorkflow(
       { issueKey: FIXTURE_ISSUE_KEY, state, ...ctxBase },

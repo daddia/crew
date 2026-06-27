@@ -124,7 +124,9 @@ describe('POST /webhooks/jira', () => {
     });
     expect(res.status).toBe(200);
     await new Promise((r) => setImmediate(r));
-    expect(runReviewWorkflow).toHaveBeenCalledWith(expect.objectContaining({ issueKey: 'CREW-99' }));
+    expect(runReviewWorkflow).toHaveBeenCalledWith(
+      expect.objectContaining({ issueKey: 'CREW-99' }),
+    );
   });
 
   it('returns 200 with duplicate true for a replayed event id', async () => {

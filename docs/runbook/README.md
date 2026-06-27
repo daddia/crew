@@ -35,10 +35,10 @@ Handoffs are encoded as work-source state transitions plus `ready-for-*` events.
 
 ## Runbooks
 
-| Topic                         | Document                                     |
-| ----------------------------- | -------------------------------------------- |
-| `delivery-build` operations   | [delivery-build.md](delivery-build.md)       |
-| `delivery-qa` operations      | [delivery-qa.md](delivery-qa.md)             |
-| `delivery-review` operations  | [delivery-review.md](delivery-review.md)     |
-| Local container build + smoke | [container.md](container.md)                 |
-| Publishing `@daddia/crew`     | [publish.md](publish.md)                     |
+| Topic                         | Document                                 |
+| ----------------------------- | ---------------------------------------- |
+| `delivery-build` operations   | [delivery-build.md](delivery-build.md)   |
+| `delivery-qa` operations      | [delivery-qa.md](delivery-qa.md)         |
+| `delivery-review` operations  | [delivery-review.md](delivery-review.md) |
+| Local container build + smoke | [container.md](container.md)             |
+| Publishing `@daddia/crew`     | [publish.md](publish.md)                 |

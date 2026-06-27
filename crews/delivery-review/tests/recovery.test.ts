@@ -105,7 +105,9 @@ function makeSuccessResult() {
 function makeState(interrupted: StepRow[] = []): StateStore {
   return {
     upsertStory: vi.fn(),
-    getStory: vi.fn().mockReturnValue({ issueKey: 'CREW-63-001', currentStep: 'final-code-review' }),
+    getStory: vi
+      .fn()
+      .mockReturnValue({ issueKey: 'CREW-63-001', currentStep: 'final-code-review' }),
     getStoriesAtStep: vi.fn().mockReturnValue([]),
     startStep: vi.fn(),
     finishStep: vi.fn(),
@@ -154,7 +156,11 @@ describe('recoverInterruptedSteps', () => {
   it('emits an info log with issueKey, step, and sessionId on successful resume', async () => {
     const ctxBase = makeCtxBase();
     const state = makeState([
-      makeInterruptedRow({ issueKey: 'CREW-63-001', step: 'final-code-review', sessionId: 'sess_abc' }),
+      makeInterruptedRow({
+        issueKey: 'CREW-63-001',
+        step: 'final-code-review',
+        sessionId: 'sess_abc',
+      }),
     ]);
 
     await recoverInterruptedSteps(state, ctxBase);

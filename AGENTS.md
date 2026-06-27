@@ -15,12 +15,12 @@ Two layers:
 
 ## Crews in this repo
 
-| Folder (code)                  | Role                                                              | Planned name (architecture / docs) | Status        |
-| ------------------------------ | ----------------------------------------------------------------- | ---------------------------------- | ------------- |
-| `crews/delivery-build/`        | Pick up story → implement → peer review → open MR → CI → hand off | `delivery-build`                   | Implemented   |
-| `crews/delivery-qa/`           | Deploy to QA → automated + exploratory pass → defect loop → hand off | `delivery-qa`                   | Implemented   |
-| `crews/delivery-review/`       | Tech-lead final review → PM HITL → merge → Done                   | `delivery-review`                  | Scaffold only |
-| `crews/delivery-code-review/`  | Standalone code-review crew (post-MR, planned CLI-shaped)         | `code-reviewer`                    | Scaffold only |
+| Folder (code)                 | Role                                                                 | Planned name (architecture / docs) | Status        |
+| ----------------------------- | -------------------------------------------------------------------- | ---------------------------------- | ------------- |
+| `crews/delivery-build/`       | Pick up story → implement → peer review → open MR → CI → hand off    | `delivery-build`                   | Implemented   |
+| `crews/delivery-qa/`          | Deploy to QA → automated + exploratory pass → defect loop → hand off | `delivery-qa`                      | Implemented   |
+| `crews/delivery-review/`      | Tech-lead final review → PM HITL → merge → Done                      | `delivery-review`                  | Scaffold only |
+| `crews/delivery-code-review/` | Standalone code-review crew (post-MR, planned CLI-shaped)            | `code-reviewer`                    | Scaffold only |
 
 Flow contracts for the full vertical live in [`docs/design/crew-flows/`](docs/design/crew-flows/).
 

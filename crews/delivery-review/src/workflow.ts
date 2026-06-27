@@ -13,11 +13,7 @@ import type { StateStore, Step } from './state.js';
 const TECH_LEAD_MODEL = 'claude-sonnet-4-6';
 
 /** SDK session storage for tech-lead persona (matches resolveSession default cwd). */
-const RECOVERY_SESSION_DIR = join(
-  dirname(fileURLToPath(import.meta.url)),
-  'agents',
-  'tech-lead',
-);
+const RECOVERY_SESSION_DIR = join(dirname(fileURLToPath(import.meta.url)), 'agents', 'tech-lead');
 
 export interface WorkflowContext {
   issueKey: string;
@@ -190,12 +186,7 @@ async function seedReviewContext(ctx: WorkflowContext): Promise<ReviewSeedContex
     } catch (err) {
       log.warn('workflow.context-seed.branch-failed', { issueKey, mrUrl, err: String(err) });
       state.finishStep(issueKey, 'context-seed', { verdict: 'failed' });
-      await escalateToHumanReview(
-        jira,
-        issueKey,
-        'Failed to resolve MR source branch',
-        state,
-      );
+      await escalateToHumanReview(jira, issueKey, 'Failed to resolve MR source branch', state);
       return null;
     }
 
@@ -239,10 +230,7 @@ async function enterStakeholderReviewPending(
 ): Promise<void> {
   const { issueKey, state, jira, behaviour } = ctx;
 
-  await jira.commentOnIssue(
-    issueKey,
-    formatPmSignOffComment(behaviour.pmApprovalCommentPattern),
-  );
+  await jira.commentOnIssue(issueKey, formatPmSignOffComment(behaviour.pmApprovalCommentPattern));
 
   state.upsertStory(issueKey, 'stakeholder-review-pending');
   state.startStep(issueKey, 'stakeholder-review-pending');
@@ -375,7 +363,12 @@ async function resolveResumeSeed(ctx: WorkflowContext): Promise<ReviewSeedContex
     pipelineStatus = await gitlab.getPipelineStatus(mrUrl);
   } catch (err) {
     log.warn('workflow.merge-and-close.pipeline-failed', { issueKey, mrUrl, err: String(err) });
-    await escalateToHumanReview(jira, issueKey, 'Failed to read pipeline status before merge', ctx.state);
+    await escalateToHumanReview(
+      jira,
+      issueKey,
+      'Failed to read pipeline status before merge',
+      ctx.state,
+    );
     return null;
   }
 
@@ -467,17 +460,15 @@ async function runMergeAndClose(ctx: WorkflowContext, agents: WorkflowAgents): P
       log.error('workflow.merge-and-close.error', { issueKey, err: String(err) });
       state.startStep(issueKey, 'merge-and-close');
       state.finishStep(issueKey, 'merge-and-close', { verdict: 'failed' });
-      await escalateToHumanReview(
-        jira,
-        issueKey,
-        'GitLab approve or merge failed',
-        state,
-      );
+      await escalateToHumanReview(jira, issueKey, 'GitLab approve or merge failed', state);
     }
   });
 }
 
-async function runReviewWorkflowResume(ctx: WorkflowContext, agents: WorkflowAgents): Promise<void> {
+async function runReviewWorkflowResume(
+  ctx: WorkflowContext,
+  agents: WorkflowAgents,
+): Promise<void> {
   await runMergeAndClose(ctx, agents);
 }
 
@@ -511,12 +502,7 @@ export async function runReviewWorkflow(
     await runReviewWorkflowInner(ctx, input, agents);
   } catch (err) {
     log.error('workflow.review.unhandled-error', { issueKey, err: String(err) });
-    await escalateToHumanReview(
-      ctx.jira,
-      issueKey,
-      'Unexpected workflow error',
-      ctx.state,
-    );
+    await escalateToHumanReview(ctx.jira, issueKey, 'Unexpected workflow error', ctx.state);
   }
 }
 

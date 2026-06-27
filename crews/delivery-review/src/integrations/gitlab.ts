@@ -74,8 +74,7 @@ function formatDiffSections(
   }
 
   if (body.length > diffSizeCapBytes) {
-    body =
-      body.slice(0, diffSizeCapBytes) + `\n[diff truncated at ${diffSizeCapBytes} bytes]`;
+    body = body.slice(0, diffSizeCapBytes) + `\n[diff truncated at ${diffSizeCapBytes} bytes]`;
   }
 
   return body;

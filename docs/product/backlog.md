@@ -83,7 +83,7 @@ Phase-gated deferrals live in [`roadmap.md`](roadmap.md) §6 (Deferred beyond th
 | Epic ID | Title                                              | Phase | Priority | Deps             | Points | Work path                       | Status      |
 | ------- | -------------------------------------------------- | ----- | -------- | ---------------- | ------ | ------------------------------- | ----------- |
 | CREW-04 | Remote audit sink (`@daddia/crew/audit`)           | Next  | P0       | CREW-03          | TBD    | `docs/work/04-audit-sink/`      | Not started |
-| CREW-05 | `delivery-qa` crew                                 | Next  | P0       | CREW-03          | 34     | `docs/work/05-delivery-qa/`     | Done |
+| CREW-05 | `delivery-qa` crew                                 | Next  | P0       | CREW-03          | 34     | `docs/work/05-delivery-qa/`     | Done        |
 | CREW-06 | `delivery-review` crew                             | Next  | P0       | CREW-05          | 31     | `docs/work/06-delivery-review/` | Not started |
 | CREW-07 | `code-reviewer` CLI crew                           | Next  | P1       | CREW-04          | TBD    | `docs/work/07-code-reviewer/`   | Not started |
 | CREW-08 | Observability — OTel tracing                       | Next  | P1       | CREW-03          | TBD    | `docs/work/08-observability/`   | In progress |

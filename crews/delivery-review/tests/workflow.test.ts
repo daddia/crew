@@ -147,7 +147,9 @@ function approveResult(overrides: Partial<AgentResult> = {}): AgentResult {
   };
 }
 
-function blockResult(blockers: Array<{ category: string; summary: string; filePath?: string }>): AgentResult {
+function blockResult(
+  blockers: Array<{ category: string; summary: string; filePath?: string }>,
+): AgentResult {
   return {
     success: false,
     summary: 'Final review blocked.',
@@ -215,7 +217,11 @@ describe('runReviewWorkflow', () => {
     const ctx = makeCtx();
     mockTechLead.mockResolvedValue(
       blockResult([
-        { category: 'architecture', summary: 'Circular dependency in module graph', filePath: 'src/a.ts' },
+        {
+          category: 'architecture',
+          summary: 'Circular dependency in module graph',
+          filePath: 'src/a.ts',
+        },
       ]),
     );
 

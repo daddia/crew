@@ -34,11 +34,11 @@ Merge and approve are workflow-only operations after PM `/pm-approve` sign-off.
 
 For `final-code-review`, evaluate each acceptance criterion:
 
-| Status    | Meaning                                              |
-| --------- | ---------------------------------------------------- |
+| Status    | Meaning                                            |
+| --------- | -------------------------------------------------- |
 | `met`     | Fully satisfied by the MR implementation           |
-| `partial` | Partially met; minor gap that does not block merge   |
-| `not-met` | Not satisfied; counts toward a `block` verdict       |
+| `partial` | Partially met; minor gap that does not block merge |
+| `not-met` | Not satisfied; counts toward a `block` verdict     |
 
 Block when any criterion is `not-met`, or when architecture/security defects
 would make merge unsafe. Warnings are non-blocking observations.

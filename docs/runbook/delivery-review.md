@@ -81,17 +81,17 @@ check fails. Do not deploy while any check is failing.
 
 ### 1.3 Diagnosing failures
 
-| Check                      | Failure detail                        | Likely fix                                                                        |
-| -------------------------- | ------------------------------------- | --------------------------------------------------------------------------------- |
-| Jira API reachability      | `HTTP 401`                            | Verify `ATLASSIAN_API_TOKEN` and `ATLASSIAN_EMAIL`                                |
-| Jira API reachability      | `HTTP 403` or DNS error               | Confirm `ATLASSIAN_BASE_URL` is correct and reachable                             |
-| Jira project key           | `HTTP 404`                            | Confirm `JIRA_PROJECT_KEY` matches the board key                                  |
-| Jira transitions           | `missing transitions: ...`            | Add the missing transitions in the Jira board workflow editor                     |
-| GitLab API reachability    | `HTTP 401`                            | Confirm `GITLAB_PERSONAL_ACCESS_TOKEN` has `api` scope                            |
-| GitLab API reachability    | `HTTP 404`                            | Confirm `GITLAB_PROJECT_ID` is the numeric ID, not the path                       |
-| GitLab MR lookup           | `MR search returned HTTP ...`         | Confirm token has MR read access on the project                                   |
-| MCP servers boot           | `timed out waiting for MCP handshake` | Ensure `npx` is on PATH; check `ATLASSIAN_*` and `GITLAB_*` values                |
-| DB_PATH directory writable | `... is not writable`                 | Confirm the parent directory exists and is writable                               |
+| Check                      | Failure detail                        | Likely fix                                                         |
+| -------------------------- | ------------------------------------- | ------------------------------------------------------------------ |
+| Jira API reachability      | `HTTP 401`                            | Verify `ATLASSIAN_API_TOKEN` and `ATLASSIAN_EMAIL`                 |
+| Jira API reachability      | `HTTP 403` or DNS error               | Confirm `ATLASSIAN_BASE_URL` is correct and reachable              |
+| Jira project key           | `HTTP 404`                            | Confirm `JIRA_PROJECT_KEY` matches the board key                   |
+| Jira transitions           | `missing transitions: ...`            | Add the missing transitions in the Jira board workflow editor      |
+| GitLab API reachability    | `HTTP 401`                            | Confirm `GITLAB_PERSONAL_ACCESS_TOKEN` has `api` scope             |
+| GitLab API reachability    | `HTTP 404`                            | Confirm `GITLAB_PROJECT_ID` is the numeric ID, not the path        |
+| GitLab MR lookup           | `MR search returned HTTP ...`         | Confirm token has MR read access on the project                    |
+| MCP servers boot           | `timed out waiting for MCP handshake` | Ensure `npx` is on PATH; check `ATLASSIAN_*` and `GITLAB_*` values |
+| DB_PATH directory writable | `... is not writable`                 | Confirm the parent directory exists and is writable                |
 
 The three required Jira transitions are: `In Review`, `Done`, `Needs human review`.
 If any are missing, add them in the Jira board project settings under "Workflows".
@@ -130,41 +130,41 @@ Canonical schema: [`crews/delivery-review/src/config.ts`](../../crews/delivery-r
 
 #### Required
 
-| Variable                            | Description                                                                                          |
-| ----------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `ANTHROPIC_API_KEY`                 | Anthropic API key for `tech-lead` agent runs                                                         |
-| `ATLASSIAN_EMAIL`                   | Atlassian account email for Jira API auth                                                            |
-| `ATLASSIAN_API_TOKEN`               | Atlassian API token                                                                                  |
-| `ATLASSIAN_BASE_URL`                | Jira base URL (e.g. `https://yourorg.atlassian.net`)                                                 |
-| `JIRA_PROJECT_KEY`                  | Jira project key (e.g. `CREW`)                                                                       |
-| `JIRA_ASSIGNEE_ACCOUNT_ID`          | Jira account ID of the **review bot** — poller JQL filters on this assignee                          |
-| `JIRA_ACCEPTANCE_CRITERIA_FIELD_ID` | Custom field ID for acceptance criteria (e.g. `customfield_10042`)                                   |
-| `PM_APPROVER_ACCOUNT_IDS`           | Comma-separated Atlassian account IDs allowed to PM-approve. Boot fails if empty.                    |
-| `GITLAB_PERSONAL_ACCESS_TOKEN`      | GitLab PAT with `api` scope                                                                          |
-| `GITLAB_API_URL`                    | GitLab API base (e.g. `https://gitlab.com/api/v4`)                                                   |
-| `GITLAB_PROJECT_ID`                 | Numeric GitLab project ID                                                                            |
-| `JIRA_WEBHOOK_SECRET`               | Shared secret for Jira webhook HMAC verification (≥ 16 characters)                                   |
-| `DB_PATH`                           | SQLite file path (e.g. `/data/delivery-review.db` in production)                                     |
+| Variable                            | Description                                                                       |
+| ----------------------------------- | --------------------------------------------------------------------------------- |
+| `ANTHROPIC_API_KEY`                 | Anthropic API key for `tech-lead` agent runs                                      |
+| `ATLASSIAN_EMAIL`                   | Atlassian account email for Jira API auth                                         |
+| `ATLASSIAN_API_TOKEN`               | Atlassian API token                                                               |
+| `ATLASSIAN_BASE_URL`                | Jira base URL (e.g. `https://yourorg.atlassian.net`)                              |
+| `JIRA_PROJECT_KEY`                  | Jira project key (e.g. `CREW`)                                                    |
+| `JIRA_ASSIGNEE_ACCOUNT_ID`          | Jira account ID of the **review bot** — poller JQL filters on this assignee       |
+| `JIRA_ACCEPTANCE_CRITERIA_FIELD_ID` | Custom field ID for acceptance criteria (e.g. `customfield_10042`)                |
+| `PM_APPROVER_ACCOUNT_IDS`           | Comma-separated Atlassian account IDs allowed to PM-approve. Boot fails if empty. |
+| `GITLAB_PERSONAL_ACCESS_TOKEN`      | GitLab PAT with `api` scope                                                       |
+| `GITLAB_API_URL`                    | GitLab API base (e.g. `https://gitlab.com/api/v4`)                                |
+| `GITLAB_PROJECT_ID`                 | Numeric GitLab project ID                                                         |
+| `JIRA_WEBHOOK_SECRET`               | Shared secret for Jira webhook HMAC verification (≥ 16 characters)                |
+| `DB_PATH`                           | SQLite file path (e.g. `/data/delivery-review.db` in production)                  |
 
 #### Behaviour and cost controls
 
-| Variable                       | Default          | Description                                                                                                                                                                                |
-| ------------------------------ | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `PM_REVIEW_TIMEOUT_HOURS`      | `48`             | Maximum hours to wait in `stakeholder-review-pending` for a PM `/pm-approve` comment from an allowlisted account. Exceeded → automatic escalation to **Needs human review**.                 |
-| `PM_APPROVAL_COMMENT_PATTERN`  | `/pm-approve`    | Substring a Jira comment must contain to count as PM approval. Only comments posted **after** the pending step started and from an account in `PM_APPROVER_ACCOUNT_IDS` qualify.             |
-| `PM_APPROVER_ACCOUNT_IDS`      | _(required)_     | Comma-separated Atlassian account IDs of humans authorised to PM-approve. Merge is too privileged for any ticket commenter — configure explicitly for your team.                           |
-| `POLL_INTERVAL_MS`             | `300000`         | Milliseconds between Jira polling ticks                                                                                                                                                    |
-| `TECH_LEAD_MAX_TURNS`          | `30`             | Max agent turns per `tech-lead` step                                                                                                                                                       |
-| `TECH_LEAD_COST_CAP_USD`       | `5`              | Per-step cost cap for `tech-lead` runs                                                                                                                                                     |
-| `DIFF_FILE_CAP`                | `50`             | Maximum diff files the tech-lead review considers                                                                                                                                          |
-| `DIFF_SIZE_CAP_BYTES`          | `500000`         | Maximum diff size in bytes for review                                                                                                                                                      |
-| `GITLAB_DEFAULT_BRANCH`        | `main`           | Target branch for merge operations                                                                                                                                                         |
-| `LOG_LEVEL`                    | `info`           | Log verbosity (`debug`, `info`, `warn`, `error`)                                                                                                                                           |
-| `PORT`                         | `3002`           | HTTP listen port                                                                                                                                                                           |
-| `CREW_ID`                      | `delivery-review`| Crew identifier in structured logs                                                                                                                                                         |
-| `ATLASSIAN_ACCOUNT_ID`         | _(unset)_        | Bot account ID for webhook author filtering when needed                                                                                                                                    |
-| `HONEYCOMB_API_KEY`            | _(unset)_        | Optional OTel export key                                                                                                                                                                   |
-| `CREW_EVAL_FIXTURE_MODE`       | `mock`           | CrewBench fixture mode (`mock` or `live`) — not used in production                                                                                                                         |
+| Variable                      | Default           | Description                                                                                                                                                                      |
+| ----------------------------- | ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PM_REVIEW_TIMEOUT_HOURS`     | `48`              | Maximum hours to wait in `stakeholder-review-pending` for a PM `/pm-approve` comment from an allowlisted account. Exceeded → automatic escalation to **Needs human review**.     |
+| `PM_APPROVAL_COMMENT_PATTERN` | `/pm-approve`     | Substring a Jira comment must contain to count as PM approval. Only comments posted **after** the pending step started and from an account in `PM_APPROVER_ACCOUNT_IDS` qualify. |
+| `PM_APPROVER_ACCOUNT_IDS`     | _(required)_      | Comma-separated Atlassian account IDs of humans authorised to PM-approve. Merge is too privileged for any ticket commenter — configure explicitly for your team.                 |
+| `POLL_INTERVAL_MS`            | `300000`          | Milliseconds between Jira polling ticks                                                                                                                                          |
+| `TECH_LEAD_MAX_TURNS`         | `30`              | Max agent turns per `tech-lead` step                                                                                                                                             |
+| `TECH_LEAD_COST_CAP_USD`      | `5`               | Per-step cost cap for `tech-lead` runs                                                                                                                                           |
+| `DIFF_FILE_CAP`               | `50`              | Maximum diff files the tech-lead review considers                                                                                                                                |
+| `DIFF_SIZE_CAP_BYTES`         | `500000`          | Maximum diff size in bytes for review                                                                                                                                            |
+| `GITLAB_DEFAULT_BRANCH`       | `main`            | Target branch for merge operations                                                                                                                                               |
+| `LOG_LEVEL`                   | `info`            | Log verbosity (`debug`, `info`, `warn`, `error`)                                                                                                                                 |
+| `PORT`                        | `3002`            | HTTP listen port                                                                                                                                                                 |
+| `CREW_ID`                     | `delivery-review` | Crew identifier in structured logs                                                                                                                                               |
+| `ATLASSIAN_ACCOUNT_ID`        | _(unset)_         | Bot account ID for webhook author filtering when needed                                                                                                                          |
+| `HONEYCOMB_API_KEY`           | _(unset)_         | Optional OTel export key                                                                                                                                                         |
+| `CREW_EVAL_FIXTURE_MODE`      | `mock`            | CrewBench fixture mode (`mock` or `live`) — not used in production                                                                                                               |
 
 ### 2.3 Persistent volume
 
@@ -184,8 +184,8 @@ deduplication is lost.
 
 After the service is live, register the Railway public URL with Jira:
 
-| Provider | URL                                      | Trigger                         |
-| -------- | ---------------------------------------- | ------------------------------- |
+| Provider | URL                                      | Trigger                             |
+| -------- | ---------------------------------------- | ----------------------------------- |
 | Jira     | `https://<railway-domain>/webhooks/jira` | Issue transitioned to **In Review** |
 
 The poller is the fallback trigger when webhooks are delayed or missed.
@@ -234,38 +234,38 @@ credentials and that `JIRA_ASSIGNEE_ACCOUNT_ID` is the review bot account.
 
 ### 4.1 Log events to alert on
 
-| Event                                        | Level | Meaning                                                           | Recommended action                                                                     |
-| -------------------------------------------- | ----- | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `workflow.escalate`                          | warn  | Story escalated to human review                                   | Check `reason`; review the Jira escalation comment                                     |
-| `poller.stakeholder-timeout`                 | warn  | `PM_REVIEW_TIMEOUT_HOURS` exceeded while awaiting PM sign-off     | Contact PM or manually approve; see [§5.1](#51-pm-approval-timeout)                      |
-| `poller.stakeholder-external-merge-error`    | error | MR merged externally while Jira still In Review                   | Reconcile Jira state manually; see [§5.6](#56-external-merge-inconsistency)            |
-| `poller.search-error`                        | warn  | Jira API unreachable during a poll tick                           | Verify `ATLASSIAN_*` credentials and Jira status                                       |
-| `recovery.session-failed`                    | warn  | Boot-time crash recovery could not reconnect an SDK session       | Story escalated automatically; review the Jira ticket                                  |
-| `workflow.merge-and-close.error`             | error | GitLab approve or merge API call failed                           | Check GitLab permissions and MR state; see [§5.5](#55-merge-api-failure)               |
-| `config.invalid`                             | error | Config schema validation failed at boot                           | Service will exit; fix the bad env var and redeploy                                    |
-| `poller.misconfigured`                       | warn  | `JIRA_PROJECT_KEY` or `JIRA_ASSIGNEE_ACCOUNT_ID` is blank         | Fix Railway env; no stories will be picked up                                          |
+| Event                                     | Level | Meaning                                                       | Recommended action                                                          |
+| ----------------------------------------- | ----- | ------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `workflow.escalate`                       | warn  | Story escalated to human review                               | Check `reason`; review the Jira escalation comment                          |
+| `poller.stakeholder-timeout`              | warn  | `PM_REVIEW_TIMEOUT_HOURS` exceeded while awaiting PM sign-off | Contact PM or manually approve; see [§5.1](#51-pm-approval-timeout)         |
+| `poller.stakeholder-external-merge-error` | error | MR merged externally while Jira still In Review               | Reconcile Jira state manually; see [§5.6](#56-external-merge-inconsistency) |
+| `poller.search-error`                     | warn  | Jira API unreachable during a poll tick                       | Verify `ATLASSIAN_*` credentials and Jira status                            |
+| `recovery.session-failed`                 | warn  | Boot-time crash recovery could not reconnect an SDK session   | Story escalated automatically; review the Jira ticket                       |
+| `workflow.merge-and-close.error`          | error | GitLab approve or merge API call failed                       | Check GitLab permissions and MR state; see [§5.5](#55-merge-api-failure)    |
+| `config.invalid`                          | error | Config schema validation failed at boot                       | Service will exit; fix the bad env var and redeploy                         |
+| `poller.misconfigured`                    | warn  | `JIRA_PROJECT_KEY` or `JIRA_ASSIGNEE_ACCOUNT_ID` is blank     | Fix Railway env; no stories will be picked up                               |
 
 ### 4.2 Normal steady-state events
 
-| Event                                       | Level | Meaning                                                                                  |
-| ------------------------------------------- | ----- | ---------------------------------------------------------------------------------------- |
-| `server.start`                              | info  | HTTP server is listening                                                                 |
-| `config.loaded`                             | info  | Config validated and loaded at boot (secrets redacted)                                   |
-| `workflow.review.start`                     | info  | Story entered the review workflow                                                        |
-| `workflow.blocked.stakeholder-review`       | info  | Tech-lead approved; awaiting PM sign-off — HITL pause entered                            |
-| `poller.stakeholder-resolved`               | info  | PM approval detected; resuming at merge-and-close                                        |
-| `workflow.handoff-done`                     | info  | Story merged and transitioned to **Done** — delivery vertical closed for this issue      |
-| `poller.stakeholder-reconciled`             | info  | MR already merged and Jira already Done — local state reconciled                         |
+| Event                                 | Level | Meaning                                                                             |
+| ------------------------------------- | ----- | ----------------------------------------------------------------------------------- |
+| `server.start`                        | info  | HTTP server is listening                                                            |
+| `config.loaded`                       | info  | Config validated and loaded at boot (secrets redacted)                              |
+| `workflow.review.start`               | info  | Story entered the review workflow                                                   |
+| `workflow.blocked.stakeholder-review` | info  | Tech-lead approved; awaiting PM sign-off — HITL pause entered                       |
+| `poller.stakeholder-resolved`         | info  | PM approval detected; resuming at merge-and-close                                   |
+| `workflow.handoff-done`               | info  | Story merged and transitioned to **Done** — delivery vertical closed for this issue |
+| `poller.stakeholder-reconciled`       | info  | MR already merged and Jira already Done — local state reconciled                    |
 
 ### 4.3 `workflow.handoff-done` payload
 
 Emitted at successful terminal exit. Key fields:
 
-| Field            | Type   | Notes                                                       |
-| ---------------- | ------ | ----------------------------------------------------------- |
-| `issueKey`       | string | Jira issue key                                              |
-| `mrUrl`          | string | GitLab MR web URL                                           |
-| `mergeCommitSha` | string | SHA of the merge commit on `main`                           |
+| Field            | Type   | Notes                             |
+| ---------------- | ------ | --------------------------------- |
+| `issueKey`       | string | Jira issue key                    |
+| `mrUrl`          | string | GitLab MR web URL                 |
+| `mergeCommitSha` | string | SHA of the merge commit on `main` |
 
 ---
 
@@ -305,12 +305,12 @@ poller detects approval (allowlisted account, after pending started_at)
 
 **Approval probe rules (v1 defaults):**
 
-| Rule | Detail |
-| ---- | ------ |
-| Signal | Jira comment body contains `PM_APPROVAL_COMMENT_PATTERN` (default `/pm-approve`) |
-| Author | Comment `accountId` must be in `PM_APPROVER_ACCOUNT_IDS` |
-| Timing | Comment `created` timestamp must be **after** `stakeholder-review-pending` step `started_at` |
-| No labels or custom fields | Comment pattern only — see design §1 locked decisions |
+| Rule                       | Detail                                                                                       |
+| -------------------------- | -------------------------------------------------------------------------------------------- |
+| Signal                     | Jira comment body contains `PM_APPROVAL_COMMENT_PATTERN` (default `/pm-approve`)             |
+| Author                     | Comment `accountId` must be in `PM_APPROVER_ACCOUNT_IDS`                                     |
+| Timing                     | Comment `created` timestamp must be **after** `stakeholder-review-pending` step `started_at` |
+| No labels or custom fields | Comment pattern only — see design §1 locked decisions                                        |
 
 Comments from non-allowlisted accounts or posted before the pending step started
 are ignored. The crew does not send reminders — PM availability is bounded by
@@ -493,16 +493,16 @@ Adjust `DIFF_FILE_CAP` and `DIFF_SIZE_CAP_BYTES` if reviews truncate important f
 The following defaults were locked for CREW-06 implementation. Revisit via
 backlog if production operation diverges.
 
-| #   | Decision               | Accepted default                                                                                                                                                                                                                         |
-| --- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | PM approval signal     | Jira comment containing `/pm-approve` after `stakeholder-review-pending` `started_at` — no labels, no custom fields                                                                                                                     |
-| 2   | PM approver identity   | **Required** `PM_APPROVER_ACCOUNT_IDS` allowlist (comma-separated Atlassian account IDs); boot fails if empty                                                                                                                             |
-| 3   | Review bot assignee    | **Dedicated Jira user** per deployment (`JIRA_ASSIGNEE_ACCOUNT_ID`); shared Atlassian API token is fine — status-scoped pollers do not fight over one assignee                                                                           |
-| 4   | Merge strategy         | `mergeMergeRequest` with **no squash/ff override** — GitLab project default wins; change merge method in GitLab UI if needed                                                                                                             |
-| 5   | Code-review skill      | Crew-local `final-code-review` skill composing shared `code-review` plugin — no `@daddia/crew` publish in this epic                                                                                                                      |
-| 6   | Send-back on blockers  | Escalate to **Needs human review** — no send-back loop to `delivery-build` or `delivery-qa` in v1                                                                                                                                        |
-| 7   | Four-eyes merge        | **Not enforced** — tech-lead reviews; workflow merges deterministically after both gates pass                                                                                                                                            |
-| 8   | Handoff event typing   | Crew-local structured log contracts (`workflow.handoff-done`, `workflow.blocked.stakeholder-review`) — downstream consumers use Jira **Done** state, not log subscription                                                                 |
+| #   | Decision              | Accepted default                                                                                                                                                          |
+| --- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | PM approval signal    | Jira comment containing `/pm-approve` after `stakeholder-review-pending` `started_at` — no labels, no custom fields                                                       |
+| 2   | PM approver identity  | **Required** `PM_APPROVER_ACCOUNT_IDS` allowlist (comma-separated Atlassian account IDs); boot fails if empty                                                             |
+| 3   | Review bot assignee   | **Dedicated Jira user** per deployment (`JIRA_ASSIGNEE_ACCOUNT_ID`); shared Atlassian API token is fine — status-scoped pollers do not fight over one assignee            |
+| 4   | Merge strategy        | `mergeMergeRequest` with **no squash/ff override** — GitLab project default wins; change merge method in GitLab UI if needed                                              |
+| 5   | Code-review skill     | Crew-local `final-code-review` skill composing shared `code-review` plugin — no `@daddia/crew` publish in this epic                                                       |
+| 6   | Send-back on blockers | Escalate to **Needs human review** — no send-back loop to `delivery-build` or `delivery-qa` in v1                                                                         |
+| 7   | Four-eyes merge       | **Not enforced** — tech-lead reviews; workflow merges deterministically after both gates pass                                                                             |
+| 8   | Handoff event typing  | Crew-local structured log contracts (`workflow.handoff-done`, `workflow.blocked.stakeholder-review`) — downstream consumers use Jira **Done** state, not log subscription |
 
 ---
 
@@ -511,21 +511,21 @@ backlog if production operation diverges.
 Run before every new deployment or credential rotation. Trust-boundary detail:
 [`docs/architecture/security-model.md`](../architecture/security-model.md).
 
-| #   | Check                                                           | How to verify                                                                |
-| --- | --------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| 1   | Jira webhook URL points at `/webhooks/jira` with HMAC secret    | Jira admin → Webhooks; secret matches `JIRA_WEBHOOK_SECRET`                  |
-| 2   | Webhook secret meets minimum length                             | Railway env: `JIRA_WEBHOOK_SECRET` ≥ 16 characters                           |
-| 3   | Unsigned or replayed Jira events rejected                       | Bad signature → `403`; stale timestamp → `400`                               |
-| 4   | Duplicate webhook deliveries idempotent                         | Re-post same Jira `id` → `{ duplicate: true }`                               |
-| 5   | API tokens in platform env only                                 | No tokens in Dockerfile, git, or `mcp.json` literals                         |
-| 6   | Boot log redacts secrets                                        | `config.loaded` omits token values                                             |
-| 7   | MCP servers boot with injected credentials                      | `pnpm diagnose` → "MCP servers boot" passes                                  |
-| 8   | SQLite state persists across redeploys                          | Volume at `/data`; `DB_PATH=/data/delivery-review.db`                        |
-| 9   | `tech-lead` allowlist excludes merge / protected-branch tools   | Review `agents/tech-lead/agent.ts` `allowedTools`                            |
-| 10  | Author-controlled Jira/MR text delimiter-fenced                 | `pnpm test` in `crews/delivery-review` — prompt-context tests pass           |
-| 11  | Workflow context from integration APIs, not webhook bodies      | Handlers pass `issueKey` only into `runReviewWorkflow`                       |
-| 12  | PM approver allowlist configured                                | `PM_APPROVER_ACCOUNT_IDS` non-empty; only listed accounts can trigger merge  |
-| 13  | PM timeout reviewed for production SLA                          | `PM_REVIEW_TIMEOUT_HOURS` set appropriately in Railway env                   |
-| 14  | CI invariant guard green                                        | `pnpm guard:invariants` exits 0 on `main`                                    |
+| #   | Check                                                         | How to verify                                                               |
+| --- | ------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| 1   | Jira webhook URL points at `/webhooks/jira` with HMAC secret  | Jira admin → Webhooks; secret matches `JIRA_WEBHOOK_SECRET`                 |
+| 2   | Webhook secret meets minimum length                           | Railway env: `JIRA_WEBHOOK_SECRET` ≥ 16 characters                          |
+| 3   | Unsigned or replayed Jira events rejected                     | Bad signature → `403`; stale timestamp → `400`                              |
+| 4   | Duplicate webhook deliveries idempotent                       | Re-post same Jira `id` → `{ duplicate: true }`                              |
+| 5   | API tokens in platform env only                               | No tokens in Dockerfile, git, or `mcp.json` literals                        |
+| 6   | Boot log redacts secrets                                      | `config.loaded` omits token values                                          |
+| 7   | MCP servers boot with injected credentials                    | `pnpm diagnose` → "MCP servers boot" passes                                 |
+| 8   | SQLite state persists across redeploys                        | Volume at `/data`; `DB_PATH=/data/delivery-review.db`                       |
+| 9   | `tech-lead` allowlist excludes merge / protected-branch tools | Review `agents/tech-lead/agent.ts` `allowedTools`                           |
+| 10  | Author-controlled Jira/MR text delimiter-fenced               | `pnpm test` in `crews/delivery-review` — prompt-context tests pass          |
+| 11  | Workflow context from integration APIs, not webhook bodies    | Handlers pass `issueKey` only into `runReviewWorkflow`                      |
+| 12  | PM approver allowlist configured                              | `PM_APPROVER_ACCOUNT_IDS` non-empty; only listed accounts can trigger merge |
+| 13  | PM timeout reviewed for production SLA                        | `PM_REVIEW_TIMEOUT_HOURS` set appropriately in Railway env                  |
+| 14  | CI invariant guard green                                      | `pnpm guard:invariants` exits 0 on `main`                                   |
 
 Do not deploy while any item fails verification.
