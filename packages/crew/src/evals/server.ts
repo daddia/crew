@@ -39,9 +39,8 @@ async function handleEvalSession(req: Request, options: EvalServerOptions): Prom
   try {
     const result: EvalSessionResult = await runner();
     return jsonResponse(result);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return jsonResponse({ error: message }, 500);
+  } catch {
+    return jsonResponse({ error: 'Eval session failed' }, 500);
   }
 }
 

@@ -96,4 +96,24 @@ describe('workspace helpers', () => {
     await mkdir(notRepo, { recursive: true });
     await expect(prepareEngineerWorkspace(notRepo)).rejects.toBeInstanceOf(WorkspaceError);
   });
+
+  it('rejects branch names that start with - (git option injection)', async () => {
+    const projectDir = join(tempDir, 'repo3');
+    await mkdir(projectDir, { recursive: true });
+    await initGitRepo(projectDir);
+
+    await expect(
+      prepareEngineerWorkspace(projectDir, { branchName: '--upload-pack=evil' }),
+    ).rejects.toBeInstanceOf(WorkspaceError);
+  });
+
+  it('rejects default branch names that start with - (git option injection)', async () => {
+    const projectDir = join(tempDir, 'repo4');
+    await mkdir(projectDir, { recursive: true });
+    await initGitRepo(projectDir);
+
+    await expect(
+      prepareEngineerWorkspace(projectDir, { defaultBranch: '--upload-pack=evil' }),
+    ).rejects.toBeInstanceOf(WorkspaceError);
+  });
 });

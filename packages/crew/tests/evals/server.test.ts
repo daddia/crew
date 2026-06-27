@@ -57,4 +57,25 @@ describe('createEvalFetchHandler', () => {
     );
     expect(res.status).toBe(404);
   });
+
+  it('returns a generic error when a fixture throws', async () => {
+    const throwingHandler = createEvalFetchHandler({
+      fixtures: {
+        throws: async () => {
+          throw new Error('internal stack trace at /secret/path.ts:42');
+        },
+      },
+    });
+
+    const res = await throwingHandler(
+      new Request('http://localhost/eval/session', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ fixture: 'throws' }),
+      }),
+    );
+    expect(res.status).toBe(500);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe('Eval session failed');
+  });
 });

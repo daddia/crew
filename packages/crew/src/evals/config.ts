@@ -6,6 +6,17 @@ import { importTypeScriptModule } from './import-module.js';
 
 const CONFIG_FILENAMES = ['evals.config.ts', 'evals.config.js', 'evals.config.mjs'] as const;
 
+/** Strip a path suffix from `/evals/…` without regex backtracking on user input. */
+function crewDirFromEvalPath(absolute: string): string | undefined {
+  const normalized = absolute.replace(/\\/g, '/');
+  const marker = '/evals/';
+  const markerIdx = normalized.lastIndexOf(marker);
+  if (markerIdx >= 0) {
+    return normalized.slice(0, markerIdx);
+  }
+  return undefined;
+}
+
 export interface LoadEvalConfigOptions {
   crewDir: string;
   baseUrlOverride?: string;
@@ -58,8 +69,8 @@ export function resolveCrewDir(
     if (crewsMatch?.[1]) {
       return resolve(workspaceRoot, 'crews', crewsMatch[1]);
     }
-    const evalParent = absolute.replace(/[\\/]evals[\\/].*$/, '');
-    if (existsSync(join(evalParent, 'evals'))) {
+    const evalParent = crewDirFromEvalPath(absolute);
+    if (evalParent && existsSync(join(evalParent, 'evals'))) {
       return evalParent;
     }
   }

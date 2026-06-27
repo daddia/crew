@@ -6,6 +6,15 @@ import { PERSONA_PLUGIN_DIR } from './plugins.js';
 
 const execFileAsync = promisify(execFile);
 
+/** Git ref names passed to execFile must not start with `-` (option injection). */
+const SAFE_GIT_REF = /^[a-zA-Z0-9][a-zA-Z0-9._/-]*$/;
+
+function assertSafeGitRef(ref: string, label: string): void {
+  if (!SAFE_GIT_REF.test(ref)) {
+    throw new WorkspaceError(`Invalid ${label}: ${ref}`);
+  }
+}
+
 export class WorkspaceError extends Error {
   constructor(message: string) {
     super(message);
@@ -66,6 +75,7 @@ export async function prepareEngineerWorkspace(
   }
 
   const defaultBranch = options.defaultBranch ?? 'main';
+  assertSafeGitRef(defaultBranch, 'default branch');
 
   try {
     await runGit(projectDir, ['fetch', 'origin', '--prune']);
@@ -94,6 +104,7 @@ export async function prepareEngineerWorkspace(
   }
 
   const branch = options.branchName;
+  assertSafeGitRef(branch, 'branch name');
   try {
     await runGit(projectDir, ['checkout', branch]);
     return;
