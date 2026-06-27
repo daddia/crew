@@ -1,6 +1,6 @@
 # Delivery Review (`delivery-review`)
 
-Forward-looking contract for the final-review slice. Scaffolded in code as [`crews/delivery-review/`](../../../crews/delivery-review/).
+Forward-looking contract for the final-review slice. Implemented in [`crews/delivery-review/`](../../../crews/delivery-review/).
 
 ```ts
 /**
@@ -14,18 +14,20 @@ Forward-looking contract for the final-review slice. Scaffolded in code as [`cre
  *
  * Scope: QA-validated MR → context-seed → tech-lead final code review →
  *   PM stakeholder HITL pause → deterministic GitLab approve + merge →
- *   review summary on Jira → ticket transitioned to "Done".
+ *   Jira transition to "Done" → review summary on Jira (best-effort).
  *
  * Sequence:
  *   → context-seed (Jira AC + MR resolution; CI-green guard)
  *   → tech-lead final-code-review (architecture, cross-cutting, technical AC)
  *   → stakeholder-review-pending (HITL PAUSE: await human PM sign-off via Jira
- *       comment `/pm-approve` from an allowlisted account)
+ *       comment `/pm-approve` from an allowlisted account; review summary cached
+ *       to {DB_PATH}.review-artefacts.json for merge resume)
  *       → timeout: PM_REVIEW_TIMEOUT_HOURS → escalateToHumanReview, halt
  *   → merge-and-close (workflow integration layer: approve + merge MR — not on
  *       the review-task tool allowlist)
- *   → tech-lead publish-review-summary (Jira comment)
  *   → status update: `In Review` → `Done`
+ *   → log workflow.handoff-done { issueKey, mrUrl, mergeCommitSha }
+ *   → tech-lead publish-review-summary (Jira comment; best-effort after Done)
  *   → done
  *
  * Caps and timers:

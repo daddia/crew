@@ -16,8 +16,9 @@ related:
 
 The `delivery-review` crew picks up Jira stories in **In Review**, runs a tech-lead
 final code review (architecture + technical AC gate), pauses for blocking PM
-stakeholder sign-off, merges the CI-green MR to `main` via the GitLab API, posts
-a review summary, and transitions the ticket to **Done**. The canonical flow
+stakeholder sign-off, merges the CI-green MR to `main` via the GitLab API,
+transitions the ticket to **Done**, then posts a review summary comment
+(best-effort). The canonical flow
 contract: [`docs/design/crew-flows/delivery-review.md`](../design/crew-flows/delivery-review.md).
 Env var schema (authoritative): [`crews/delivery-review/src/config.ts`](../../crews/delivery-review/src/config.ts).
 
@@ -177,8 +178,9 @@ railway variables set DB_PATH=/data/delivery-review.db
 ```
 
 Without a persistent volume the SQLite state is wiped on every redeploy — the
-crash-recovery scan becomes a no-op, PM pending timers reset, and story
-deduplication is lost.
+crash-recovery scan becomes a no-op, PM pending timers reset, story
+deduplication is lost, and the review-artefact sidecar
+(`{DB_PATH}.review-artefacts.json`) is lost (merge resume falls back to a generic summary).
 
 ### 2.4 Webhook registration
 
@@ -234,28 +236,30 @@ credentials and that `JIRA_ASSIGNEE_ACCOUNT_ID` is the review bot account.
 
 ### 4.1 Log events to alert on
 
-| Event                                     | Level | Meaning                                                       | Recommended action                                                          |
-| ----------------------------------------- | ----- | ------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `workflow.escalate`                       | warn  | Story escalated to human review                               | Check `reason`; review the Jira escalation comment                          |
-| `poller.stakeholder-timeout`              | warn  | `PM_REVIEW_TIMEOUT_HOURS` exceeded while awaiting PM sign-off | Contact PM or manually approve; see [§5.1](#51-pm-approval-timeout)         |
-| `poller.stakeholder-external-merge-error` | error | MR merged externally while Jira still In Review               | Reconcile Jira state manually; see [§5.6](#56-external-merge-inconsistency) |
-| `poller.search-error`                     | warn  | Jira API unreachable during a poll tick                       | Verify `ATLASSIAN_*` credentials and Jira status                            |
-| `recovery.session-failed`                 | warn  | Boot-time crash recovery could not reconnect an SDK session   | Story escalated automatically; review the Jira ticket                       |
-| `workflow.merge-and-close.error`          | error | GitLab approve or merge API call failed                       | Check GitLab permissions and MR state; see [§5.5](#55-merge-api-failure)    |
-| `config.invalid`                          | error | Config schema validation failed at boot                       | Service will exit; fix the bad env var and redeploy                         |
-| `poller.misconfigured`                    | warn  | `JIRA_PROJECT_KEY` or `JIRA_ASSIGNEE_ACCOUNT_ID` is blank     | Fix Railway env; no stories will be picked up                               |
+| Event                                       | Level | Meaning                                                       | Recommended action                                                                            |
+| ------------------------------------------- | ----- | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `workflow.escalate`                         | warn  | Story escalated to human review                               | Check `reason`; review the Jira escalation comment                                            |
+| `poller.stakeholder-timeout`                | warn  | `PM_REVIEW_TIMEOUT_HOURS` exceeded while awaiting PM sign-off | Contact PM or manually approve; see [§6.1](#61-pm-approval-timeout)                           |
+| `poller.stakeholder-external-merge-error`   | error | MR merged externally while Jira still In Review               | Reconcile Jira state manually; see [§6.5](#65-external-merge-inconsistency)                   |
+| `poller.search-error`                       | warn  | Jira API unreachable during a poll tick                       | Verify `ATLASSIAN_*` credentials and Jira status                                              |
+| `recovery.session-failed`                   | warn  | Boot-time crash recovery could not reconnect an SDK session   | Story escalated automatically; review the Jira ticket                                         |
+| `workflow.merge-and-close.error`            | error | GitLab approve or merge API call failed                       | Check GitLab permissions and MR state; see [§6.4](#64-merge-api-failure)                      |
+| `workflow.merge-and-close.post-merge-error` | error | Jira **Done** transition failed after MR merge                | MR is on `main`; reconcile Jira manually; see [§6.7](#67-post-merge-jira-failure)             |
+| `workflow.merge-and-close.summary-failed`   | warn  | Review summary comment failed after **Done**                  | Story is closed; post summary manually if needed; see [§6.8](#68-summary-publication-failure) |
+| `config.invalid`                            | error | Config schema validation failed at boot                       | Service will exit; fix the bad env var and redeploy                                           |
+| `poller.misconfigured`                      | warn  | `JIRA_PROJECT_KEY` or `JIRA_ASSIGNEE_ACCOUNT_ID` is blank     | Fix Railway env; no stories will be picked up                                                 |
 
 ### 4.2 Normal steady-state events
 
-| Event                                 | Level | Meaning                                                                             |
-| ------------------------------------- | ----- | ----------------------------------------------------------------------------------- |
-| `server.start`                        | info  | HTTP server is listening                                                            |
-| `config.loaded`                       | info  | Config validated and loaded at boot (secrets redacted)                              |
-| `workflow.review.start`               | info  | Story entered the review workflow                                                   |
-| `workflow.blocked.stakeholder-review` | info  | Tech-lead approved; awaiting PM sign-off — HITL pause entered                       |
-| `poller.stakeholder-resolved`         | info  | PM approval detected; resuming at merge-and-close                                   |
-| `workflow.handoff-done`               | info  | Story merged and transitioned to **Done** — delivery vertical closed for this issue |
-| `poller.stakeholder-reconciled`       | info  | MR already merged and Jira already Done — local state reconciled                    |
+| Event                                 | Level | Meaning                                                                                                          |
+| ------------------------------------- | ----- | ---------------------------------------------------------------------------------------------------------------- |
+| `server.start`                        | info  | HTTP server is listening                                                                                         |
+| `config.loaded`                       | info  | Config validated and loaded at boot (secrets redacted)                                                           |
+| `workflow.review.start`               | info  | Story entered the review workflow                                                                                |
+| `workflow.blocked.stakeholder-review` | info  | Tech-lead approved; awaiting PM sign-off — HITL pause entered                                                    |
+| `poller.stakeholder-resolved`         | info  | PM approval detected; resuming at merge-and-close                                                                |
+| `workflow.handoff-done`               | info  | Story merged and transitioned to **Done** — emitted before summary task; delivery vertical closed for this issue |
+| `poller.stakeholder-reconciled`       | info  | MR already merged and Jira already Done — local state reconciled                                                 |
 
 ### 4.3 `workflow.handoff-done` payload
 
@@ -288,9 +292,9 @@ tech-lead final-code-review passes
 poller detects approval (allowlisted account, after pending started_at)
   → log poller.stakeholder-resolved
   → resume at merge-and-close (approve + merge via GitLab API)
-  → tech-lead publish-review-summary
   → Jira In Review → Done
-  → log workflow.handoff-done
+  → log workflow.handoff-done { issueKey, mrUrl, mergeCommitSha }
+  → tech-lead publish-review-summary (best-effort Jira comment)
 ```
 
 **What the PM must do:**
@@ -418,17 +422,48 @@ UI or another tool) but Jira is still **In Review**. The poller detects
 **Reconciliation path:** If MR is merged **and** Jira is already **Done**, the
 poller reconciles local state to `done` without escalation (`poller.stakeholder-reconciled`).
 
-### 6.6 Agent step failure
+### 6.6 Agent step failure at final-code-review
 
-**Cause:** `tech-lead` returns `success: false` at `final-code-review` or
-`publish-review-summary` without a block verdict.
+**Cause:** `tech-lead` returns `success: false` at `final-code-review` without a block
+verdict, or the agent run throws before submitting a result.
 
-**Automatic action:** Escalate at the current step.
+**Automatic action:** Escalate at the current step. No merge attempt is made.
 
 **Operator steps:** Review agent session logs (if available), Jira comments, and
 MR state. Fix root cause and re-transition to **In Review**.
 
-### 6.7 In-flight story on boot (crash recovery)
+### 6.7 Post-merge Jira transition failure
+
+**Cause:** GitLab approve + merge succeeded, but `transitionIssue('Done')` failed
+(Jira API error, missing transition, or permissions).
+
+**Automatic action:** `workflow.merge-and-close.post-merge-error` →
+`escalateToHumanReview` with reason including the merge commit SHA. The code is
+already on `main`; Jira may still show **In Review**.
+
+**Operator steps:**
+
+1. Confirm the MR is merged in GitLab and note the merge commit SHA from logs.
+2. Transition Jira to **Done** manually.
+3. Update local SQLite state if needed (`stories.current_step` → `done`).
+
+### 6.8 Summary publication failure
+
+**Cause:** `tech-lead` `publish-review-summary` returns `success: false` or throws
+after the story has already reached **Done**.
+
+**Automatic action:** `workflow.merge-and-close.summary-failed` or
+`workflow.merge-and-close.summary-error` warn log only — **no escalation**. The
+terminal handoff is complete; the summary comment is best-effort.
+
+**Operator steps:**
+
+1. Confirm Jira status is **Done** and GitLab MR is merged.
+2. Post a manual review summary comment on the ticket if stakeholders need it.
+3. No workflow retry is required unless you want the agent to re-run the summary
+   task outside the crew.
+
+### 6.9 In-flight story on boot (crash recovery)
 
 **Cause:** Process crashed mid-agent-run. The `steps` table has a row where
 `session_id IS NOT NULL` and `finished_at IS NULL`.
@@ -445,7 +480,7 @@ SDK session and restarts `runReviewWorkflow`, or escalates on failure
    `DELETE FROM steps WHERE issue_key = '<ISSUE_KEY>' AND finished_at IS NULL;`
 4. Transition the Jira issue back to **In Review**.
 
-### 6.8 SQLite volume loss
+### 6.10 SQLite volume loss
 
 Same recovery pattern as [`delivery-build.md` §5.4](delivery-build.md#54-sqlite-volume-loss).
 Re-attach the volume, set `DB_PATH=/data/delivery-review.db`, redeploy, and audit
