@@ -7,6 +7,11 @@ import type { Config } from './config.js';
 import type { GitlabClient } from './integrations/gitlab.js';
 import type { JiraClient, JiraIssue } from './integrations/jira.js';
 import { log, tracer } from './observability.js';
+import {
+  clearReviewArtefact,
+  loadReviewArtefact,
+  saveReviewArtefact,
+} from './review-artefact-cache.js';
 import type { StateStore, Step } from './state.js';
 
 /** Default model for tech-lead runs until dedicated routing lands. */
@@ -18,6 +23,7 @@ const RECOVERY_SESSION_DIR = join(dirname(fileURLToPath(import.meta.url)), 'agen
 export interface WorkflowContext {
   issueKey: string;
   state: StateStore;
+  dbPath: string;
   behaviour: Pick<
     Config['behaviour'],
     | 'pmReviewTimeoutHours'
@@ -227,8 +233,11 @@ async function seedReviewContext(ctx: WorkflowContext): Promise<ReviewSeedContex
 async function enterStakeholderReviewPending(
   ctx: WorkflowContext,
   seed: ReviewSeedContext,
+  reviewResult: AgentResult,
 ): Promise<void> {
-  const { issueKey, state, jira, behaviour } = ctx;
+  const { issueKey, state, jira, behaviour, dbPath } = ctx;
+
+  saveReviewArtefact(dbPath, issueKey, buildReviewSummary(reviewResult, seed.mrUrl));
 
   await jira.commentOnIssue(issueKey, formatPmSignOffComment(behaviour.pmApprovalCommentPattern));
 
@@ -287,7 +296,7 @@ async function runReviewWorkflowInner(
     return;
   }
 
-  await enterStakeholderReviewPending(ctx, seed);
+  await enterStakeholderReviewPending(ctx, seed, reviewResult);
 }
 
 function buildReviewSummary(result: AgentResult | undefined, mrUrl: string): string {
@@ -399,7 +408,7 @@ async function resolveResumeSeed(ctx: WorkflowContext): Promise<ReviewSeedContex
 }
 
 async function runMergeAndClose(ctx: WorkflowContext, agents: WorkflowAgents): Promise<void> {
-  const { issueKey, state, jira, gitlab } = ctx;
+  const { issueKey, state, jira, gitlab, dbPath } = ctx;
 
   await withWorkflowStepSpan('merge-and-close', issueKey, async () => {
     state.upsertStory(issueKey, 'merge-and-close');
@@ -411,56 +420,75 @@ async function runMergeAndClose(ctx: WorkflowContext, agents: WorkflowAgents): P
       return;
     }
 
+    let mergeCommitSha: string | undefined;
+    const cachedSummary = loadReviewArtefact(dbPath, issueKey);
+
     try {
       await gitlab.approveMergeRequest(seed.mrUrl);
-      const mergeCommitSha = await gitlab.mergeMergeRequest(seed.mrUrl);
+      mergeCommitSha = await gitlab.mergeMergeRequest(seed.mrUrl);
+    } catch (err) {
+      log.error('workflow.merge-and-close.error', { issueKey, err: String(err) });
+      state.startStep(issueKey, 'merge-and-close');
+      state.finishStep(issueKey, 'merge-and-close', { verdict: 'failed' });
+      await escalateToHumanReview(jira, issueKey, 'GitLab approve or merge failed', state);
+      return;
+    }
 
-      const history = state.getStepHistory(issueKey);
-      const reviewStep = [...history].reverse().find((row) => row.step === 'final-code-review');
-      const previousSessionId = reviewStep?.sessionId ?? undefined;
-      const priorReviewVerdict = priorReviewVerdictFromHistory(history);
+    try {
+      await jira.transitionIssue(issueKey, 'Done');
+      state.upsertStory(issueKey, 'done');
+      state.startStep(issueKey, 'merge-and-close');
+      state.finishStep(issueKey, 'merge-and-close', { verdict: 'ok' });
+      log.info('workflow.handoff-done', { issueKey, mrUrl: seed.mrUrl, mergeCommitSha });
+      clearReviewArtefact(dbPath, issueKey);
+    } catch (err) {
+      log.error('workflow.merge-and-close.post-merge-error', {
+        issueKey,
+        mergeCommitSha,
+        err: String(err),
+      });
+      state.startStep(issueKey, 'merge-and-close');
+      state.finishStep(issueKey, 'merge-and-close', { verdict: 'failed' });
+      await escalateToHumanReview(
+        jira,
+        issueKey,
+        `MR merged (${mergeCommitSha ?? 'unknown'}) but Jira transition to Done failed`,
+        state,
+      );
+      return;
+    }
 
+    const history = state.getStepHistory(issueKey);
+    const reviewStep = [...history].reverse().find((row) => row.step === 'final-code-review');
+    const previousSessionId = reviewStep?.sessionId ?? undefined;
+    const priorReviewVerdict = priorReviewVerdictFromHistory(history);
+    const reviewSummary = cachedSummary ?? buildReviewSummary(undefined, seed.mrUrl);
+
+    try {
       const summaryResult = await agents.techLead.run({
         issueKey,
         context: techLeadContext(ctx, seed, {
           task: 'publish-review-summary',
           previousSessionId,
           priorReviewVerdict,
-          reviewSummary: buildReviewSummary(undefined, seed.mrUrl),
+          reviewSummary,
           mergeCommitSha,
         }),
       });
 
-      const sessionId = summaryResult.artefacts['sessionId'] as string | undefined;
-      state.startStep(issueKey, 'merge-and-close', sessionId);
-
       if (!summaryResult.success) {
-        state.finishStep(issueKey, 'merge-and-close', { verdict: 'failed' });
-        await escalateToHumanReview(
-          jira,
+        log.warn('workflow.merge-and-close.summary-failed', {
           issueKey,
-          summaryResult.summary || 'Failed to publish review summary after merge',
-          state,
-        );
-        return;
+          mergeCommitSha,
+          summary: summaryResult.summary,
+        });
       }
-
-      await jira.transitionIssue(issueKey, 'Done');
-      state.upsertStory(issueKey, 'done');
-      state.finishStep(issueKey, 'merge-and-close', {
-        costUsd: summaryResult.costUsd,
-        verdict: 'ok',
-      });
-      log.info('workflow.handoff-done', {
-        issueKey,
-        mrUrl: seed.mrUrl,
-        mergeCommitSha,
-      });
     } catch (err) {
-      log.error('workflow.merge-and-close.error', { issueKey, err: String(err) });
-      state.startStep(issueKey, 'merge-and-close');
-      state.finishStep(issueKey, 'merge-and-close', { verdict: 'failed' });
-      await escalateToHumanReview(jira, issueKey, 'GitLab approve or merge failed', state);
+      log.warn('workflow.merge-and-close.summary-error', {
+        issueKey,
+        mergeCommitSha,
+        err: String(err),
+      });
     }
   });
 }
@@ -528,6 +556,7 @@ export async function recoverInterruptedSteps(
     const { issueKey, step, sessionId } = row;
 
     try {
+      // getInterruptedSteps only returns rows with session_id IS NOT NULL.
       const sessionInfo = await getSessionInfo(sessionId!, { dir: RECOVERY_SESSION_DIR });
       if (!sessionInfo) {
         throw new Error(`Session not found: ${sessionId}`);

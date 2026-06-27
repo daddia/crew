@@ -103,9 +103,11 @@ async function withHandoffDoneFixture(
   const gitlab = makeRecordingGitlab(mrUrl);
 
   const dbDir = await mkdtemp(join(tmpdir(), 'crew-eval-review-workflow-'));
-  const state = createStateStore(join(dbDir, 'eval.db'));
+  const dbPath = join(dbDir, 'eval.db');
+  const state = createStateStore(dbPath);
 
   const ctxBase: WorkflowCtxBase = {
+    dbPath,
     behaviour: {
       pmReviewTimeoutHours: 48,
       pmApprovalCommentPattern: '/pm-approve',

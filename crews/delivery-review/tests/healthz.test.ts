@@ -119,6 +119,7 @@ const mockState = {
 } as unknown as StateStore;
 
 const mockCtxBase = {
+  dbPath: mockConfig.infrastructure.dbPath,
   behaviour: mockConfig.behaviour,
   jira: {},
   gitlab: {},

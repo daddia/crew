@@ -51,3 +51,22 @@ export function buildFinalReviewAgentResult(
     costUsd,
   };
 }
+
+/** Summary task success reflects comment publication, not review verdict. */
+export function buildPublishSummaryAgentResult(
+  sessionId: string,
+  submitted: SubmittedAgentResult,
+  costUsd: number,
+): AgentResult {
+  const verdict = submitted.artefacts['verdict'];
+
+  return {
+    success: submitted.success,
+    summary: submitted.summary,
+    artefacts: {
+      sessionId,
+      ...(verdict === 'approve' || verdict === 'block' ? { verdict } : {}),
+    },
+    costUsd,
+  };
+}

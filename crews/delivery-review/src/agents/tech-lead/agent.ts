@@ -20,6 +20,7 @@ import { buildTaskPrompt } from '../prompt-context.js';
 import { log } from '../../observability.js';
 import {
   buildFinalReviewAgentResult,
+  buildPublishSummaryAgentResult,
   createFinalReviewSubmitResultCapture,
 } from './final-review-result.js';
 
@@ -155,7 +156,9 @@ async function run(input: AgentInput): Promise<AgentResult> {
       capture: resultCapture,
       resultMsg,
       buildResult: (submitted, costUsd) =>
-        buildFinalReviewAgentResult(sessionId, submitted, costUsd),
+        task === 'publish-review-summary'
+          ? buildPublishSummaryAgentResult(sessionId, submitted, costUsd)
+          : buildFinalReviewAgentResult(sessionId, submitted, costUsd),
     });
   } catch (err) {
     return {

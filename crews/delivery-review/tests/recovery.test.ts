@@ -67,6 +67,7 @@ function makeCtxBase(): WorkflowCtxBase & {
   gitlab: ReturnType<typeof makeMockGitlab>;
 } {
   return {
+    dbPath: '/tmp/delivery-review-recovery-test.db',
     behaviour: {
       pmReviewTimeoutHours: 48,
       pmApprovalCommentPattern: '/pm-approve',

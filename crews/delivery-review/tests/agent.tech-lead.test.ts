@@ -287,6 +287,34 @@ describe('techLead', () => {
     expect(getAllowedToolsForTask('publish-review-summary')).toEqual(SUMMARY_ALLOWED_TOOLS);
   });
 
+  it('publish-review-summary succeeds when submit_result omits review verdict', async () => {
+    submittedResult = {
+      success: true,
+      summary: 'Posted review summary comment.',
+      artefacts: {},
+    };
+    const session = makeSession([makeResultMessage()]);
+    mockResolveSession.mockResolvedValue({
+      session,
+      sessionId: 'sess-summary',
+      isResumed: false,
+      skillCatalog: [],
+    });
+
+    const result = await techLead.run({
+      ...baseInput,
+      context: {
+        ...baseContext,
+        task: 'publish-review-summary',
+        reviewSummary: 'All AC met.',
+        priorReviewVerdict: 'approve',
+      },
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.summary).toBe('Posted review summary comment.');
+  });
+
   it('passes buildAuditHook to resolveSession as auditHook', async () => {
     const session = makeSession([makeResultMessage()]);
     mockResolveSession.mockResolvedValue({

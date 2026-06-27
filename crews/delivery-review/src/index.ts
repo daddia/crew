@@ -83,6 +83,7 @@ export async function boot(env: NodeJS.ProcessEnv = process.env): Promise<void> 
   );
 
   const ctxBase: WorkflowCtxBase = {
+    dbPath: config.infrastructure.dbPath,
     behaviour: {
       pmReviewTimeoutHours: config.behaviour.pmReviewTimeoutHours,
       pmApprovalCommentPattern: config.behaviour.pmApprovalCommentPattern,
@@ -109,6 +110,7 @@ export async function boot(env: NodeJS.ProcessEnv = process.env): Promise<void> 
   });
 
   const pollerDeps = {
+    dbPath: config.infrastructure.dbPath,
     identity: config.identity,
     behaviour: config.behaviour,
     jira,

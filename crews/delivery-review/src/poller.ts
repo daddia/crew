@@ -14,6 +14,7 @@ const TERMINAL_STEPS = new Set<Step>(['done', 'needs-human-review']);
  * rather than read from the environment.
  */
 export interface PollerDeps {
+  dbPath: string;
   identity: {
     jira: {
       projectKey: string;
@@ -169,6 +170,7 @@ export async function pollTick(deps: PollerDeps, state: StateStore): Promise<voi
   }
 
   const ctxBase: WorkflowCtxBase = {
+    dbPath: deps.dbPath,
     behaviour: {
       pmReviewTimeoutHours: deps.behaviour.pmReviewTimeoutHours,
       pmApprovalCommentPattern: deps.behaviour.pmApprovalCommentPattern,

@@ -1,4 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import type { Agent, AgentInput, AgentResult } from '@daddia/crew';
 
 vi.mock('../src/observability.js', () => ({
@@ -25,6 +28,12 @@ import type { WorkflowContext } from '../src/workflow.js';
 
 const mockTechLead = vi.mocked(techLead.run);
 const MR_URL = 'https://gitlab.example.com/group/project/-/merge_requests/42';
+
+let testDbPath: string;
+
+function makeTestDbPath(): string {
+  return join(mkdtempSync(join(tmpdir(), 'dr-workflow-test-')), 'test.db');
+}
 
 function makeJiraMock(): JiraClient {
   return {
@@ -180,6 +189,7 @@ function makeCtx(
   return {
     issueKey: 'CREW-99',
     state,
+    dbPath: testDbPath,
     behaviour: makeBehaviour(),
     jira,
     gitlab,
@@ -188,8 +198,13 @@ function makeCtx(
 
 describe('runReviewWorkflow', () => {
   beforeEach(() => {
+    testDbPath = makeTestDbPath();
     vi.clearAllMocks();
     mockTechLead.mockResolvedValue(approveResult());
+  });
+
+  afterEach(() => {
+    rmSync(join(testDbPath, '..'), { recursive: true, force: true });
   });
 
   it('reaches stakeholder-review-pending after approving review (happy path)', async () => {
@@ -388,5 +403,54 @@ describe('runReviewWorkflow', () => {
     expect(ctx.gitlab.approveMergeRequest).not.toHaveBeenCalled();
     expect(ctx.gitlab.mergeMergeRequest).not.toHaveBeenCalled();
     expect(mockTechLead).not.toHaveBeenCalled();
+  });
+
+  it('transitions to Done and logs handoff-done when summary publication fails after merge', async () => {
+    const state = makeState();
+    state.stories.set('CREW-99', {
+      currentStep: 'stakeholder-review-pending',
+      startedAt: Date.now() - 60_000,
+    });
+    state.getStepHistory.mockReturnValue([
+      {
+        issueKey: 'CREW-99',
+        step: 'final-code-review',
+        sessionId: 'sess-tl-1',
+        startedAt: Date.now() - 120_000,
+        finishedAt: Date.now() - 90_000,
+        costUsd: 0.04,
+        verdict: 'approve',
+      },
+    ]);
+
+    mockTechLead.mockResolvedValue({
+      success: false,
+      summary: 'Failed to post Jira comment',
+      artefacts: { sessionId: 'sess-summary' },
+      costUsd: 0.01,
+    });
+
+    const ctx = makeCtx({ state });
+    const logInfo = vi.spyOn(log, 'info');
+    const logWarn = vi.spyOn(log, 'warn');
+
+    await runReviewWorkflow(ctx, {
+      resumeFromMerge: true,
+      agents: { techLead: { name: 'tech-lead', run: mockTechLead } },
+    });
+
+    expect(ctx.gitlab.mergeMergeRequest).toHaveBeenCalledWith(MR_URL);
+    expect(ctx.jira.transitionIssue).toHaveBeenCalledWith('CREW-99', 'Done');
+    expect(ctx.state.getStory('CREW-99')?.currentStep).toBe('done');
+    expect(logInfo).toHaveBeenCalledWith('workflow.handoff-done', {
+      issueKey: 'CREW-99',
+      mrUrl: MR_URL,
+      mergeCommitSha: 'abc123merge',
+    });
+    expect(logWarn).toHaveBeenCalledWith(
+      'workflow.merge-and-close.summary-failed',
+      expect.objectContaining({ issueKey: 'CREW-99', mergeCommitSha: 'abc123merge' }),
+    );
+    expect(ctx.jira.transitionIssue).not.toHaveBeenCalledWith('CREW-99', 'Needs human review');
   });
 });

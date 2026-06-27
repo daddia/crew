@@ -1,16 +1,19 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-vi.mock('../src/workflow.js', () => ({
-  runReviewWorkflow: vi.fn().mockResolvedValue(undefined),
-  escalateToHumanReview: vi.fn().mockResolvedValue(undefined),
-}));
+vi.mock('../src/workflow.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../src/workflow.js')>();
+  return {
+    ...actual,
+    runReviewWorkflow: vi.fn().mockResolvedValue(undefined),
+  };
+});
 vi.mock('../src/observability.js', () => ({
   log: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
 
 import { pollTick, startPoller } from '../src/poller.js';
 import { inFlight } from '../src/in-flight.js';
-import { runReviewWorkflow, escalateToHumanReview } from '../src/workflow.js';
+import { runReviewWorkflow } from '../src/workflow.js';
 import { log } from '../src/observability.js';
 import type { StateStore, Step, StepRow } from '../src/state.js';
 import type { PollerDeps } from '../src/poller.js';
@@ -18,7 +21,6 @@ import type { JiraClient } from '../src/integrations/jira.js';
 import type { GitlabClient } from '../src/integrations/gitlab.js';
 
 const mockRunReviewWorkflow = vi.mocked(runReviewWorkflow);
-const mockEscalateToHumanReview = vi.mocked(escalateToHumanReview);
 const mockLogInfo = vi.mocked(log.info);
 const mockLogWarn = vi.mocked(log.warn);
 const mockLogDebug = vi.mocked(log.debug);
@@ -68,6 +70,7 @@ function makePollerDeps(overrides: Partial<PollerDeps> = {}): PollerDeps {
   };
 
   return {
+    dbPath: '/tmp/delivery-review-poller-test.db',
     identity: {
       jira: {
         projectKey: 'CREW',
@@ -90,10 +93,25 @@ function makeState(
   getStoryImpl?: (
     key: string,
   ) => { issueKey: string; currentStep: Step; startedAt: number } | undefined,
-): StateStore {
+): StateStore & {
+  stories: Map<string, { currentStep: Step; startedAt: number }>;
+} {
+  const stories = new Map<string, { currentStep: Step; startedAt: number }>();
+
   return {
-    upsertStory: vi.fn(),
-    getStory: vi.fn().mockImplementation(getStoryImpl ?? (() => undefined)),
+    stories,
+    upsertStory: vi.fn((issueKey: string, step: Step) => {
+      const existing = stories.get(issueKey);
+      if (!existing) {
+        stories.set(issueKey, { currentStep: step, startedAt: Date.now() });
+      } else {
+        existing.currentStep = step;
+      }
+    }),
+    getStory: vi.fn().mockImplementation((issueKey: string) => {
+      const story = stories.get(issueKey) ?? getStoryImpl?.(issueKey);
+      return story ? { issueKey, ...story } : undefined;
+    }),
     getStoriesAtStep: vi.fn().mockReturnValue([]),
     startStep: vi.fn(),
     finishStep: vi.fn(),
@@ -125,7 +143,6 @@ describe('pollTick stakeholder HITL (CREW-06-04)', () => {
   beforeEach(() => {
     inFlight.clear();
     mockRunReviewWorkflow.mockReset().mockResolvedValue(undefined);
-    mockEscalateToHumanReview.mockReset().mockResolvedValue(undefined);
     mockLogInfo.mockReset();
     mockLogWarn.mockReset();
     mockLogDebug.mockReset();
@@ -205,11 +222,11 @@ describe('pollTick stakeholder HITL (CREW-06-04)', () => {
     await pollTick(deps, state);
     await new Promise((r) => setTimeout(r, 0));
 
-    expect(mockEscalateToHumanReview).toHaveBeenCalledWith(
-      deps.jira,
+    expect(deps.jira.transitionIssue).toHaveBeenCalledWith('CREW-PM3', 'Needs human review');
+    expect(state.getStory('CREW-PM3')?.currentStep).toBe('needs-human-review');
+    expect(deps.jira.commentOnIssue).toHaveBeenCalledWith(
       'CREW-PM3',
       expect.stringContaining('PM approval timeout'),
-      state,
     );
     expect(mockLogWarn).toHaveBeenCalledWith(
       'poller.stakeholder-timeout',
@@ -264,11 +281,11 @@ describe('pollTick stakeholder HITL (CREW-06-04)', () => {
     await pollTick(deps, state);
     await new Promise((r) => setTimeout(r, 0));
 
-    expect(mockEscalateToHumanReview).toHaveBeenCalledWith(
-      deps.jira,
+    expect(deps.jira.transitionIssue).toHaveBeenCalledWith('CREW-PM5', 'Needs human review');
+    expect(state.getStory('CREW-PM5')?.currentStep).toBe('needs-human-review');
+    expect(deps.jira.commentOnIssue).toHaveBeenCalledWith(
       'CREW-PM5',
       expect.stringContaining('MR merged externally'),
-      state,
     );
     expect(mockRunReviewWorkflow).not.toHaveBeenCalled();
   });
@@ -295,7 +312,7 @@ describe('pollTick stakeholder HITL (CREW-06-04)', () => {
 
     expect(vi.mocked(state.upsertStory)).toHaveBeenCalledWith('CREW-PM6', 'done');
     expect(mockRunReviewWorkflow).not.toHaveBeenCalled();
-    expect(mockEscalateToHumanReview).not.toHaveBeenCalled();
+    expect(deps.jira.transitionIssue).not.toHaveBeenCalledWith('CREW-PM6', 'Needs human review');
   });
 });
 

@@ -46,6 +46,7 @@ const mockGitlab = {
 } satisfies GitlabClient;
 
 const ctxBase: WorkflowCtxBase = {
+  dbPath: '/tmp/delivery-review-handler-test.db',
   behaviour: {
     pmReviewTimeoutHours: 48,
     pmApprovalCommentPattern: '/pm-approve',
