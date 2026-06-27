@@ -40,20 +40,13 @@ describe('bundled runtime docs', () => {
   });
 
   it('lists docs in the npm pack tarball', async () => {
-    const { stdout: packStdout } = await execFileAsync('npm', ['pack', '--silent'], {
+    const { stdout } = await execFileAsync('npm', ['pack', '--dry-run', '--json'], {
       cwd: packageRoot,
       encoding: 'utf8',
     });
-    const tarball = packStdout.trim().split('\n').pop();
-    if (!tarball) {
-      throw new Error('npm pack did not return a tarball name');
-    }
-    const tarballPath = join(packageRoot, tarball);
-    const { stdout: listing } = await execFileAsync('tar', ['-tzf', tarballPath], {
-      encoding: 'utf8',
-    });
-    await rm(tarballPath, { force: true });
-    expect(listing).toContain('package/docs/AGENTS.md');
-    expect(listing).toContain('package/docs/adding-a-persona.md');
+    const [packMeta] = JSON.parse(stdout) as Array<{ files: Array<{ path: string }> }>;
+    const paths = packMeta.files.map((file) => file.path);
+    expect(paths).toContain('docs/AGENTS.md');
+    expect(paths).toContain('docs/adding-a-persona.md');
   });
 });
