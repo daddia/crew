@@ -22,10 +22,11 @@ export type StepRow = Omit<BaseStepRow, 'step'> & { step: Step };
 
 export interface StateStore extends Omit<
   BaseStateStore,
-  'upsertStory' | 'getStory' | 'startStep' | 'finishStep' | 'getStepHistory'
+  'upsertStory' | 'getStory' | 'getStoriesAtStep' | 'startStep' | 'finishStep' | 'getStepHistory'
 > {
   upsertStory(issueKey: string, step: Step): void;
   getStory(issueKey: string): StoryRow | undefined;
+  getStoriesAtStep(step: Step): StoryRow[];
   startStep(issueKey: string, step: Step, sessionId?: string): void;
   finishStep(issueKey: string, step: Step, result: StepResult): void;
   getStepHistory(issueKey: string): StepRow[];

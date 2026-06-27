@@ -35,12 +35,14 @@ function makeJiraMock(): JiraClient {
       description: 'Deliver the feature.',
       acceptanceCriteria: 'Given a user When they act Then outcome holds',
     }),
+    getIssueStatus: vi.fn().mockResolvedValue('In Review'),
   };
 }
 
 function makeGitlabMock(overrides: Partial<GitlabClient> = {}): GitlabClient {
   return {
     findOpenMrForIssue: vi.fn().mockResolvedValue(MR_URL),
+    findMrForIssue: vi.fn().mockResolvedValue({ mrUrl: MR_URL, state: 'opened' }),
     getMrSourceBranch: vi.fn().mockResolvedValue('feature/CREW-99-review'),
     getPipelineStatus: vi.fn().mockResolvedValue('success'),
     getMrDiff: vi.fn().mockResolvedValue(''),

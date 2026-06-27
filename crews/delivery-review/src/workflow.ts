@@ -33,6 +33,8 @@ export interface WorkflowAgents {
 
 export interface RunReviewWorkflowOptions {
   agents?: WorkflowAgents;
+  /** When true, resume at merge-and-close after PM approval (poller dispatch). */
+  resumeFromMerge?: boolean;
 }
 
 interface ReviewSeedContext {
@@ -283,6 +285,26 @@ async function runReviewWorkflowInner(
 }
 
 /**
+ * Resume path after PM approval — full merge logic lands in CREW-06-06.
+ * For CREW-06-04 the poller dispatches here; this stub records merge-and-close.
+ */
+async function runMergeAndClose(ctx: WorkflowContext): Promise<void> {
+  const { issueKey, state } = ctx;
+
+  await withWorkflowStepSpan('merge-and-close', issueKey, async () => {
+    state.upsertStory(issueKey, 'merge-and-close');
+    state.startStep(issueKey, 'merge-and-close');
+    state.finishStep(issueKey, 'merge-and-close', { verdict: 'pending' });
+    log.info('workflow.merge-and-close.stub', { issueKey });
+  });
+}
+
+async function runReviewWorkflowResume(ctx: WorkflowContext, agents: WorkflowAgents): Promise<void> {
+  await runMergeAndClose(ctx);
+  void agents;
+}
+
+/**
  * Run the delivery-review sequence for one story through PM HITL entry.
  *
  * Sequence:
@@ -292,13 +314,19 @@ export async function runReviewWorkflow(
   ctx: WorkflowContext,
   options?: RunReviewWorkflowOptions,
 ): Promise<void> {
-  const { issueKey } = ctx;
+  const { issueKey, state } = ctx;
   const agents: WorkflowAgents = options?.agents ?? { techLead };
   const input: AgentInput = { issueKey, context: {} };
+  const story = state.getStory(issueKey);
+  const resumeFromMerge = options?.resumeFromMerge === true;
 
-  log.info('workflow.review.start', { issueKey });
+  log.info('workflow.review.start', { issueKey, resumeFromMerge });
 
   try {
+    if (resumeFromMerge && story?.currentStep === 'stakeholder-review-pending') {
+      await runReviewWorkflowResume(ctx, agents);
+      return;
+    }
     await runReviewWorkflowInner(ctx, input, agents);
   } catch (err) {
     log.error('workflow.review.unhandled-error', { issueKey, err: String(err) });

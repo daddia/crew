@@ -194,10 +194,15 @@ describe('findOpenMrForIssue', () => {
   it('returns the web_url of an open MR whose source branch contains the issue key', async () => {
     fetchMock.mockResolvedValueOnce(
       mockJson([
-        { web_url: 'https://gitlab.test/org/repo/-/merge_requests/7', source_branch: 'main' },
+        {
+          web_url: 'https://gitlab.test/org/repo/-/merge_requests/7',
+          source_branch: 'main',
+          state: 'opened',
+        },
         {
           web_url: 'https://gitlab.test/org/repo/-/merge_requests/8',
           source_branch: 'feature/CREW-66-005',
+          state: 'opened',
         },
       ]),
     );
@@ -205,6 +210,7 @@ describe('findOpenMrForIssue', () => {
     const url = await client.findOpenMrForIssue('CREW-66-005');
 
     expect(url).toBe('https://gitlab.test/org/repo/-/merge_requests/8');
+    expect(fetchMock.mock.calls[0]?.[0]).toContain('state=all');
   });
 
   it('returns null when no matching open MR exists', async () => {

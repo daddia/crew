@@ -4,9 +4,18 @@
 
 export type PipelineStatus = 'created' | 'pending' | 'running' | 'success' | 'failed' | 'canceled';
 
+export type MrState = 'opened' | 'merged' | 'closed';
+
+export interface MrForIssue {
+  mrUrl: string;
+  state: MrState;
+}
+
 export interface GitlabClient {
   /** Resolve an open MR whose source branch contains the issue key. */
   findOpenMrForIssue(issueKey: string): Promise<string | null>;
+  /** Resolve an MR linked to the issue key regardless of merge state. */
+  findMrForIssue(issueKey: string): Promise<MrForIssue | null>;
   getPipelineStatus(mrWebUrl: string): Promise<PipelineStatus>;
   getMrSourceBranch(mrWebUrl: string): Promise<string>;
   getMrDiff(mrWebUrl: string): Promise<string>;
@@ -99,6 +108,22 @@ export function createGitlabClient(
     return res;
   }
 
+  async function findMrForIssueImpl(issueKey: string): Promise<MrForIssue | null> {
+    const res = await gitlabFetch(
+      `/projects/${encodeURIComponent(projectId)}/merge_requests?state=all&search=${encodeURIComponent(issueKey)}`,
+    );
+    const mrs = (await res.json()) as Array<{
+      web_url: string;
+      source_branch: string;
+      state: MrState;
+    }>;
+    const match = mrs.find((mr) => mr.source_branch.includes(issueKey));
+    if (!match) {
+      return null;
+    }
+    return { mrUrl: match.web_url, state: match.state };
+  }
+
   return {
     async getPipelineStatus(mrWebUrl) {
       const iid = extractMrIid(projectId, mrWebUrl);
@@ -119,12 +144,12 @@ export function createGitlabClient(
     },
 
     async findOpenMrForIssue(issueKey) {
-      const res = await gitlabFetch(
-        `/projects/${encodeURIComponent(projectId)}/merge_requests?state=opened&search=${encodeURIComponent(issueKey)}`,
-      );
-      const mrs = (await res.json()) as Array<{ web_url: string; source_branch: string }>;
-      const match = mrs.find((mr) => mr.source_branch.includes(issueKey));
-      return match?.web_url ?? null;
+      const mr = await findMrForIssueImpl(issueKey);
+      return mr?.state === 'opened' ? mr.mrUrl : null;
+    },
+
+    async findMrForIssue(issueKey) {
+      return findMrForIssueImpl(issueKey);
     },
 
     async getMrDiff(mrWebUrl) {
