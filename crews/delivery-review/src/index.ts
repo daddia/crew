@@ -2,7 +2,9 @@ import { pathToFileURL } from 'node:url';
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { initTracing } from '@daddia/crew';
+import { createEvalFetchHandler } from '@daddia/crew/evals';
 import { SchemaValidationError, redact } from '@daddia/crew/config';
+import { createEvalFixtures } from './eval/fixtures.js';
 import { jiraHandler } from './handlers/jira.js';
 import { createJiraClient } from './integrations/jira.js';
 import { createGitlabClient } from './integrations/gitlab.js';
@@ -10,7 +12,7 @@ import { loadConfig, CONFIG_SCHEMA_VERSION, type Config } from './config.js';
 import { log } from './observability.js';
 import { startPoller } from './poller.js';
 import { createStateStore } from './state.js';
-import type { WorkflowCtxBase } from './workflow.js';
+import { recoverInterruptedSteps, type WorkflowCtxBase } from './workflow.js';
 
 /**
  * HTTP application with routes wired for this crew. Exported for unit tests
@@ -26,6 +28,11 @@ export function createApp(
   app.post('/webhooks/jira', (c) =>
     jiraHandler(c, state, config.secrets.jiraWebhookSecret, ctxBase),
   );
+
+  const evalHandler = createEvalFetchHandler({
+    fixtures: createEvalFixtures(config.behaviour.evalFixtureMode),
+  });
+  app.all('/eval/*', (c) => evalHandler(c.req.raw));
 
   return app;
 }
@@ -90,7 +97,7 @@ export async function boot(env: NodeJS.ProcessEnv = process.env): Promise<void> 
 
   const state = createStateStore(config.infrastructure.dbPath);
 
-  // TODO (CREW-06-07): recoverInterruptedSteps before poller start.
+  await recoverInterruptedSteps(state, ctxBase);
 
   const app = createApp(state, config, ctxBase);
 

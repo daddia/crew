@@ -1,3 +1,6 @@
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { getSessionInfo } from '@anthropic-ai/claude-agent-sdk';
 import type { Agent, AgentInput, AgentResult } from '@daddia/crew';
 import { techLead } from './agents/tech-lead/agent.js';
 import type { Config } from './config.js';
@@ -8,6 +11,13 @@ import type { StateStore, Step } from './state.js';
 
 /** Default model for tech-lead runs until dedicated routing lands. */
 const TECH_LEAD_MODEL = 'claude-sonnet-4-6';
+
+/** SDK session storage for tech-lead persona (matches resolveSession default cwd). */
+const RECOVERY_SESSION_DIR = join(
+  dirname(fileURLToPath(import.meta.url)),
+  'agents',
+  'tech-lead',
+);
 
 export interface WorkflowContext {
   issueKey: string;
@@ -490,7 +500,11 @@ export async function runReviewWorkflow(
   log.info('workflow.review.start', { issueKey, resumeFromMerge });
 
   try {
-    if (resumeFromMerge && story?.currentStep === 'stakeholder-review-pending') {
+    if (
+      resumeFromMerge &&
+      (story?.currentStep === 'stakeholder-review-pending' ||
+        story?.currentStep === 'merge-and-close')
+    ) {
       await runReviewWorkflowResume(ctx, agents);
       return;
     }
@@ -508,6 +522,50 @@ export async function runReviewWorkflow(
 
 /** @deprecated Use `runReviewWorkflow`. Kept for callers that import the scaffold name. */
 export const runReview = runReviewWorkflow;
+
+/**
+ * Scan for agent steps that started a session but never finished (process
+ * crash mid-run). For each interrupted row, attempt to reconnect the SDK
+ * session: if the session is still accessible, log info and restart the review
+ * workflow; if the reconnect throws, log a warning and escalate.
+ *
+ * Called once on startup, before the HTTP server and poller are initialised,
+ * so no new stories begin processing while recovery is in progress.
+ */
+export async function recoverInterruptedSteps(
+  state: StateStore,
+  ctxBase: WorkflowCtxBase,
+): Promise<void> {
+  const interrupted = state.getInterruptedSteps();
+
+  for (const row of interrupted) {
+    const { issueKey, step, sessionId } = row;
+
+    try {
+      const sessionInfo = await getSessionInfo(sessionId!, { dir: RECOVERY_SESSION_DIR });
+      if (!sessionInfo) {
+        throw new Error(`Session not found: ${sessionId}`);
+      }
+      log.info('recovery.session-resumed', { issueKey, step, sessionId });
+      const story = state.getStory(issueKey);
+      const resumeFromMerge =
+        step === 'merge-and-close' || story?.currentStep === 'stakeholder-review-pending';
+      await runReviewWorkflow({ issueKey, state, ...ctxBase }, { resumeFromMerge });
+    } catch (err) {
+      log.warn('recovery.session-failed', { issueKey, step, sessionId, err: String(err) });
+      try {
+        await escalateToHumanReview(
+          ctxBase.jira,
+          issueKey,
+          'Crash recovery failed: ' + String(err),
+          state,
+        );
+      } catch (escalateErr) {
+        log.error('recovery.escalation-failed', { issueKey, err: String(escalateErr) });
+      }
+    }
+  }
+}
 
 export async function escalateToHumanReview(
   jira: JiraClient,
