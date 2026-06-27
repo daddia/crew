@@ -118,6 +118,14 @@ function formatPmSignOffComment(approvalPattern: string): string {
   );
 }
 
+function stepVerdict(result: AgentResult): string | undefined {
+  const artefactVerdict = result.artefacts['verdict'];
+  if (artefactVerdict === 'approve' || artefactVerdict === 'block') {
+    return artefactVerdict;
+  }
+  return result.success ? 'ok' : 'failed';
+}
+
 async function runAgentStep(
   ctx: WorkflowContext,
   step: Step,
@@ -133,7 +141,7 @@ async function runAgentStep(
   state.startStep(issueKey, step, sessionId);
   state.finishStep(issueKey, step, {
     costUsd: result.costUsd,
-    verdict: result.success ? 'ok' : 'failed',
+    verdict: stepVerdict(result),
   });
 
   return result;
@@ -284,24 +292,183 @@ async function runReviewWorkflowInner(
   await enterStakeholderReviewPending(ctx, seed);
 }
 
-/**
- * Resume path after PM approval — full merge logic lands in CREW-06-06.
- * For CREW-06-04 the poller dispatches here; this stub records merge-and-close.
- */
-async function runMergeAndClose(ctx: WorkflowContext): Promise<void> {
-  const { issueKey, state } = ctx;
+function buildReviewSummary(result: AgentResult | undefined, mrUrl: string): string {
+  if (result?.summary) {
+    return result.summary;
+  }
+
+  const acCoverage = result?.artefacts['acCoverage'];
+  if (Array.isArray(acCoverage) && acCoverage.length > 0) {
+    const lines = acCoverage
+      .filter(
+        (entry): entry is { criterion: string; status: string } =>
+          !!entry &&
+          typeof entry === 'object' &&
+          typeof (entry as { criterion?: unknown }).criterion === 'string' &&
+          typeof (entry as { status?: unknown }).status === 'string',
+      )
+      .map((entry) => `- ${entry.criterion}: ${entry.status}`);
+    if (lines.length > 0) {
+      return ['Final code review approved.', ...lines].join('\n');
+    }
+  }
+
+  return `Final code review approved. MR: ${mrUrl}`;
+}
+
+function priorReviewVerdictFromHistory(
+  history: ReturnType<StateStore['getStepHistory']>,
+): 'approve' | 'block' {
+  const reviewStep = [...history].reverse().find((row) => row.step === 'final-code-review');
+  if (reviewStep?.verdict === 'block') {
+    return 'block';
+  }
+  return 'approve';
+}
+
+async function resolveResumeSeed(ctx: WorkflowContext): Promise<ReviewSeedContext | null> {
+  const { issueKey, jira, gitlab } = ctx;
+
+  let mrUrl: string | null = null;
+  try {
+    mrUrl = await gitlab.findOpenMrForIssue(issueKey);
+  } catch (err) {
+    log.warn('workflow.merge-and-close.mr-failed', { issueKey, err: String(err) });
+  }
+
+  if (!mrUrl) {
+    await escalateToHumanReview(
+      jira,
+      issueKey,
+      'No open merge request found at merge-and-close',
+      ctx.state,
+    );
+    return null;
+  }
+
+  let branchName: string;
+  try {
+    branchName = await gitlab.getMrSourceBranch(mrUrl);
+  } catch (err) {
+    log.warn('workflow.merge-and-close.branch-failed', { issueKey, mrUrl, err: String(err) });
+    await escalateToHumanReview(
+      jira,
+      issueKey,
+      'Failed to resolve MR source branch at merge-and-close',
+      ctx.state,
+    );
+    return null;
+  }
+
+  let pipelineStatus: string;
+  try {
+    pipelineStatus = await gitlab.getPipelineStatus(mrUrl);
+  } catch (err) {
+    log.warn('workflow.merge-and-close.pipeline-failed', { issueKey, mrUrl, err: String(err) });
+    await escalateToHumanReview(jira, issueKey, 'Failed to read pipeline status before merge', ctx.state);
+    return null;
+  }
+
+  if (pipelineStatus !== 'success') {
+    await escalateToHumanReview(
+      jira,
+      issueKey,
+      `CI pipeline not green before merge (status: ${pipelineStatus})`,
+      ctx.state,
+    );
+    return null;
+  }
+
+  let ticket: JiraIssue | null = null;
+  try {
+    ticket = await jira.getIssue(issueKey);
+  } catch (err) {
+    log.warn('workflow.merge-and-close.issue-failed', { issueKey, err: String(err) });
+  }
+
+  return {
+    ticket,
+    mrUrl,
+    branchName,
+    pipelineStatus,
+    acceptanceCriteria: ticket?.acceptanceCriteria ?? '',
+  };
+}
+
+async function runMergeAndClose(ctx: WorkflowContext, agents: WorkflowAgents): Promise<void> {
+  const { issueKey, state, jira, gitlab } = ctx;
 
   await withWorkflowStepSpan('merge-and-close', issueKey, async () => {
     state.upsertStory(issueKey, 'merge-and-close');
-    state.startStep(issueKey, 'merge-and-close');
-    state.finishStep(issueKey, 'merge-and-close', { verdict: 'pending' });
-    log.info('workflow.merge-and-close.stub', { issueKey });
+
+    const seed = await resolveResumeSeed(ctx);
+    if (!seed) {
+      state.startStep(issueKey, 'merge-and-close');
+      state.finishStep(issueKey, 'merge-and-close', { verdict: 'failed' });
+      return;
+    }
+
+    try {
+      await gitlab.approveMergeRequest(seed.mrUrl);
+      const mergeCommitSha = await gitlab.mergeMergeRequest(seed.mrUrl);
+
+      const history = state.getStepHistory(issueKey);
+      const reviewStep = [...history].reverse().find((row) => row.step === 'final-code-review');
+      const previousSessionId = reviewStep?.sessionId ?? undefined;
+      const priorReviewVerdict = priorReviewVerdictFromHistory(history);
+
+      const summaryResult = await agents.techLead.run({
+        issueKey,
+        context: techLeadContext(ctx, seed, {
+          task: 'publish-review-summary',
+          previousSessionId,
+          priorReviewVerdict,
+          reviewSummary: buildReviewSummary(undefined, seed.mrUrl),
+          mergeCommitSha,
+        }),
+      });
+
+      const sessionId = summaryResult.artefacts['sessionId'] as string | undefined;
+      state.startStep(issueKey, 'merge-and-close', sessionId);
+
+      if (!summaryResult.success) {
+        state.finishStep(issueKey, 'merge-and-close', { verdict: 'failed' });
+        await escalateToHumanReview(
+          jira,
+          issueKey,
+          summaryResult.summary || 'Failed to publish review summary after merge',
+          state,
+        );
+        return;
+      }
+
+      await jira.transitionIssue(issueKey, 'Done');
+      state.upsertStory(issueKey, 'done');
+      state.finishStep(issueKey, 'merge-and-close', {
+        costUsd: summaryResult.costUsd,
+        verdict: 'ok',
+      });
+      log.info('workflow.handoff-done', {
+        issueKey,
+        mrUrl: seed.mrUrl,
+        mergeCommitSha,
+      });
+    } catch (err) {
+      log.error('workflow.merge-and-close.error', { issueKey, err: String(err) });
+      state.startStep(issueKey, 'merge-and-close');
+      state.finishStep(issueKey, 'merge-and-close', { verdict: 'failed' });
+      await escalateToHumanReview(
+        jira,
+        issueKey,
+        'GitLab approve or merge failed',
+        state,
+      );
+    }
   });
 }
 
 async function runReviewWorkflowResume(ctx: WorkflowContext, agents: WorkflowAgents): Promise<void> {
-  await runMergeAndClose(ctx);
-  void agents;
+  await runMergeAndClose(ctx, agents);
 }
 
 /**

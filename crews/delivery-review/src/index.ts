@@ -3,19 +3,29 @@ import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { initTracing } from '@daddia/crew';
 import { SchemaValidationError, redact } from '@daddia/crew/config';
+import { jiraHandler } from './handlers/jira.js';
+import { createJiraClient } from './integrations/jira.js';
+import { createGitlabClient } from './integrations/gitlab.js';
 import { loadConfig, CONFIG_SCHEMA_VERSION, type Config } from './config.js';
 import { log } from './observability.js';
+import { startPoller } from './poller.js';
 import { createStateStore } from './state.js';
+import type { WorkflowCtxBase } from './workflow.js';
 
 /**
  * HTTP application with routes wired for this crew. Exported for unit tests
  * that exercise handlers without binding a port.
  */
-export function createApp(): Hono {
+export function createApp(
+  state: ReturnType<typeof createStateStore>,
+  config: Config,
+  ctxBase: WorkflowCtxBase,
+): Hono {
   const app = new Hono();
   app.get('/healthz', (c) => c.json({ ok: true }));
-
-  // TODO (CREW-06-06): POST /webhooks/jira — dispatch on transition to In Review.
+  app.post('/webhooks/jira', (c) =>
+    jiraHandler(c, state, config.secrets.jiraWebhookSecret, ctxBase),
+  );
 
   return app;
 }
@@ -53,8 +63,36 @@ export async function boot(env: NodeJS.ProcessEnv = process.env): Promise<void> 
     ...redact(config),
   });
 
+  const jira = createJiraClient(config.identity.jira, {
+    atlassianApiToken: config.secrets.atlassianApiToken,
+  });
+  const gitlab = createGitlabClient(
+    config.identity.gitlab,
+    { gitlabAccessToken: config.secrets.gitlabAccessToken },
+    {
+      diffFileCap: config.behaviour.diffFileCap,
+      diffSizeCapBytes: config.behaviour.diffSizeCapBytes,
+    },
+  );
+
+  const ctxBase: WorkflowCtxBase = {
+    behaviour: {
+      pmReviewTimeoutHours: config.behaviour.pmReviewTimeoutHours,
+      pmApprovalCommentPattern: config.behaviour.pmApprovalCommentPattern,
+      techLeadMaxTurns: config.behaviour.techLeadMaxTurns,
+      techLeadCostCapUsd: config.behaviour.techLeadCostCapUsd,
+      diffFileCap: config.behaviour.diffFileCap,
+      diffSizeCapBytes: config.behaviour.diffSizeCapBytes,
+    },
+    jira,
+    gitlab,
+  };
+
   const state = createStateStore(config.infrastructure.dbPath);
-  const app = createApp();
+
+  // TODO (CREW-06-07): recoverInterruptedSteps before poller start.
+
+  const app = createApp(state, config, ctxBase);
 
   const server = serve({ fetch: app.fetch, port: config.infrastructure.port }, () => {
     log.info('server.start', {
@@ -63,8 +101,18 @@ export async function boot(env: NodeJS.ProcessEnv = process.env): Promise<void> 
     });
   });
 
+  const pollerDeps = {
+    identity: config.identity,
+    behaviour: config.behaviour,
+    jira,
+    gitlab,
+  };
+
+  const pollInterval = startPoller(pollerDeps, state);
+
   function shutdown(): void {
     log.info('server.shutdown');
+    clearInterval(pollInterval);
     server.close(() => {
       state.close();
       process.exit(0);
