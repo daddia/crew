@@ -40,7 +40,9 @@ export interface RunSubagentProgressEvent extends RunProgressEnvelope {
 }
 
 export type RunProgressEvent =
-  RunStepProgressEvent | RunToolUseProgressEvent | RunSubagentProgressEvent;
+  | RunStepProgressEvent
+  | RunToolUseProgressEvent
+  | RunSubagentProgressEvent;
 
 export type RunProgressPublishInput =
   | Omit<RunStepProgressEvent, 'seq' | 'ts'>
