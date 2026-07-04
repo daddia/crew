@@ -8,7 +8,8 @@ export default defineEval({
     t.expect(t.session.artefacts['terminalStep'] === 'in-qa', 'terminal step is in-qa');
 
     const handoff = t.session.artefacts['handoffEvent'] as
-      { issueKey: string; mrUrl: string } | undefined;
+      | { issueKey: string; mrUrl: string }
+      | undefined;
     t.expect(
       typeof handoff?.issueKey === 'string' && handoff.issueKey.length > 0,
       'handoff has issueKey',
