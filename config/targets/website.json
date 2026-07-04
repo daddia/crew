@@ -1,0 +1,19 @@
+{
+  "repo": "carinyaparc/website",
+  "defaultSquad": "site",
+  "artefacts": {
+    "product": "docs/product",
+    "architecture": "docs/architecture",
+    "work": "docs/work",
+    "backlog": "docs/product/backlog.md",
+    "roadmap": "docs/product/roadmap.md",
+    "solution": "docs/architecture/solution.md"
+  },
+  "squads": {
+    "site": "squads/site/charter.md",
+    "blog": "squads/blog/charter.md",
+    "recipes": "squads/recipes/charter.md",
+    "content": "squads/content/charter.md",
+    "seo": "squads/seo/charter.md"
+  }
+}
