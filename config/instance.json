@@ -1,0 +1,19 @@
+{
+  "id": "carinyaparc",
+  "repo": "carinyaparc/carinyaparc",
+  "catalogue": "carinyaparc/digital-agency",
+  "brand": {
+    "voice": "brand/brand-voice.md",
+    "taxonomy": "brand/taxonomy.md",
+    "hashtags": "brand/hashtags.md",
+    "seasonalCalendar": "brand/seasonal-calendar.md"
+  },
+  "tracker": {
+    "provider": "github",
+    "project": "Carinya Parc Delivery"
+  },
+  "labels": {
+    "squads": ["squad:site", "squad:blog", "squad:recipes", "squad:content", "squad:seo"],
+    "types": ["type:feature", "type:maintenance", "type:defect", "type:seo-recommendation"]
+  }
+}
