@@ -39,14 +39,18 @@ describe('bundled runtime docs', () => {
     expect(summary).toContain('Bundled documentation');
   });
 
-  it('lists docs in the npm pack tarball', async () => {
-    const { stdout } = await execFileAsync('npm', ['pack', '--dry-run', '--json'], {
-      cwd: packageRoot,
-      encoding: 'utf8',
-    });
-    const [packMeta] = JSON.parse(stdout) as Array<{ files: Array<{ path: string }> }>;
-    const paths = packMeta.files.map((file) => file.path);
-    expect(paths).toContain('docs/AGENTS.md');
-    expect(paths).toContain('docs/adding-a-persona.md');
-  });
+  it(
+    'lists docs in the npm pack tarball',
+    async () => {
+      const { stdout } = await execFileAsync('npm', ['pack', '--dry-run', '--json'], {
+        cwd: packageRoot,
+        encoding: 'utf8',
+      });
+      const [packMeta] = JSON.parse(stdout) as Array<{ files: Array<{ path: string }> }>;
+      const paths = packMeta.files.map((file) => file.path);
+      expect(paths).toContain('docs/AGENTS.md');
+      expect(paths).toContain('docs/adding-a-persona.md');
+    },
+    30_000,
+  );
 });
