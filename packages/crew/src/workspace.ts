@@ -113,14 +113,14 @@ export async function prepareEngineerWorkspace(
   }
 
   try {
-    await runGit(projectDir, ['fetch', 'origin', branch]);
-    await runGit(projectDir, ['checkout', '-b', branch, `origin/${branch}`]);
+    await runGit(projectDir, ['fetch', 'origin', '--', branch]);
+    await runGit(projectDir, ['checkout', '-b', branch, '--', `origin/${branch}`]);
     return;
   } catch {
     // remote branch missing — create from current HEAD (new branch)
   }
 
-  await runGit(projectDir, ['checkout', '-b', branch]);
+  await runGit(projectDir, ['checkout', '-b', branch, '--']);
 }
 
 /** @deprecated Use namespaced skill names from {@link resolvePluginBundles}. */
