@@ -1,23 +1,14 @@
-# Carinya Parc — seasonal calendar
+# Seasonal calendar — Carinya Parc
 
-Southern hemisphere farming calendar for content planning and curation. Months are
-1-based (1 = January).
+Southern-hemisphere farming calendar for content planning. Months are inclusive (1 = January).
 
-## Default events
+| Event              | Months  | Tags                         |
+| ------------------ | ------- | ---------------------------- |
+| Autumn calving     | Mar–May | Dexter cattle                |
+| Spring wildflowers | Sep–Nov | native flora, wildlife       |
+| Winter fencing     | Jun–Aug | fencing, farm infrastructure |
+| Summer harvest     | Dec–Feb | food / produce               |
 
-| Event              | Months                | Relevant tags                |
-| ------------------ | --------------------- | ---------------------------- |
-| Autumn calving     | Mar–May (3–5)         | Dexter cattle                |
-| Spring wildflowers | Sep–Nov (9–11)        | native flora, wildlife       |
-| Winter fencing     | Jun–Aug (6–8)         | fencing, farm infrastructure |
-| Summer harvest     | Dec–Feb (12–2, wraps) | food / produce               |
+Wrap-around events (e.g. Summer harvest Dec–Feb) span year boundaries.
 
-## Season inference (NSW mid-north coast)
-
-- **Summer** (Dec–Feb): hot, dry or stormy; parched grasses; harsh midday light
-- **Autumn** (Mar–May): mild; grass greening; clear skies; soft light
-- **Winter** (Jun–Aug): cool mornings; lush green pasture; possible mist
-- **Spring** (Sep–Nov): warm; fresh growth; wildflowers; active wildlife
-
-Lush green pasture usually indicates winter or early autumn here, not spring.
-Golden hour light occurs year-round — it is not a seasonal indicator.
+Used by `content-calendar` skill and Squad D planning. Instagram steward pipeline may load overrides from env/S3; this file is the instance default.

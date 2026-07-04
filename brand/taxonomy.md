@@ -1,6 +1,6 @@
-# Carinya Parc — content taxonomy
+# Taxonomy — Carinya Parc
 
-Controlled vocabulary for media analysis, curation, and tagging.
+Controlled vocabulary for content classification, curation, and SEO topic alignment.
 
 ## Subjects
 
@@ -26,7 +26,7 @@ Controlled vocabulary for media analysis, curation, and tagging.
 
 ## Seasons
 
-Southern hemisphere: summer, autumn, winter, spring.
+summer · autumn · winter · spring (southern hemisphere)
 
 ## Moods
 

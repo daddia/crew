@@ -1,6 +1,8 @@
-# Carinya Parc — Instagram hashtags
+# Hashtags — Carinya Parc
 
-## Core (always consider)
+Instagram-oriented hashtag sets. Website content may use a subset; avoid hashtag stuffing in blog prose.
+
+## Core
 
 - #carinyaparc
 - #regenerative
@@ -9,7 +11,7 @@
 - #farmtofork
 - #farmstay
 
-## Subject-specific
+## By subject
 
 | Subject                 | Hashtags                                                 |
 | ----------------------- | -------------------------------------------------------- |
@@ -22,5 +24,3 @@
 | landscape overview      | #australianfarm #ruralnsw #farmlife                      |
 | farm stay accommodation | #farmstay #agritourism #ruralretreat #nswgetaway         |
 | sunrise / sunset        | #goldenhour #farmlife #ruralnsw                          |
-
-Combine core + subject tags; cap at 20 hashtags per post.
