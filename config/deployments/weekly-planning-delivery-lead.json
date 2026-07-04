@@ -1,0 +1,15 @@
+{
+  "id": "weekly-planning-delivery-lead",
+  "agent": "delivery-lead",
+  "platform": "either",
+  "squad": "cross-squad",
+  "repos": ["website", "carinyaparc"],
+  "ritual": "weekly-planning",
+  "schedule": {
+    "cron": "30 8 * * 1",
+    "timezone": "Australia/Sydney"
+  },
+  "enabled": true,
+  "secrets": ["CURSOR_API_TOKEN", "ANTHROPIC_ADMIN_KEY"],
+  "notes": "Spike deployment — sprint plan + issues phase; platform resolved at apply time (prefer Cursor if token present)."
+}

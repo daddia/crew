@@ -1,0 +1,15 @@
+{
+  "id": "weekly-planning-product-manager",
+  "agent": "product-manager",
+  "platform": "claude-cma",
+  "squad": "cross-squad",
+  "repos": ["website", "carinyaparc"],
+  "ritual": "weekly-planning",
+  "schedule": {
+    "cron": "0 8 * * 1",
+    "timezone": "Australia/Sydney"
+  },
+  "enabled": true,
+  "secrets": ["ANTHROPIC_ADMIN_KEY"],
+  "notes": "Spike deployment — backlog refine phase of weekly planning ritual."
+}

@@ -1,0 +1,15 @@
+{
+  "id": "site-frontend-engineer",
+  "agent": "frontend-engineer",
+  "platform": "cursor",
+  "squad": "site",
+  "repos": ["website", "carinyaparc"],
+  "ritual": null,
+  "schedule": {
+    "cron": "0 9 * * 1-5",
+    "timezone": "Australia/Sydney"
+  },
+  "enabled": false,
+  "secrets": ["CURSOR_API_TOKEN"],
+  "notes": "On-demand / future schedule — picks up squad:site issues. Disabled until weekly planning spike passes."
+}
