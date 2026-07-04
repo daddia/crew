@@ -59,3 +59,6 @@ Desktop.ini
 !.cursor/rules/
 !.cursor/skills/
 !.cursor/mcp.json
+
+# deploy script output (dashboard import JSON until API wired)
+.deploy-artifacts/
