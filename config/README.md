@@ -5,11 +5,11 @@ Single source of truth for Carinya Parc instance wiring. Target repos carry a mi
 
 ## Files
 
-| File | Purpose |
-| ---- | ------- |
-| [`instance.json`](instance.json) | Instance id, catalogue marketplace, brand paths, tracker, labels |
-| [`targets/website.json`](targets/website.json) | Website artefact paths, default squad, charter links |
-| [`plugins.json`](plugins.json) | Enabled agents and connectors from `digital-agency` |
+| File                                           | Purpose                                                          |
+| ---------------------------------------------- | ---------------------------------------------------------------- |
+| [`instance.json`](instance.json)               | Instance id, catalogue marketplace, brand paths, tracker, labels |
+| [`targets/website.json`](targets/website.json) | Website artefact paths, default squad, charter links             |
+| [`plugins.json`](plugins.json)                 | Enabled agents and connectors from `digital-agency`              |
 
 ## Resolution
 

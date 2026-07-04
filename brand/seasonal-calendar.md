@@ -5,12 +5,12 @@ Southern hemisphere farming calendar for content planning and curation. Months a
 
 ## Default events
 
-| Event | Months | Relevant tags |
-| ----- | ------ | --------------- |
-| Autumn calving | Mar–May (3–5) | Dexter cattle |
-| Spring wildflowers | Sep–Nov (9–11) | native flora, wildlife |
-| Winter fencing | Jun–Aug (6–8) | fencing, farm infrastructure |
-| Summer harvest | Dec–Feb (12–2, wraps) | food / produce |
+| Event              | Months                | Relevant tags                |
+| ------------------ | --------------------- | ---------------------------- |
+| Autumn calving     | Mar–May (3–5)         | Dexter cattle                |
+| Spring wildflowers | Sep–Nov (9–11)        | native flora, wildlife       |
+| Winter fencing     | Jun–Aug (6–8)         | fencing, farm infrastructure |
+| Summer harvest     | Dec–Feb (12–2, wraps) | food / produce               |
 
 ## Season inference (NSW mid-north coast)
 

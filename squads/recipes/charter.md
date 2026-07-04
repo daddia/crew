@@ -7,21 +7,21 @@ data — not editorial recipe content (Squad D).
 
 ## Roster
 
-| Agent | Role |
-| ----- | ---- |
-| `frontend-engineer` | Recipe UI, routes, collection integration |
-| `senior-frontend-engineer` | Peer review |
-| `qa-engineer` | Validation |
+| Agent                      | Role                                      |
+| -------------------------- | ----------------------------------------- |
+| `frontend-engineer`        | Recipe UI, routes, collection integration |
+| `senior-frontend-engineer` | Peer review                               |
+| `qa-engineer`              | Validation                                |
 
 Delivery chain for larger epics: add `delivery-lead`, `principal-frontend-engineer`.
 
 ## Target repo paths
 
-| Area | Path |
-| ---- | ---- |
-| Recipes collection | `website/apps/site/src/collections/Recipes.ts` |
-| Recipe routes | `website/apps/site/src/app/(frontend)/recipes/` |
-| Structured data | recipe JSON-LD in route/layout components |
+| Area               | Path                                            |
+| ------------------ | ----------------------------------------------- |
+| Recipes collection | `website/apps/site/src/collections/Recipes.ts`  |
+| Recipe routes      | `website/apps/site/src/app/(frontend)/recipes/` |
+| Structured data    | recipe JSON-LD in route/layout components       |
 
 ## Backlog area
 

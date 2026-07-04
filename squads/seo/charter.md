@@ -7,17 +7,17 @@ Technical fixes are handed to Squads A/B/C — Squad E does not implement code.
 
 ## Roster (Sprint 2+)
 
-| Agent | Role |
-| ----- | ---- |
+| Agent            | Role                                         |
+| ---------------- | -------------------------------------------- |
 | `seo-specialist` | Keyword research, audits, content SEO review |
 
 ## Target repo paths
 
-| Area | Path |
-| ---- | ---- |
+| Area             | Path                                                |
+| ---------------- | --------------------------------------------------- |
 | Keyword research | `website/docs/work/seo/keyword-research-{topic}.md` |
-| Production site | `https://carinyaparc.com.au` |
-| Sitemap/robots | `website/apps/site/public/` |
+| Production site  | `https://carinyaparc.com.au`                        |
+| Sitemap/robots   | `website/apps/site/public/`                         |
 
 ## Backlog area
 

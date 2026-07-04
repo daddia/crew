@@ -7,21 +7,21 @@ without human gate. Absorbs steward social craft (captions, curation, editing).
 
 ## Roster (Sprint 2+ for strategist/writer; Sprint 1 skills land in catalogue)
 
-| Agent | Role | Sprint |
-| ----- | ---- | ------ |
-| `content-strategist` | Content calendar, briefs | 2 |
-| `content-writer` | Post/recipe seed drafts | 2 |
-| Skills (Sprint 1) | `analyse-media`, `write-captions`, `edit-content`, `curate-content` | 1 |
-| `brand-voice` | Enforce voice (reads `carinyaparc/brand/` via config) | catalogue |
+| Agent                | Role                                                                | Sprint    |
+| -------------------- | ------------------------------------------------------------------- | --------- |
+| `content-strategist` | Content calendar, briefs                                            | 2         |
+| `content-writer`     | Post/recipe seed drafts                                             | 2         |
+| Skills (Sprint 1)    | `analyse-media`, `write-captions`, `edit-content`, `curate-content` | 1         |
+| `brand-voice`        | Enforce voice (reads `carinyaparc/brand/` via config)               | catalogue |
 
 ## Target repo paths
 
-| Area | Path |
-| ---- | ---- |
-| Content seeds | `website/apps/site/content/seeds/posts/`, `.../recipes/` |
-| Import script | `website/apps/site/scripts/import-content-seed.ts` (Sprint 2) |
-| Content calendar | `carinyaparc/docs/product/content-calendar.md` |
-| Brand | `carinyaparc/brand/` via `config/instance.json` — never `website/docs/brand/` |
+| Area             | Path                                                                          |
+| ---------------- | ----------------------------------------------------------------------------- |
+| Content seeds    | `website/apps/site/content/seeds/posts/`, `.../recipes/`                      |
+| Import script    | `website/apps/site/scripts/import-content-seed.ts` (Sprint 2)                 |
+| Content calendar | `carinyaparc/docs/product/content-calendar.md`                                |
+| Brand            | `carinyaparc/brand/` via `config/instance.json` — never `website/docs/brand/` |
 
 ## Backlog area
 

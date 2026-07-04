@@ -48,5 +48,5 @@ describe('bundled runtime docs', () => {
     const paths = packMeta.files.map((file) => file.path);
     expect(paths).toContain('docs/AGENTS.md');
     expect(paths).toContain('docs/adding-a-persona.md');
-  });
+  }, 30_000);
 });

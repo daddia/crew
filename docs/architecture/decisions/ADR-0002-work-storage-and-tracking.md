@@ -19,10 +19,10 @@ duplicate Gherkin in issues or treat the tracker as the source of truth for scop
 
 Adopt a **two-layer model**:
 
-| Layer | System of record | Contents |
-| ----- | ---------------- | -------- |
-| **Contract** | Markdown in git | Epics (`docs/product/backlog.md`), Gherkin AC (`docs/work/{epic}/tasks.md`), design (`design.md`), sprint plans (`docs/work/sprint-{id}/plan.md`), retrospectives |
-| **Queue** | GitHub Issues + org Project | Status, assignment, board columns — one issue per committed task at sprint planning |
+| Layer        | System of record            | Contents                                                                                                                                                          |
+| ------------ | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Contract** | Markdown in git             | Epics (`docs/product/backlog.md`), Gherkin AC (`docs/work/{epic}/tasks.md`), design (`design.md`), sprint plans (`docs/work/sprint-{id}/plan.md`), retrospectives |
+| **Queue**    | GitHub Issues + org Project | Status, assignment, board columns — one issue per committed task at sprint planning                                                                               |
 
 **Canonical AC lives in `tasks.md`.** Issues carry title, squad label, type label,
 links to epic slug and task id — not duplicated Gherkin.
@@ -47,24 +47,24 @@ Title format: `[{TASK-ID}] {short title}`.
 
 Labels:
 
-| Label | Purpose |
-| ----- | ------- |
-| `squad:site` … `squad:seo` | Owning squad |
-| `type:feature`, `type:maintenance`, `type:defect`, `type:seo-recommendation` | Work type |
+| Label                                                                        | Purpose      |
+| ---------------------------------------------------------------------------- | ------------ |
+| `squad:site` … `squad:seo`                                                   | Owning squad |
+| `type:feature`, `type:maintenance`, `type:defect`, `type:seo-recommendation` | Work type    |
 
 Project **Squad** field mirrors squad labels for board views.
 
 ### Artefact ownership
 
-| Artefact | Repo | Path |
-| -------- | ---- | ---- |
-| Product steering (backlog, roadmap, product) | Target repo (website first) | `website/docs/product/` |
-| Architecture (solution, ADRs) | Target repo | `website/docs/architecture/` |
-| Epic design + tasks + verification | Target repo | `website/docs/work/{epic}/` |
-| Sprint plans + retros | Target repo | `website/docs/work/sprint-{id}/` |
-| Instance-wide cadence, content calendar | carinyaparc | `carinyaparc/docs/` or squad charter paths |
-| Brand voice, taxonomy, hashtags, seasonal calendar | carinyaparc | `carinyaparc/brand/` (paths in `config/instance.json`) — **never** `website/docs/brand/` |
-| Instance config (plugins, targets, tracker) | carinyaparc | `carinyaparc/config/` |
+| Artefact                                           | Repo                        | Path                                                                                     |
+| -------------------------------------------------- | --------------------------- | ---------------------------------------------------------------------------------------- |
+| Product steering (backlog, roadmap, product)       | Target repo (website first) | `website/docs/product/`                                                                  |
+| Architecture (solution, ADRs)                      | Target repo                 | `website/docs/architecture/`                                                             |
+| Epic design + tasks + verification                 | Target repo                 | `website/docs/work/{epic}/`                                                              |
+| Sprint plans + retros                              | Target repo                 | `website/docs/work/sprint-{id}/`                                                         |
+| Instance-wide cadence, content calendar            | carinyaparc                 | `carinyaparc/docs/` or squad charter paths                                               |
+| Brand voice, taxonomy, hashtags, seasonal calendar | carinyaparc                 | `carinyaparc/brand/` (paths in `config/instance.json`) — **never** `website/docs/brand/` |
+| Instance config (plugins, targets, tracker)        | carinyaparc                 | `carinyaparc/config/`                                                                    |
 
 Squads A/B/C engineering epics use `website/docs/work/`. Squad D content calendar
 may live in `carinyaparc/docs/product/content-calendar.md` (per charter). Squad E
