@@ -13,8 +13,8 @@ roster, owned paths, backlog area (labels/board), cadence, and definition of don
 
 Squads run interactively in Claude Cowork / Cursor using the `digital-agency`
 catalogue with instance config from `config/`. Crews are the unattended runtime —
-a later convergence phase (see ADR-0002 work storage; runtime substrate decision
-deferred to Sprint 4).
+a later convergence phase (see [ADR-0003](../docs/architecture/decisions/ADR-0003-rented-runtime-substrate.md);
+work storage in [ADR-0002](../docs/architecture/decisions/ADR-0002-work-storage-and-tracking.md)).
 
 **Migration direction:** `crews/delivery-*` stop vendoring prompts/skills and consume
 `digital-agency` agents instead. Squads remain stable config; `crews/` shrink as rented
