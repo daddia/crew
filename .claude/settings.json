@@ -1,5 +1,17 @@
 {
-  "env": {
-    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "0"
+  "enabledPlugins": {
+    "carinya-digital@product-manager": true,
+    "carinya-digital@delivery-lead": true,
+    "carinya-digital@principal-architect": true,
+    "carinya-digital@frontend-engineer": true,
+    "carinya-digital@senior-frontend-engineer": true,
+    "carinya-digital@principal-frontend-engineer": true,
+    "carinya-digital@qa-engineer": true,
+    "carinya-digital@webops-engineer": true,
+    "carinya-digital@github": true,
+    "carinya-digital@vercel": true,
+    "carinya-digital@playwright": true,
+    "carinya-digital@context7": true,
+    "carinya-digital@next-devtools": true
   }
 }
