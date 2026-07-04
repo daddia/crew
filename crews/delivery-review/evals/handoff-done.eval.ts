@@ -8,8 +8,7 @@ export default defineEval({
     t.expect(t.session.artefacts['terminalStep'] === 'done', 'terminal step is done');
 
     const handoff = t.session.artefacts['handoffDoneEvent'] as
-      | { issueKey: string; mrUrl: string; mergeCommitSha: string }
-      | undefined;
+      { issueKey: string; mrUrl: string; mergeCommitSha: string } | undefined;
     t.expect(
       typeof handoff?.issueKey === 'string' && handoff.issueKey.length > 0,
       'handoff-done has issueKey',
