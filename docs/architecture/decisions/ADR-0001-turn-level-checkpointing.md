@@ -1,8 +1,9 @@
 ---
 type: Architecture Decision Record (ADR)
-status: Proposed
+status: Superseded
 date: 2026-06-26
 supersedes:
+superseded_by: ADR-0003
 related:
   - docs/architecture/solution.md §4.4
   - docs/architecture/solution.md §10.3 (open question #7)

@@ -76,7 +76,9 @@ keyword research uses `website/docs/work/seo/`.
 - Benefit: GitHub MCP connector works without extra setup for Sprint 1 proof.
 - Trade-off: Cross-repo visibility requires linked repos on one Project or manual
   coordination until Linear migration.
-- Trade-off: `crews/delivery-build` Jira polling remains until runtime converges (Sprint 4).
+- Trade-off: `crews/delivery-build` Jira polling remains until runtime converges — see
+  [ADR-0003](../architecture/decisions/ADR-0003-rented-runtime-substrate.md) and
+  [crews-migration.md](../architecture/crews-migration.md).
 
 ## Confirmation
 
