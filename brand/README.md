@@ -8,11 +8,11 @@ Paths are declared in [`config/instance.json`](../config/instance.json).
 
 ## Artefacts
 
-| File | Purpose |
-| ---- | ------- |
-| `brand-voice.md` | Tone, conventions, clichés to avoid |
-| `taxonomy.md` | Subjects, seasons, moods, content types |
-| `hashtags.md` | Instagram core + subject hashtags |
+| File                   | Purpose                                         |
+| ---------------------- | ----------------------------------------------- |
+| `brand-voice.md`       | Tone, conventions, clichés to avoid             |
+| `taxonomy.md`          | Subjects, seasons, moods, content types         |
+| `hashtags.md`          | Instagram core + subject hashtags               |
 | `seasonal-calendar.md` | Southern hemisphere events for content planning |
 
 ## Ported from

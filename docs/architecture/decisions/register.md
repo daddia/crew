@@ -24,8 +24,8 @@ ADRs live in [`docs/architecture/decisions/`](.) in this repo. Use the template 
 
 ## Foundation decisions
 
-| ID       | Title                         | Status   |
-| -------- | ----------------------------- | -------- |
+| ID       | Title                           | Status   |
+| -------- | ------------------------------- | -------- |
 | ADR-0002 | Work storage and issue tracking | Accepted |
 
 ---

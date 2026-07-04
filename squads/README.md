@@ -5,11 +5,11 @@ roster, owned paths, backlog area (labels/board), cadence, and definition of don
 
 ## Squads vs crews
 
-| Concept | What it is | Location |
-| ------- | ---------- | -------- |
-| **Squad (A–E)** | Organisational config for interactive delivery | `squads/` |
-| **Crew (`delivery-*`)** | Unattended runtime process (poller/webhook workflow) | `crews/` |
-| **Catalogue agent** | Persona plugin consumed by squads and crews | `digital-agency/agents/` |
+| Concept                 | What it is                                           | Location                 |
+| ----------------------- | ---------------------------------------------------- | ------------------------ |
+| **Squad (A–E)**         | Organisational config for interactive delivery       | `squads/`                |
+| **Crew (`delivery-*`)** | Unattended runtime process (poller/webhook workflow) | `crews/`                 |
+| **Catalogue agent**     | Persona plugin consumed by squads and crews          | `digital-agency/agents/` |
 
 Squads run interactively in Claude Cowork / Cursor using the `digital-agency`
 catalogue with instance config from `config/`. Crews are the unattended runtime —
@@ -22,13 +22,13 @@ substrate converges.
 
 ## Squad roster
 
-| Squad | Slug | Charter | Primary target |
-| ----- | ---- | ------- | -------------- |
-| A — Site | `site` | [site/charter.md](site/charter.md) | `website` — platform, deps, performance |
-| B — Blog | `blog` | [blog/charter.md](blog/charter.md) | `website` — Posts collection, blog routes |
+| Squad       | Slug      | Charter                                  | Primary target                                |
+| ----------- | --------- | ---------------------------------------- | --------------------------------------------- |
+| A — Site    | `site`    | [site/charter.md](site/charter.md)       | `website` — platform, deps, performance       |
+| B — Blog    | `blog`    | [blog/charter.md](blog/charter.md)       | `website` — Posts collection, blog routes     |
 | C — Recipes | `recipes` | [recipes/charter.md](recipes/charter.md) | `website` — Recipes collection, recipe routes |
-| D — Content | `content` | [content/charter.md](content/charter.md) | Payload seed PRs + steward social craft |
-| E — SEO | `seo` | [seo/charter.md](seo/charter.md) | Audits and recommendations as issues |
+| D — Content | `content` | [content/charter.md](content/charter.md) | Payload seed PRs + steward social craft       |
+| E — SEO     | `seo`     | [seo/charter.md](seo/charter.md)         | Audits and recommendations as issues          |
 
 ## Cross-squad cadence
 

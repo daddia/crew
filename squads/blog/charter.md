@@ -7,20 +7,20 @@ editorial content (Squad D).
 
 ## Roster
 
-| Agent | Role |
-| ----- | ---- |
-| `frontend-engineer` | Blog UI, routes, collection integration |
-| `senior-frontend-engineer` | Peer review |
-| `qa-engineer` | Validation |
+| Agent                      | Role                                    |
+| -------------------------- | --------------------------------------- |
+| `frontend-engineer`        | Blog UI, routes, collection integration |
+| `senior-frontend-engineer` | Peer review                             |
+| `qa-engineer`              | Validation                              |
 
 Delivery chain for larger epics: add `delivery-lead`, `principal-frontend-engineer`.
 
 ## Target repo paths
 
-| Area | Path |
-| ---- | ---- |
-| Posts collection | `website/apps/site/src/collections/Posts.ts` |
-| Blog routes | `website/apps/site/src/app/(frontend)/blog/` |
+| Area               | Path                                                |
+| ------------------ | --------------------------------------------------- |
+| Posts collection   | `website/apps/site/src/collections/Posts.ts`        |
+| Blog routes        | `website/apps/site/src/app/(frontend)/blog/`        |
 | Related components | `website/apps/site/src/components/` (blog-specific) |
 
 ## Backlog area
