@@ -1,0 +1,18 @@
+{
+  "marketplace": "carinyaparc/digital-agency",
+  "enabled": [
+    "product-manager",
+    "delivery-lead",
+    "principal-architect",
+    "frontend-engineer",
+    "senior-frontend-engineer",
+    "principal-frontend-engineer",
+    "qa-engineer",
+    "webops-engineer",
+    "github",
+    "vercel",
+    "playwright",
+    "context7",
+    "next-devtools"
+  ]
+}
