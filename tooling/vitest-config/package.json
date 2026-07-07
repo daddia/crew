@@ -19,7 +19,7 @@
     "view-report": "open coverage/report/index.html"
   },
   "dependencies": {
-    "vitest": "^4.1.9"
+    "vitest": "^4.1.10"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
